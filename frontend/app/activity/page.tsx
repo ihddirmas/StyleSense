@@ -37,7 +37,7 @@ function thumbUrl(task: AnyTask): string | undefined {
 }
 
 function StatusIcon({ status }: { status: TaskStatus }) {
-  if (status === "running") return <Loader2 size={16} className="spin" style={{ color: "var(--gold)" }} />;
+  if (status === "running") return <Loader2 size={16} className="spin" style={{ color: "var(--ink)" }} />;
   if (status === "done")    return <CheckCircle2 size={16} style={{ color: "var(--green)" }} />;
   return <XCircle size={16} style={{ color: "var(--red)" }} />;
 }
@@ -72,10 +72,10 @@ export default function ActivityPage() {
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-16">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center" style={{ color: "var(--text-dim)" }}>
-            <Sparkles size={32} className="mb-4" style={{ opacity: 0.35 }} />
+          <div className="flex flex-col items-center justify-center py-24 text-center" style={{ color: "var(--text-muted)" }}>
+            <Sparkles size={32} className="mb-4" style={{ opacity: 0.5, color: "var(--text-muted)" }} />
             <div className="text-sm">No activity yet this session.</div>
-            <div className="text-xs mt-1">Generate a try-on in Studio to see it here.</div>
+            <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Generate a try-on in Studio to see it here.</div>
           </div>
         ) : (
           <div className="flex flex-col gap-2 max-w-2xl">
@@ -116,7 +116,7 @@ export default function ActivityPage() {
                         {task.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-dim)" }}>
+                    <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
                       <StatusIcon status={task.status} />
                       <span>
                         {task.status === "running" && "Running…"}
@@ -136,7 +136,7 @@ export default function ActivityPage() {
                     <button
                       onClick={() => remove(task.id)}
                       className="shrink-0 flex items-center justify-center"
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4 }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
                       aria-label="Dismiss"
                     >
                       <X size={14} />

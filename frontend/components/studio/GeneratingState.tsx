@@ -78,18 +78,17 @@ export function GeneratingState({
 
       {/* Progress bar — width derived from elapsed so it survives remounts */}
       <div className="w-full max-w-md mb-3">
-        <div style={{ height: 4, background: "var(--surface3)", borderRadius: 999, overflow: "hidden" }}>
+        <div style={{ height: 4, background: "rgba(60,36,21,0.15)", borderRadius: 999, overflow: "hidden" }}>
           <div
             style={{
               height: "100%",
               width: `${barPct}%`,
-              background: "var(--gold)",
-              boxShadow: "0 0 12px var(--gold-glow)",
+              background: "var(--ink)",
               transition: "width 1s linear",
             }}
           />
         </div>
-        <div className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+        <div className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
           ~{Math.max(0, TOTAL - secs)}s remaining · {secs}s elapsed
         </div>
       </div>
@@ -97,10 +96,10 @@ export function GeneratingState({
       {/* Step list */}
       <div className="w-full max-w-md text-left mt-4">
         {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center gap-2 text-xs py-1" style={{ color: i <= stepIdx ? "var(--gold)" : "var(--text-dim)" }}>
+          <div key={s} className="flex items-center gap-2 text-xs py-1" style={{ color: i <= stepIdx ? "var(--ink)" : "var(--text-muted)" }}>
             <span style={{
               width: 12, textAlign: "center",
-              color: i < stepIdx ? "var(--green)" : i === stepIdx ? "var(--gold)" : "var(--text-dim)",
+              color: i < stepIdx ? "var(--green)" : i === stepIdx ? "var(--ink)" : "var(--text-muted)",
             }}>
               {i < stepIdx ? "✓" : i === stepIdx ? "⟳" : "·"}
             </span>

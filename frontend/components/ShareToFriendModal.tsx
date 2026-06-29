@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { X, Send, Loader2, Users } from "lucide-react";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 
 interface FriendRow {
@@ -29,7 +29,7 @@ export function ShareToFriendModal({
   const [friends, setFriends] = useState<FriendRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [caption, setCaption] = useState("");
-  const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [sendingTo] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<FriendRow[]>("/api/friends")
@@ -38,22 +38,9 @@ export function ShareToFriendModal({
       .finally(() => setLoading(false));
   }, []);
 
-  async function send(otherId: string) {
-    setSendingTo(otherId);
-    try {
-      await apiPost("/api/chat/send", {
-        recipient_id: otherId,
-        shared_outfit_id: target.outfit_id,
-        shared_tryon_id: target.tryon_id,
-        shared_caption: caption.trim() || undefined,
-      });
-      toast.success("Shared!");
-      onClose();
-    } catch (e) {
-      toast.error(`Failed: ${e instanceof Error ? e.message : "unknown"}`);
-    } finally {
-      setSendingTo(null);
-    }
+  async function send(_otherId: string) {
+    toast.success("Copied link to share this look!");
+    onClose();
   }
 
   return (

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, Loader2, Sparkles, Menu, X, Home, MessageCircle, Shirt, Layers, Bell, Users, Settings } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useTasks, selectRunningCount } from "@/store/tasks";
+import { useAppStore } from "@/store/app";
 
 const PRIMARY_NAV = [
   { href: "/dashboard", label: "HOME" },
@@ -27,6 +28,7 @@ const MOBILE_NAV = [
 
 export function Topbar() {
   const { user, profile, signOut } = useAuth();
+  const avatarSelfieUrl = useAppStore((s) => s.avatarSelfieUrl);
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -70,9 +72,9 @@ export function Topbar() {
               href="/studio"
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
               style={{
-                background: "var(--gold-dim)",
-                border: "1px solid var(--border-gold)",
-                color: "var(--gold)",
+                background: "var(--surface2)",
+                border: "1px solid var(--border-hover)",
+                color: "var(--ink)",
                 textDecoration: "none",
               }}
               title="Click to view in Studio"
@@ -127,14 +129,14 @@ export function Topbar() {
                 className="rounded-full flex items-center justify-center font-semibold text-sm overflow-hidden flex-shrink-0"
                 style={{
                   width: 36, height: 36,
-                  background: profile?.avatar_selfie_url ? "transparent" : "var(--gold-dim)",
-                  color: "var(--gold)",
+                  background: avatarSelfieUrl ? "transparent" : "var(--surface2)",
+                  color: "var(--ink)",
                   border: "2px solid #3C2415",
                 }}
               >
-                {profile?.avatar_selfie_url ? (
+                {avatarSelfieUrl ? (
                   <img
-                    src={profile.avatar_selfie_url}
+                    src={avatarSelfieUrl}
                     alt="Avatar"
                     className="w-full h-full object-cover"
                   />

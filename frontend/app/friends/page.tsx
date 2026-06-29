@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
 import {
-  Search, UserPlus, Check, X, Users, Loader2, Copy, MessagesSquare,
+  Search, UserPlus, Check, X, Users, Loader2, Copy,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/components/AuthProvider";
@@ -230,9 +229,6 @@ export default function FriendsPage() {
               <FriendRow key={f.friendship_id} friend={f}
                 actions={
                   <>
-                    <Link href={`/chat?with=${f.other.id}`} className="btn-primary" style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
-                      <MessagesSquare size={14} /> Message
-                    </Link>
                     <button className="btn-secondary" onClick={() => setPendingRemove(f)}
                             style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
                       Remove

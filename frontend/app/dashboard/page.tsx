@@ -15,7 +15,7 @@ import type { WardrobeItem } from "@/types";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { cachedWardrobe, cachedRecent, setCachedWardrobe, setCachedRecent } = useAppStore();
+  const { cachedWardrobe, cachedRecent, setCachedWardrobe, setCachedRecent, avatarSelfieUrl } = useAppStore();
   const [items, setItems] = useState<WardrobeItem[]>(cachedWardrobe);
   const [recent, setRecent] = useState<TryOnResult[]>(cachedRecent);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -112,7 +112,9 @@ export default function DashboardPage() {
             className="flex items-start gap-2 -mt-2 max-w-lg"
           >
             <p className="flex-1 text-sm" style={{ color: "var(--text-muted)" }}>
-              Add items to your Wardrobe, then head to Studio to try them on your avatar.
+              {avatarSelfieUrl
+                ? "Add items to your Wardrobe, then head to Studio to try them on your avatar."
+                : "Start by uploading a selfie in Settings, then add clothes to your Wardrobe."}
             </p>
             <button
               onClick={() => setHintDismissed(true)}
@@ -125,20 +127,21 @@ export default function DashboardPage() {
         )}
 
         {/* Hero + Insight: side-by-side when insight present, full-width video otherwise */}
-        <div className="grid gap-4" style={{ gridTemplateColumns: insight || items.length > 0 ? "1fr 340px" : "1fr" }}>
-          <HeroVideo />
-          <div className="flex flex-col gap-4">
-            <StyleInsightCard insight={insight} items={items} recent={recent} />
-            {/* Action cards stacked in the sidebar column when insight is present */}
-            {(insight || items.length > 0) && (
+        {insight || items.length > 0 ? (
+          <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 340px" }}>
+            <HeroVideo />
+            <div className="flex flex-col gap-4">
+              <StyleInsightCard insight={insight} items={items} recent={recent} />
               <div className="flex flex-col gap-2">
                 <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
                 <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
                 <ActionCard href="/stylist" icon={<MessageCircle size={16} />} title="Ask your stylist" />
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <HeroVideo />
+        )}
 
         {/* Recent try-ons */}
         {fetchError ? (

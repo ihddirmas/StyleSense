@@ -259,7 +259,6 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
   function reset() {
     setShowCompare(false);
     setEventInput("");
-    useTasks.getState().clearDone();
   }
 
   function generate() {

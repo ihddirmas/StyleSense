@@ -42,7 +42,7 @@ export function PageHeader({ eyebrow, title, subtitle, action, tutorialKey }: Pa
         {title && <h1 className="font-display text-4xl leading-tight">{title}</h1>}
         {showSubtitle && (
           <div className="mt-3 flex items-start gap-2 max-w-xl">
-            <p className="flex-1 text-sm" style={{ color: "var(--text-muted)" }}>
+            <p className="flex-1 text-sm" style={{ color: "var(--text)" }}>
               {subtitle}
             </p>
             {tutorialKey && (
@@ -53,7 +53,7 @@ export function PageHeader({ eyebrow, title, subtitle, action, tutorialKey }: Pa
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: "var(--text-dim)",
+                  color: "var(--text-muted)",
                   padding: "2px",
                   flexShrink: 0,
                   lineHeight: 1,
