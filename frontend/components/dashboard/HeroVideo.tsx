@@ -7,26 +7,11 @@ import { useAppStore } from "@/store/app";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "@/components/ui/Toast";
 
-interface StylistShape {
-  hero_video_url: string | null;
-  image_url: string | null;
-  name: string | null;
-}
-
 interface StylizedVideoShape {
   url: string | null;
   status: "idle" | "generating" | "ready" | "failed" | "no_selfie";
 }
 
-/**
- * Dashboard hero. Landscape 16:9 video card.
- * State machine:
- *   - User video ready                -> user video (crossfade from Aria)
- *   - User video generating           -> Aria + "Creating yours..." pill
- *   - User has selfie, no video yet   -> Aria + "Generate my ramp video" button
- *   - No selfie                       -> Aria ramp video
- *   - Aria env not set                -> Aria still portrait fallback
- */
 export function HeroVideo() {
   const { user } = useAuth();
   const {
@@ -34,16 +19,25 @@ export function HeroVideo() {
     stylizedVideoUrl,
     stylizedVideoStatus,
     setStylizedVideo,
+    ariaVideoUrl,
+    ariaImageUrl,
+    ariaName,
+    setAria,
   } = useAppStore();
-  const [aria, setAria] = useState<StylistShape | null>(null);
   const [triggering, setTriggering] = useState(false);
 
+  // Only fetch Aria once — store persists it so subsequent visits are instant.
   useEffect(() => {
-    apiGet<StylistShape>("/api/avatar/stylist").then(setAria).catch(() => {});
-  }, []);
+    if (ariaVideoUrl !== null) return;
+    apiGet<{ hero_video_url: string | null; image_url: string | null; name: string | null }>(
+      "/api/avatar/stylist"
+    ).then((d) => setAria(d.hero_video_url, d.image_url, d.name)).catch(() => {});
+  }, [ariaVideoUrl, setAria]);
 
+  // Only poll stylized-video if it's generating. If already ready, skip the call.
   useEffect(() => {
     if (!user) return;
+    if (stylizedVideoStatus === "ready") return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function tick() {
@@ -58,16 +52,11 @@ export function HeroVideo() {
     }
     tick();
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [user, setStylizedVideo]);
+  }, [user, stylizedVideoStatus, setStylizedVideo]);
 
   const showUser = !!stylizedVideoUrl && stylizedVideoStatus === "ready";
   const generating = !!avatarSelfieUrl && stylizedVideoStatus === "generating";
-  const canBackfill =
-    !!avatarSelfieUrl &&
-    !stylizedVideoUrl &&
-    !generating &&
-    !triggering;
-  const ariaSrc = aria?.hero_video_url || null;
+  const canBackfill = !!avatarSelfieUrl && !stylizedVideoUrl && !generating && !triggering;
 
   async function backfill() {
     setTriggering(true);
@@ -104,10 +93,10 @@ export function HeroVideo() {
             transition={{ duration: 0.6 }}
             className="w-full h-full object-cover"
           />
-        ) : ariaSrc ? (
+        ) : ariaVideoUrl ? (
           <motion.video
             key="aria-video"
-            src={ariaSrc}
+            src={ariaVideoUrl}
             autoPlay loop muted playsInline
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -115,7 +104,7 @@ export function HeroVideo() {
             transition={{ duration: 0.6 }}
             className="w-full h-full object-cover"
           />
-        ) : (
+        ) : ariaImageUrl ? (
           <motion.div
             key="aria-still"
             initial={{ opacity: 0 }}
@@ -123,12 +112,10 @@ export function HeroVideo() {
             className="w-full h-full flex items-center justify-center"
             style={{ background: "var(--surface2)" }}
           >
-            {aria?.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={aria.image_url} alt={aria.name || "Stylist"} className="h-full object-contain" />
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={ariaImageUrl} alt={ariaName || "Stylist"} className="h-full object-contain" />
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
       {/* Top-left badge: who is on screen */}

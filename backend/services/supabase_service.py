@@ -166,7 +166,7 @@ def delete_wardrobe_item(item_id: str) -> None:
 # ───────────────────────────── USERS / AVATAR ───────────────────────────── #
 
 # JSONB columns on `users` - dict/list values for these are json-encoded + cast.
-_USER_JSONB_COLS = {"selfie_urls", "color_profile"}
+_USER_JSONB_COLS = {"selfie_urls", "color_profile", "style_preferences", "body_analysis"}
 
 
 def upsert_user(user_id: str, **fields) -> dict:
@@ -349,3 +349,60 @@ def get_outfits(user_id: str) -> list:
         {"user_id": user_id},
         fetch="all",
     )
+
+
+# ───────────────────────────── STYLIST SESSIONS ───────────────────────────── #
+
+def create_stylist_session(user_id: str, messages: list, title: Optional[str] = None) -> dict:
+    """Create a new stylist chat session."""
+    return db.query(
+        """
+        INSERT INTO stylist_sessions (user_id, messages, title)
+        VALUES (:user_id, CAST(:messages AS JSONB), :title)
+        RETURNING *
+        """,
+        {"user_id": user_id, "messages": json.dumps(messages), "title": title},
+        fetch="one",
+    )
+
+
+def get_stylist_sessions(user_id: str, limit: int = 50) -> list:
+    """Get all stylist sessions for a user, ordered by most recent."""
+    return db.query(
+        """
+        SELECT * FROM stylist_sessions
+        WHERE user_id = :user_id
+        ORDER BY updated_at DESC
+        LIMIT :limit
+        """,
+        {"user_id": user_id, "limit": limit},
+        fetch="all",
+    )
+
+
+def get_stylist_session(session_id: str) -> Optional[dict]:
+    """Get a single stylist session by ID."""
+    return db.query(
+        "SELECT * FROM stylist_sessions WHERE id = :id",
+        {"id": session_id},
+        fetch="one",
+    )
+
+
+def update_stylist_session(session_id: str, messages: list, title: Optional[str] = None) -> dict:
+    """Update an existing stylist session (append messages or update title)."""
+    set_clause = "messages = CAST(:messages AS JSONB), updated_at = NOW()"
+    params = {"id": session_id, "messages": json.dumps(messages)}
+    if title is not None:
+        set_clause += ", title = :title"
+        params["title"] = title
+    return db.query(
+        f"UPDATE stylist_sessions SET {set_clause} WHERE id = :id RETURNING *",
+        params,
+        fetch="one",
+    ) or {}
+
+
+def delete_stylist_session(session_id: str) -> None:
+    """Delete a stylist session."""
+    db.query("DELETE FROM stylist_sessions WHERE id = :id", {"id": session_id}, fetch="none")

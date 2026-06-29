@@ -165,7 +165,7 @@ export default function FeaturesTab() {
                   cursor: "pointer",
                   letterSpacing: "0.02em",
                   transition: "color 0.2s",
-                  fontFamily: "DM Sans, sans-serif",
+                  fontFamily: "Public Sans, sans-serif",
                   whiteSpace: "nowrap",
                 }}
               >

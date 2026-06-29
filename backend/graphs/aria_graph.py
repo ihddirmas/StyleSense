@@ -147,7 +147,10 @@ def _ensure_profile(state: AriaState) -> dict:
 def _last_user_text(messages: list) -> str:
     for m in reversed(messages or []):
         if m.get("role") == "user":
-            return m.get("content", "") or ""
+            content = m.get("content", "")
+            if isinstance(content, list):
+                return " ".join(b.get("text", "") for b in content if b.get("type") == "text")
+            return content or ""
     return ""
 
 

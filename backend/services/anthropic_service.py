@@ -118,13 +118,18 @@ def stylist_chat(messages: list, wardrobe_items: list) -> str:
 
 def analyze_chat_image(image_url: str) -> str:
     """Claude vision pass on a photo shared in chat. Returns a clothing description."""
-    import httpx, base64
+    import httpx, base64 as b64_mod
     try:
-        _require_storage_url(image_url)
-        data = httpx.get(image_url, timeout=20, follow_redirects=False).content
-        b64 = base64.standard_b64encode(data).decode()
-        ext = image_url.split(".")[-1].split("?")[0].lower()
-        media = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
+        if image_url.startswith("data:"):
+            # Browser-sent data URI — no network fetch, so SSRF check doesn't apply.
+            header, b64 = image_url.split(",", 1)
+            media = header.split(":")[1].split(";")[0]
+        else:
+            _require_storage_url(image_url)
+            raw = httpx.get(image_url, timeout=20, follow_redirects=False).content
+            b64 = b64_mod.standard_b64encode(raw).decode()
+            ext = image_url.split(".")[-1].split("?")[0].lower()
+            media = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
         resp = client.messages.create(
             model=MODEL,
             max_tokens=200,
@@ -141,7 +146,7 @@ def analyze_chat_image(image_url: str) -> str:
         )
         return resp.content[0].text.strip()
     except Exception as e:
-        logger.warning(f"Chat image analysis failed: {e}")
+        logger.warning(f"Chat image analysis failed: {type(e).__name__}: {e}")
         return ""
 
 
@@ -149,6 +154,58 @@ def extract_item_ids(reply_text: str) -> list:
     """Pull out [ITEM:<id>] mentions from a stylist reply."""
     import re
     return re.findall(r"\[ITEM:([a-zA-Z0-9\-]+)\]", reply_text)
+
+
+def style_insight(wardrobe_items: list, recent_tryons: list) -> str:
+    """One sharp, non-obvious style insight from the user's wardrobe + try-on history."""
+    from collections import Counter, defaultdict
+
+    if not wardrobe_items:
+        return "Add a few anchor pieces and I'll tell you what I see."
+
+    cat_groups: dict = defaultdict(list)
+    for it in wardrobe_items:
+        cat_groups[(it.get("category") or "other").lower()].append(it)
+
+    tried_ids = {r["wardrobe_item_id"] for r in recent_tryons if r.get("wardrobe_item_id")}
+    id_counts = Counter(r["wardrobe_item_id"] for r in recent_tryons if r.get("wardrobe_item_id"))
+    most_tried_id = id_counts.most_common(1)[0][0] if id_counts else None
+    most_tried = next((it for it in wardrobe_items if it["id"] == most_tried_id), None)
+    untried = [it for it in wardrobe_items if it["id"] not in tried_ids]
+
+    cat_summary = ", ".join(
+        f"{c}: {len(items)}"
+        for c, items in sorted(cat_groups.items(), key=lambda x: -len(x[1]))
+    )
+    lines = [f"Wardrobe ({len(wardrobe_items)} items): {cat_summary}"]
+
+    if most_tried:
+        lines.append(
+            f"Most tried: {most_tried['name']} "
+            f"({most_tried.get('color', '?')}, {most_tried.get('category', '?')})"
+        )
+    if untried:
+        names = ", ".join(it["name"] for it in untried[:6])
+        suffix = "..." if len(untried) > 6 else ""
+        lines.append(f"Never tried ({len(untried)}): {names}{suffix}")
+
+    colors = [it.get("color") for it in wardrobe_items if it.get("color")]
+    if colors:
+        top = ", ".join(f"{c} ({n})" for c, n in Counter(colors).most_common(4))
+        lines.append(f"Colors: {top}")
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=120,
+        system=(
+            "You are a sharp personal stylist. Analyze this wardrobe data and give ONE non-obvious "
+            "insight in 1-2 sentences. Rules: never count items or recite stats back — observe "
+            "patterns, gaps, or hidden potential instead. Name specific items where relevant. "
+            "Use precise, editorial language. Never open with 'I' or 'Your wardrobe'."
+        ),
+        messages=[{"role": "user", "content": "\n".join(lines)}],
+    )
+    return response.content[0].text.strip()
 
 
 def suggest_category_from_url(page_title: str) -> str | None:

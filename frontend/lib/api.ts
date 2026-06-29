@@ -44,6 +44,13 @@ export async function apiDelete<T>(path: string): Promise<T> {
   return handle<T>(await fetch(`${API_BASE}${path}`, { method: "DELETE", headers }));
 }
 
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const headers = { "Content-Type": "application/json", ...(await authHeader()) };
+  return handle<T>(
+    await fetch(`${API_BASE}${path}`, { method: "PUT", headers, body: JSON.stringify(body) })
+  );
+}
+
 export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
   const headers = await authHeader();
   return handle<T>(await fetch(`${API_BASE}${path}`, { method: "POST", headers, body: formData }));

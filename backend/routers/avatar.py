@@ -438,6 +438,8 @@ async def regenerate_stylized(
     """On-demand 'Refresh my avatar'. Regenerates the realistic hero still (~2-5cr).
     Default model is Gemini Flash; pass ?model=gen4_image for the gen4 path.
     Pass ?video=true to also (re)generate the ramp-walking video (~60-100cr)."""
+    if model not in {"gemini_2.5_flash", "gen4_image"}:
+        raise HTTPException(400, f"Unsupported model: {model}")
     row = supabase_service.get_user(user["id"]) or {}
     selfie = color_service.best_face_source(row)
     if not selfie:

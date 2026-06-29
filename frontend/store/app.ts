@@ -21,6 +21,18 @@ interface AppState {
   stylizedVideoUrl: string | null;
   stylizedVideoStatus: "idle" | "generating" | "ready" | "failed" | "no_selfie" | null;
   setStylizedVideo: (url: string | null, status: AppState["stylizedVideoStatus"]) => void;
+  // Aria shared-admin stylist data. Fetched once, persisted so the hero video
+  // renders from cache on every subsequent visit without a network round-trip.
+  ariaVideoUrl: string | null;
+  ariaImageUrl: string | null;
+  ariaName: string | null;
+  setAria: (videoUrl: string | null, imageUrl: string | null, name: string | null) => void;
+  // Cached wardrobe + recent try-ons. Stale-while-revalidate: shown instantly
+  // from localStorage, replaced silently when the fresh fetch lands.
+  cachedWardrobe: import("@/types").WardrobeItem[];
+  cachedRecent: import("@/types").TryOnResult[];
+  setCachedWardrobe: (items: import("@/types").WardrobeItem[]) => void;
+  setCachedRecent: (results: import("@/types").TryOnResult[]) => void;
   // User-selected Runway models for Studio (persisted). See frontend/lib/models.ts.
   tryonModel: string;
   videoModel: string;
@@ -45,6 +57,11 @@ export const useAppStore = create<AppState>()(
       stylizedAvatarStatus: null,
       stylizedVideoUrl: null,
       stylizedVideoStatus: null,
+      ariaVideoUrl: null,
+      ariaImageUrl: null,
+      ariaName: null,
+      cachedWardrobe: [],
+      cachedRecent: [],
       tryonModel: "gen4_image",
       videoModel: "veo3.1",
       setTryonModel: (id) => set({ tryonModel: id }),
@@ -64,6 +81,9 @@ export const useAppStore = create<AppState>()(
       setSelfieOnly: (selfieUrl) => set({ avatarSelfieUrl: selfieUrl }),
       setStylized: (url, status) => set({ stylizedAvatarUrl: url, stylizedAvatarStatus: status }),
       setStylizedVideo: (url, status) => set({ stylizedVideoUrl: url, stylizedVideoStatus: status }),
+      setAria: (videoUrl, imageUrl, name) => set({ ariaVideoUrl: videoUrl, ariaImageUrl: imageUrl, ariaName: name }),
+      setCachedWardrobe: (items) => set({ cachedWardrobe: items }),
+      setCachedRecent: (results) => set({ cachedRecent: results }),
       resetUserData: () => set({
         selectedItemIds: [],
         avatarSelfieUrl: null,
@@ -73,6 +93,8 @@ export const useAppStore = create<AppState>()(
         stylizedVideoStatus: null,
         bodyType: null,
         bodyPhotoUrl: null,
+        cachedWardrobe: [],
+        cachedRecent: [],
       }),
     }),
     {
@@ -83,6 +105,11 @@ export const useAppStore = create<AppState>()(
         stylizedAvatarStatus: s.stylizedAvatarStatus,
         stylizedVideoUrl: s.stylizedVideoUrl,
         stylizedVideoStatus: s.stylizedVideoStatus,
+        ariaVideoUrl: s.ariaVideoUrl,
+        ariaImageUrl: s.ariaImageUrl,
+        ariaName: s.ariaName,
+        cachedWardrobe: s.cachedWardrobe,
+        cachedRecent: s.cachedRecent,
         tryonModel: s.tryonModel,
         videoModel: s.videoModel,
       }),

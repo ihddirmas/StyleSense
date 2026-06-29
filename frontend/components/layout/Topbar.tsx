@@ -47,7 +47,7 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
     <>
       <header
         className="flex items-center px-4 md:px-8 py-4 relative gap-4 md:gap-6 shrink-0"
-        style={{ borderBottom: "2px solid #513229" }}
+        style={{ borderBottom: "2px solid #3C2415" }}
       >
         {/* LEFT — Brand + tasks */}
         <div id="topbar-brand-group" className="flex items-center gap-2 md:gap-4 min-w-0 cursor-pointer" onClick={onBrandClick}>
@@ -83,8 +83,8 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
                 href={href}
                 className={
                   active
-                    ? "text-[#301c10] font-bold px-4 py-2 text-sm transition-all tracking-wide"
-                    : "text-[#7a5a4a] font-normal px-4 py-2 text-sm transition-all tracking-wide hover:text-[#301c10]"
+                    ? "text-[#3C2415] font-bold px-4 py-2 text-sm transition-all tracking-wide"
+                    : "text-[#84634c] font-normal px-4 py-2 text-sm transition-all tracking-wide hover:text-[#3C2415]"
                 }
                 style={{ textDecoration: "none" }}
               >
@@ -118,7 +118,7 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
                   width: 36, height: 36,
                   background: profile?.avatar_selfie_url ? "transparent" : "var(--gold-dim)",
                   color: "var(--gold)",
-                  border: "2px solid #513229",
+                  border: "2px solid #3C2415",
                 }}
               >
                 {profile?.avatar_selfie_url ? (
@@ -155,12 +155,12 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
                 )}
                 <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
                 <Link
-                  href="/onboarding"
+                  href="/settings"
                   onClick={() => setOpen(false)}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm"
                   style={{ color: "var(--text)", textDecoration: "none", borderRadius: 8 }}
                 >
-                  <User size={14} /> Avatar Setup
+                  <User size={14} /> Settings
                 </Link>
                 <button
                   onClick={signOut}
@@ -177,7 +177,7 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
 
       {/* Mobile nav menu */}
       {mobileMenuOpen && (
-        <nav className="md:hidden shrink-0 border-b" style={{ background: "var(--bg)", borderColor: "rgba(81,50,41,0.2)" }}>
+        <nav className="md:hidden shrink-0 border-b" style={{ background: "var(--bg)", borderColor: "rgba(60,36,21,0.2)" }}>
           <div className="px-2 py-2">
             {[
               ...PRIMARY_NAV,
@@ -196,7 +196,7 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
                   style={{
                     textDecoration: "none",
                     fontWeight: active ? 700 : 400,
-                    color: active ? "#301c10" : "#7a5a4a",
+                    color: active ? "#3C2415" : "#84634c",
                     background: active ? "var(--parchment)" : "transparent",
                   }}
                 >

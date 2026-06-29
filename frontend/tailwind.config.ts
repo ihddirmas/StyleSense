@@ -26,7 +26,7 @@ const config: Config = {
         red: "var(--red)",
       },
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
+        sans: ["Public Sans", "sans-serif"],
         display: ["Cormorant Garamond", "serif"],
       },
       borderRadius: {

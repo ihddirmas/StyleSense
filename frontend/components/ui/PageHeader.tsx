@@ -24,14 +24,14 @@ export function PageHeader({ eyebrow, title, subtitle, action, tutorialKey }: Pa
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="flex items-end justify-between mb-8"
+      className="flex items-end justify-between mb-5"
     >
       <div className="flex-1 min-w-0">
         {eyebrow && (
           <div
             className={title ? "text-xs mb-2" : "text-sm"}
             style={{
-              color: "var(--gold)",
+              color: "var(--text-muted)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
             }}
@@ -39,7 +39,7 @@ export function PageHeader({ eyebrow, title, subtitle, action, tutorialKey }: Pa
             {eyebrow}
           </div>
         )}
-        {title && <h1 className="font-display text-5xl leading-tight">{title}</h1>}
+        {title && <h1 className="font-display text-4xl leading-tight">{title}</h1>}
         {showSubtitle && (
           <div className="mt-3 flex items-start gap-2 max-w-xl">
             <p className="flex-1 text-sm" style={{ color: "var(--text-muted)" }}>

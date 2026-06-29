@@ -1,52 +1,76 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Shirt, MessageCircle, Plus, X } from "lucide-react";
+import { Sparkles, MessageCircle, Plus, X } from "lucide-react";
+import { StyleInsightCard } from "@/components/dashboard/StyleInsightCard";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { TryOnResult } from "@/types";
 import { HeroVideo } from "@/components/dashboard/HeroVideo";
 import { TryOnCarousel } from "@/components/dashboard/TryOnCarousel";
 import { useAuth } from "@/components/AuthProvider";
+import { useAppStore } from "@/store/app";
 import { apiGet } from "@/lib/api";
 import type { WardrobeItem } from "@/types";
 
-interface ArchiveEntry {
-  category: string;
-  count: number;
-  previews: string[];
-}
-
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [items, setItems] = useState<WardrobeItem[]>([]);
-  const [recent, setRecent] = useState<TryOnResult[]>([]);
+  const { cachedWardrobe, cachedRecent, setCachedWardrobe, setCachedRecent } = useAppStore();
+  const [items, setItems] = useState<WardrobeItem[]>(cachedWardrobe);
+  const [recent, setRecent] = useState<TryOnResult[]>(cachedRecent);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const [insight, setInsight] = useState<string | null>(null);
   const hintSeen = useSeenOnce("dashboard-welcome");
 
   useEffect(() => {
     if (!user) return;
-    apiGet<WardrobeItem[]>(`/api/wardrobe`).then(setItems).catch(() => {});
-    apiGet<TryOnResult[]>(`/api/tryon/recent?all=true`).then(r => setRecent(r.slice(0, 10))).catch(() => {});
-  }, [user]);
 
-  const archive = Object.values(
-    items.reduce<Record<string, ArchiveEntry>>((acc, it) => {
-      const key = it.category;
-      if (!acc[key]) acc[key] = { category: key, count: 0, previews: [] };
-      acc[key].count += 1;
-      if (acc[key].previews.length < 6) acc[key].previews.push(it.image_url);
-      return acc;
-    }, {})
-  ).sort((a, b) => b.count - a.count);
+    // Serve cached insight instantly while the fresh call runs in the background
+    const cacheKey = `si_${user.id}`;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const { text, ts } = JSON.parse(raw);
+        if (Date.now() - ts < 6 * 3600 * 1000) setInsight(text);
+      }
+    } catch {}
+
+    setFetchError(false);
+    Promise.allSettled([
+      apiGet<WardrobeItem[]>(`/api/wardrobe`),
+      apiGet<TryOnResult[]>(`/api/tryon/recent?all=true`),
+    ]).then(([wardrobeRes, recentRes]) => {
+      if (wardrobeRes.status === "fulfilled") {
+        setItems(wardrobeRes.value);
+        setCachedWardrobe(wardrobeRes.value);
+      } else setFetchError(true);
+      if (recentRes.status === "fulfilled") {
+        const s = recentRes.value.slice(0, 10);
+        setRecent(s);
+        setCachedRecent(s);
+      } else setFetchError(true);
+    });
+
+    // Insight: fire in parallel, never blocks loading state
+    apiGet<{ insight: string | null }>(`/api/stylist/insight`)
+      .then(d => {
+        if (d.insight) {
+          setInsight(d.insight);
+          try { localStorage.setItem(cacheKey, JSON.stringify({ text: d.insight, ts: Date.now() })); } catch {}
+        }
+      })
+      .catch(() => {});
+  }, [user, retryKey]);
+
+  const categoryCount = new Set(items.map(i => i.category)).size;
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pb-6">
+      <div className="flex flex-col gap-4 pb-6 max-w-3xl">
 
-        {/* ── Right column (shows first on mobile via order) ── */}
-        <div className="md:col-span-8 flex flex-col gap-4 order-1">
           <h1 className="font-display text-3xl md:text-4xl leading-tight">
             Your Digital Runway
           </h1>
@@ -72,19 +96,19 @@ export default function DashboardPage() {
             </motion.div>
           )}
 
-          {/* Stats row — derived from already-fetched data, no extra BE calls */}
-          {(items.length > 0 || recent.length > 0) && (
+          {/* Stats row */}
+          {(items.length > 0 || recent.length > 0) ? (
             <div className="flex items-center gap-3 flex-wrap -mt-1">
               {items.length > 0 && (
                 <span className="font-mono text-xs" style={{ color: "var(--text-dim)" }}>
                   {items.length} items
                 </span>
               )}
-              {archive.length > 0 && (
+              {categoryCount > 0 && (
                 <>
                   <span style={{ color: "var(--border)" }}>·</span>
                   <span className="font-mono text-xs" style={{ color: "var(--text-dim)" }}>
-                    {archive.length} {archive.length === 1 ? "category" : "categories"}
+                    {categoryCount} {categoryCount === 1 ? "category" : "categories"}
                   </span>
                 </>
               )}
@@ -97,13 +121,26 @@ export default function DashboardPage() {
                 </>
               )}
             </div>
-          )}
+          ) : null}
+
+          {/* Style insight — signals appear immediately, Claude text slots in when ready */}
+          <StyleInsightCard insight={insight} items={items} recent={recent} />
 
           {/* Hero ramp video */}
           <HeroVideo />
 
           {/* Recent try-ons — auto-advancing carousel */}
-          {recent.length > 0 && (
+          {fetchError ? (
+            <div className="text-sm" style={{ color: "var(--text-dim)" }}>
+              Couldn&apos;t load your wardrobe.{" "}
+              <button
+                onClick={() => setRetryKey(k => k + 1)}
+                style={{ textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
+              >
+                Retry
+              </button>
+            </div>
+          ) : recent.length > 0 ? (
             <div>
               <h3
                 className="text-xs font-semibold uppercase tracking-widest mb-3"
@@ -117,7 +154,7 @@ export default function DashboardPage() {
                 onOpen={(r) => setLightboxUrl(r.event_scene_url || r.result_image_url)}
               />
             </div>
-          )}
+          ) : null}
 
           {/* Lightbox */}
           <AnimatePresence>
@@ -166,90 +203,11 @@ export default function DashboardPage() {
               desc={recent.length > 0 ? undefined : "Get item picks for your next event."}
             />
           </div>
-        </div>
-
-        {/* ── Left column: wardrobe categories (shows second on mobile) ── */}
-        <div className="md:col-span-4 flex flex-col gap-3 order-2">
-          <h2 className="font-display text-2xl">Wardrobe</h2>
-          {archive.length === 0 ? (
-            <Link
-              href="/wardrobe"
-              className="surface surface-hover block p-6 text-center text-sm"
-              style={{ color: "var(--text-muted)", textDecoration: "none" }}
-            >
-              <Shirt size={22} className="mx-auto mb-2" style={{ color: "var(--text-dim)" }} />
-              Add items to build your archive.
-            </Link>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {archive.map((a, i) => (
-                <CategoryCard key={a.category} entry={a} index={i} />
-              ))}
-            </div>
-          )}
-        </div>
-
       </div>
     </div>
   );
 }
 
-function CategoryCard({ entry, index }: { entry: ArchiveEntry; index: number }) {
-  const [imgIdx, setImgIdx] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (entry.previews.length <= 1) return;
-    // Stagger start so cards don't all flip simultaneously
-    const delay = setTimeout(() => {
-      intervalRef.current = setInterval(() => {
-        setImgIdx(i => (i + 1) % entry.previews.length);
-      }, 2400);
-    }, index * 600);
-    return () => {
-      clearTimeout(delay);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [entry.previews.length, index]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.04 * index }}
-    >
-      <Link
-        href={`/wardrobe?category=${entry.category}`}
-        className="surface surface-hover block overflow-hidden relative"
-        style={{ textDecoration: "none", color: "inherit", border: "1px solid var(--ink)" }}
-      >
-        {/* Absolute stack: old image stays visible while new one fades in — no blink */}
-        <div className="relative w-full overflow-hidden" style={{ aspectRatio: "4/5" }}>
-          <AnimatePresence>
-            <motion.img
-              key={imgIdx}
-              src={entry.previews[imgIdx]}
-              alt={entry.category}
-              className="absolute inset-0 w-full h-full object-cover"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              // eslint-disable-next-line @next/next/no-img-element
-            />
-          </AnimatePresence>
-        </div>
-        <div
-          className="absolute bottom-0 left-0 right-0 px-2 py-1 flex items-center justify-between"
-          style={{ background: "var(--ink)", color: "var(--bg)" }}
-        >
-          <span className="text-xs font-mono capitalize">{entry.category}</span>
-          <span className="text-xs font-mono">{entry.count}</span>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
 
 function ActionCard({
   href,

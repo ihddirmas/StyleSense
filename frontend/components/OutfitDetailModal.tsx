@@ -18,7 +18,7 @@ export function OutfitDetailModal({
   onDeleted?: (id: string) => void;
 }) {
   const router = useRouter();
-  const { setSelected } = useAppStore();
+  const { setSelected, selectedItemIds } = useAppStore();
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [showShare, setShowShare] = useState(false);
@@ -33,8 +33,29 @@ export function OutfitDetailModal({
   }, [outfit.item_ids]);
 
   function tryThisOutfit() {
-    // Studio supports up to 2 items in the picker. Take the first 2.
-    setSelected(outfit.item_ids.slice(0, 2));
+    const catOf = (id: string) => (items.find((w) => w.id === id)?.category || "").toLowerCase();
+    const selected = [...selectedItemIds];
+
+    outfit.item_ids.forEach((id) => {
+      const cat = catOf(id);
+      if (cat === "accessories") {
+        if (!selected.includes(id)) selected.push(id);
+      } else if (cat === "dresses") {
+        const filtered = selected.filter((x) => !["dresses", "tops", "bottoms"].includes(catOf(x)));
+        selected.length = 0;
+        selected.push(...filtered, id);
+      } else if (cat === "tops" || cat === "bottoms") {
+        const filtered = selected.filter((x) => catOf(x) !== cat && catOf(x) !== "dresses");
+        selected.length = 0;
+        selected.push(...filtered, id);
+      } else {
+        const filtered = selected.filter((x) => catOf(x) !== cat);
+        selected.length = 0;
+        selected.push(...filtered, id);
+      }
+    });
+
+    setSelected(selected.slice(0, 6));
     onClose();
     router.push("/studio");
   }

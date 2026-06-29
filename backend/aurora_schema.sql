@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS users (
   color_profile_source_selfie     TEXT,
   -- full-body photo for body-aware styling (selfie stays the face source for try-on)
   full_body_url                   TEXT,
+  body_analysis                   JSONB,
+  -- v2h
+  style_preferences               JSONB DEFAULT '[]'::jsonb,
   created_at                      TIMESTAMPTZ DEFAULT NOW(),
   updated_at                      TIMESTAMPTZ DEFAULT NOW()
 );

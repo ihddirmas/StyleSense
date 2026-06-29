@@ -240,7 +240,7 @@ export default function StylistPage() {
                         fontSize: "0.9rem",
                       } : {
                         background: "var(--surface)",
-                        borderLeft: "3px solid #513229",
+                        borderLeft: "3px solid #3C2415",
                         borderTop: "1px solid var(--border)",
                         borderRight: "1px solid var(--border)",
                         borderBottom: "1px solid var(--border)",
@@ -738,7 +738,7 @@ function FormattedReply({
             ul: ({ children }) => <ul style={{ margin: "0.25rem 0 0.5rem", paddingLeft: "1.1rem", listStyle: "disc" }}>{children}</ul>,
             ol: ({ children }) => <ol style={{ margin: "0.25rem 0 0.5rem", paddingLeft: "1.2rem" }}>{children}</ol>,
             li: ({ children }) => <li style={{ margin: "0.1rem 0" }}>{children}</li>,
-            strong: ({ children }) => <strong style={{ color: "#513229", fontWeight: 700 }}>{children}</strong>,
+            strong: ({ children }) => <strong style={{ color: "#3C2415", fontWeight: 700 }}>{children}</strong>,
           }}
         >
           {stripped}

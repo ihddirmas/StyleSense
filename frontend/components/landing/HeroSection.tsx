@@ -12,7 +12,7 @@ gsap.registerPlugin(ScrollTrigger);
 const HERO_ITEMS = [
   { color: "#8b6fe8", label: "Silk Blouse",    badge: "Try-on ✓" },
   { color: "#c9a84c", label: "Linen Blazer",   badge: null         },
-  { color: "#3d1f14", label: "Trench Coat",    badge: "Try-on ✓" },
+  { color: "#3C2415", label: "Trench Coat",    badge: "Try-on ✓" },
   { color: "#5cb8b2", label: "Midi Dress",     badge: null         },
   { color: "#e87f8a", label: "Pleated Skirt",  badge: "Try-on ✓" },
   { color: "#6b8e5f", label: "Wide-leg Pants", badge: null         },
@@ -26,7 +26,7 @@ function HeroAppMockup() {
       {/* Slim sidebar */}
       <div style={{ width: 44, background: "#ede9d9", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 18, flexShrink: 0 }}>
         {[...Array(5)].map((_, i) => (
-          <div key={i} style={{ width: 20, height: 20, borderRadius: 3, background: i === 1 ? "var(--ink)" : "rgba(61,31,20,0.12)" }} />
+          <div key={i} style={{ width: 20, height: 20, borderRadius: 3, background: i === 1 ? "var(--ink)" : "rgba(60,36,21,0.12)" }} />
         ))}
       </div>
 
@@ -37,10 +37,10 @@ function HeroAppMockup() {
           <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>My Wardrobe</span>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             {["All", "Tops", "Dresses"].map((cat, i) => (
-              <span key={cat} style={{ fontSize: 9, padding: "3px 8px", border: "1px solid var(--border)", fontFamily: "DM Sans, sans-serif", color: i === 0 ? "var(--ink)" : "var(--text-muted)", background: i === 0 ? "rgba(61,31,20,0.06)" : "transparent" }}>{cat}</span>
+              <span key={cat} style={{ fontSize: 9, padding: "3px 8px", border: "1px solid var(--border)", fontFamily: "Public Sans, sans-serif", color: i === 0 ? "var(--ink)" : "var(--text-muted)", background: i === 0 ? "rgba(60,36,21,0.06)" : "transparent" }}>{cat}</span>
             ))}
           </div>
-          <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 9, padding: "4px 10px", fontFamily: "DM Sans, sans-serif", letterSpacing: "0.05em", cursor: "pointer", marginLeft: 4 }}>+ ADD</div>
+          <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 9, padding: "4px 10px", fontFamily: "Public Sans, sans-serif", letterSpacing: "0.05em", cursor: "pointer", marginLeft: 4 }}>+ ADD</div>
         </div>
 
         {/* Grid */}
@@ -56,7 +56,7 @@ function HeroAppMockup() {
                 <div style={{ width: "34%", height: "55%", background: item.color, opacity: 0.6, borderRadius: 1 }} />
               </div>
               <div style={{ padding: "5px 6px" }}>
-                <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "DM Sans, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</div>
+                <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</div>
               </div>
             </div>
           ))}
@@ -253,7 +253,7 @@ export default function HeroSection() {
               border: "1px solid var(--border)",
               letterSpacing: "0.06em",
               cursor: "pointer",
-              fontFamily: "DM Sans, sans-serif",
+              fontFamily: "Public Sans, sans-serif",
               transition: "all 0.2s",
             }}
             onMouseEnter={(e) => {
@@ -288,10 +288,10 @@ export default function HeroSection() {
             width: "100%",
             borderRadius: "10px 10px 0 0",
             overflow: "hidden",
-            border: "1px solid rgba(81,50,41,0.16)",
+            border: "1px solid rgba(60,36,21,0.16)",
             borderBottom: "none",
             boxShadow:
-              "0 -4px 0 0 rgba(61,31,20,0.04) inset, 0 40px 100px -20px rgba(61,31,20,0.22), 0 0 0 1px rgba(81,50,41,0.07)",
+              "0 -4px 0 0 rgba(60,36,21,0.04) inset, 0 40px 100px -20px rgba(60,36,21,0.22), 0 0 0 1px rgba(60,36,21,0.07)",
             opacity: 0,
           }}
         >
@@ -313,7 +313,7 @@ export default function HeroSection() {
                 <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c, opacity: 0.85 }} />
               ))}
             </div>
-            <div style={{ flex: 1, background: "rgba(61,31,20,0.06)", borderRadius: 4, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ flex: 1, background: "rgba(60,36,21,0.06)", borderRadius: 4, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
                 app.stylesense.ai/wardrobe
               </span>
@@ -321,7 +321,7 @@ export default function HeroSection() {
             {/* Window action icons */}
             <div style={{ display: "flex", gap: 6 }}>
               {[...Array(3)].map((_, i) => (
-                <div key={i} style={{ width: 14, height: 14, borderRadius: 2, background: "rgba(61,31,20,0.08)" }} />
+                <div key={i} style={{ width: 14, height: 14, borderRadius: 2, background: "rgba(60,36,21,0.08)" }} />
               ))}
             </div>
           </div>

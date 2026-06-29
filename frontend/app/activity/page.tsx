@@ -43,7 +43,7 @@ function StatusIcon({ status }: { status: TaskStatus }) {
 }
 
 export default function ActivityPage() {
-  const tasks = useTasks((s) => [...s.tasks].reverse());
+  const tasks = [...useTasks((s) => s.tasks)].reverse();
   const clearDone = useTasks((s) => s.clearDone);
   const remove = useTasks((s) => s.remove);
 

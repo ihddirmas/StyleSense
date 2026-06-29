@@ -15,7 +15,7 @@ function TopbarMock({ active }: { active: string }) {
       <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: 14, color: "var(--ink)", fontWeight: 600, letterSpacing: "0.02em" }}>StyleSense</span>
       <div style={{ display: "flex", gap: 16, marginLeft: 8 }}>
         {nav.map((n) => (
-          <span key={n} style={{ fontSize: 10, letterSpacing: "0.06em", color: n === active ? "var(--ink)" : "var(--text-muted)", fontWeight: n === active ? 700 : 400, fontFamily: "DM Sans, sans-serif" }}>{n}</span>
+          <span key={n} style={{ fontSize: 10, letterSpacing: "0.06em", color: n === active ? "var(--ink)" : "var(--text-muted)", fontWeight: n === active ? 700 : 400, fontFamily: "Public Sans, sans-serif" }}>{n}</span>
         ))}
       </div>
     </div>
@@ -29,10 +29,10 @@ function OnboardingMock() {
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5"><path d="M12 5v14M5 12h14"/></svg>
       </div>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontFamily: "DM Sans, sans-serif", marginBottom: 4 }}>Upload your selfie</div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "DM Sans, sans-serif" }}>One photo unlocks every try-on</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontFamily: "Public Sans, sans-serif", marginBottom: 4 }}>Upload your selfie</div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif" }}>One photo unlocks every try-on</div>
       </div>
-      <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 11, padding: "8px 20px", fontFamily: "DM Sans, sans-serif", letterSpacing: "0.06em", cursor: "pointer" }}>
+      <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 11, padding: "8px 20px", fontFamily: "Public Sans, sans-serif", letterSpacing: "0.06em", cursor: "pointer" }}>
         CHOOSE PHOTO
       </div>
       <div style={{ display: "flex", gap: 20, marginTop: 16 }}>
@@ -48,7 +48,7 @@ function WardrobeMock() {
   const items = [
     { color: "#8b6fe8", label: "Silk Blouse",    cat: "tops"      },
     { color: "#c9a84c", label: "Linen Blazer",   cat: "outerwear" },
-    { color: "#3d1f14", label: "Trench Coat",    cat: "outerwear" },
+    { color: "#3C2415", label: "Trench Coat",    cat: "outerwear" },
     { color: "#5cb8b2", label: "Midi Dress",     cat: "dresses"   },
     { color: "#e87f8a", label: "Pleated Skirt",  cat: "bottoms"   },
     { color: "#6b8e5f", label: "Wide-leg Pants", cat: "bottoms"   },
@@ -61,7 +61,7 @@ function WardrobeMock() {
         <div style={{ flex: 1, background: "#f4f2df", fontSize: 10, color: "var(--text-muted)", padding: "3px 10px", fontFamily: "JetBrains Mono, monospace", borderRadius: 3 }}>
           paste amazon / asos / any retailer URL…
         </div>
-        <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 10, padding: "3px 10px", fontFamily: "DM Sans, sans-serif", borderRadius: 2, cursor: "pointer" }}>ADD</div>
+        <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 10, padding: "3px 10px", fontFamily: "Public Sans, sans-serif", borderRadius: 2, cursor: "pointer" }}>ADD</div>
       </div>
       {/* Grid */}
       <div style={{ flex: 1, padding: "14px 16px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, overflow: "hidden" }}>
@@ -70,7 +70,7 @@ function WardrobeMock() {
             <div style={{ width: "100%", aspectRatio: "3/4", background: `${item.color}22`, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <div style={{ width: 28, height: 42, background: item.color, opacity: 0.55, borderRadius: 1 }} />
             </div>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "DM Sans, sans-serif", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{item.label}</div>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{item.label}</div>
             <div style={{ fontSize: 8, color: item.color, fontFamily: "JetBrains Mono, monospace", textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.cat}</div>
           </div>
         ))}
@@ -88,11 +88,11 @@ function StudioMock() {
         {[{ color: "#8b6fe8", label: "Silk Blouse" }, { color: "#5cb8b2", label: "Midi Dress" }].map((it) => (
           <div key={it.label} style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <div style={{ width: 28, height: 36, background: `${it.color}25`, border: `1px solid ${it.color}50`, flexShrink: 0 }} />
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "DM Sans, sans-serif", lineHeight: 1.3 }}>{it.label}</div>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", lineHeight: 1.3 }}>{it.label}</div>
           </div>
         ))}
         <div style={{ marginTop: "auto" }}>
-          <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 9, padding: "6px 8px", textAlign: "center", fontFamily: "DM Sans, sans-serif", letterSpacing: "0.06em", cursor: "pointer" }}>TRY ON ✦</div>
+          <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 9, padding: "6px 8px", textAlign: "center", fontFamily: "Public Sans, sans-serif", letterSpacing: "0.06em", cursor: "pointer" }}>TRY ON ✦</div>
         </div>
       </div>
 
@@ -106,7 +106,7 @@ function StudioMock() {
           </div>
           {/* "after" — person wearing */}
           <div style={{ position: "absolute", right: 0, top: 0, width: "50%", height: "100%", background: "#5cb8b210", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 20, height: 52, background: "#3d1f1440", borderRadius: 1 }}>
+            <div style={{ width: 20, height: 52, background: "#3C241540", borderRadius: 1 }}>
               <div style={{ width: "100%", height: 26, background: "#8b6fe880", borderRadius: "1px 1px 0 0" }} />
             </div>
           </div>
@@ -116,8 +116,8 @@ function StudioMock() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "DM Sans, sans-serif" }}>← Before</div>
-          <div style={{ fontSize: 9, color: "var(--ink)", fontFamily: "DM Sans, sans-serif", fontWeight: 600 }}>After →</div>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif" }}>← Before</div>
+          <div style={{ fontSize: 9, color: "var(--ink)", fontFamily: "Public Sans, sans-serif", fontWeight: 600 }}>After →</div>
         </div>
       </div>
     </div>
@@ -134,31 +134,31 @@ function AnimateMock() {
           <div style={{ width: "100%", aspectRatio: "9/16", background: "linear-gradient(160deg,#8b6fe830,#5cb8b220)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {/* Silhouette */}
             <div style={{ width: 30, height: 70, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#3d1f1440" }} />
+              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#3C241540" }} />
               <div style={{ width: 22, height: 32, background: "#8b6fe860", borderRadius: "2px 2px 0 0" }} />
-              <div style={{ width: 18, height: 20, background: "#3d1f1425", display: "flex", gap: 2 }}>
+              <div style={{ width: 18, height: 20, background: "#3C241525", display: "flex", gap: 2 }}>
                 <div style={{ flex: 1, background: "#5cb8b240" }} />
                 <div style={{ flex: 1, background: "#5cb8b240" }} />
               </div>
             </div>
             {/* Play button */}
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(61,31,20,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(60,36,21,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="#f7f1ea"><polygon points="5,3 19,12 5,21"/></svg>
               </div>
             </div>
             {/* Duration tag */}
-            <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(61,31,20,0.7)", color: "#f7f1ea", fontSize: 9, padding: "2px 5px", fontFamily: "JetBrains Mono, monospace" }}>5s</div>
+            <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(60,36,21,0.7)", color: "#f7f1ea", fontSize: 9, padding: "2px 5px", fontFamily: "JetBrains Mono, monospace" }}>5s</div>
           </div>
           <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)" }}>
-            <div style={{ fontSize: 10, color: "var(--text)", fontFamily: "DM Sans, sans-serif", fontWeight: 600 }}>Summer Editorial</div>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "DM Sans, sans-serif", marginTop: 2 }}>Silk Blouse · Midi Dress</div>
+            <div style={{ fontSize: 10, color: "var(--text)", fontFamily: "Public Sans, sans-serif", fontWeight: 600 }}>Summer Editorial</div>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", marginTop: 2 }}>Silk Blouse · Midi Dress</div>
           </div>
         </div>
         {/* Share row */}
         <div style={{ display: "flex", gap: 8 }}>
           {["↗ Share", "⬇ Download"].map((label) => (
-            <div key={label} style={{ fontSize: 9, padding: "5px 10px", border: "1px solid var(--border)", color: "var(--text-muted)", fontFamily: "DM Sans, sans-serif", cursor: "pointer" }}>{label}</div>
+            <div key={label} style={{ fontSize: 9, padding: "5px 10px", border: "1px solid var(--border)", color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", cursor: "pointer" }}>{label}</div>
           ))}
         </div>
       </div>
@@ -170,7 +170,7 @@ function AnimateMock() {
 
 function BrowserFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(81,50,41,0.15)", background: "var(--surface)", boxShadow: "0 32px 72px -12px rgba(61,31,20,0.28), 0 0 0 1px rgba(81,50,41,0.06)" }}>
+    <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(60,36,21,0.15)", background: "var(--surface)", boxShadow: "0 32px 72px -12px rgba(60,36,21,0.28), 0 0 0 1px rgba(60,36,21,0.06)" }}>
       {/* Chrome bar */}
       <div style={{ height: 36, background: "#ede9d9", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 12px", gap: 8, flexShrink: 0 }}>
         <div style={{ display: "flex", gap: 5 }}>
@@ -178,7 +178,7 @@ function BrowserFrame({ children }: { children: React.ReactNode }) {
             <div key={c} style={{ width: 9, height: 9, borderRadius: "50%", background: c, opacity: 0.8 }} />
           ))}
         </div>
-        <div style={{ flex: 1, background: "rgba(61,31,20,0.06)", borderRadius: 4, height: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ flex: 1, background: "rgba(60,36,21,0.06)", borderRadius: 4, height: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>app.stylesense.ai</span>
         </div>
       </div>

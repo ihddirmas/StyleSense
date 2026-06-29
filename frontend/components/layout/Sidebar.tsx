@@ -63,7 +63,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
           ? "w-16 opacity-100"
           : "w-0 opacity-0 overflow-hidden border-r-0 pointer-events-none",
       ].join(" ")}
-      style={{ borderColor: "#513229", background: "var(--bg)" }}
+      style={{ borderColor: "#3C2415", background: "var(--bg)" }}
     >
       <nav className="flex flex-col items-center gap-1 flex-1 w-full px-2">
         {navItems.map(({ href, icon: Icon, label, badge }) => {
@@ -78,7 +78,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
               style={{
                 height: 44,
                 color: active ? "#ffffff" : "var(--text-muted)",
-                background: active ? "#513229" : "transparent",
+                background: active ? "#3C2415" : "transparent",
                 textDecoration: "none",
               }}
             >
@@ -105,7 +105,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
           style={{
             height: 44,
             color: pathname === "/settings" ? "#ffffff" : "var(--text-muted)",
-            background: pathname === "/settings" ? "#513229" : "transparent",
+            background: pathname === "/settings" ? "#3C2415" : "transparent",
             textDecoration: "none",
           }}
         >

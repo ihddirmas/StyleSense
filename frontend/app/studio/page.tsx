@@ -6,17 +6,18 @@ import { motion } from "framer-motion";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import {
   Sparkles, MapPin, Film, Loader2, Save, ArrowLeftRight, Shirt, AlertCircle, Share2,
-  User as UserIcon, RefreshCw, Upload, X,
+  User as UserIcon, RefreshCw, Upload, X, Plus, Trash2, ChevronDown,
 } from "lucide-react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { GeneratingState } from "@/components/studio/GeneratingState";
 import { ShareToFriendModal } from "@/components/ShareToFriendModal";
-import { PromptDialog } from "@/components/ui/Dialog";
+import { PromptDialog, ConfirmDialog } from "@/components/ui/Dialog";
+import { AddItemModal } from "@/components/wardrobe/AddItemModal";
 import { useAppStore } from "@/store/app";
 import { useAuth } from "@/components/AuthProvider";
 import { useTasks, selectActiveTryOn } from "@/store/tasks";
-import { apiGet, apiPost, apiUpload } from "@/lib/api";
+import { apiGet, apiPost, apiUpload, apiDelete } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { TRYON_MODELS, VIDEO_MODELS } from "@/lib/models";
 import { useSeenOnce } from "@/lib/useSeenOnce";
@@ -51,8 +52,12 @@ export default function StudioPage() {
     videoModel,
     setTryonModel,
     setVideoModel,
+    cachedWardrobe,
+    cachedRecent,
+    setCachedWardrobe,
+    setCachedRecent,
   } = useAppStore();
-  const [items, setItems] = useState<WardrobeItem[]>([]);
+  const [items, setItems] = useState<WardrobeItem[]>(cachedWardrobe);
   const [showCompare, setShowCompare] = useState(false);
   const [eventInput, setEventInput] = useState("");
   const [motionPrompt, setMotionPrompt] = useState(MOTION_PRESETS[0].prompt);
@@ -74,8 +79,24 @@ export default function StudioPage() {
   // null = still loading; false = the user has uploaded no photo at all.
   const [hasPhoto, setHasPhoto] = useState<boolean | null>(null);
   const taskHintSeen = useSeenOnce("studio-task-hint");
-  const [recentTryOns, setRecentTryOns] = useState<TryOnResult[]>([]);
+  const [recentTryOns, setRecentTryOns] = useState<TryOnResult[]>(cachedRecent);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [pendingDelete, setPendingDelete] = useState<WardrobeItem | null>(null);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const CATEGORIES = ["all", "tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"];
+
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    if (!showFilterMenu) return;
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-filter-menu]")) setShowFilterMenu(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showFilterMenu]);
 
   // On-demand "Refresh my avatar": regenerates the realistic hero still (~5cr) + polls.
   async function refreshAvatar() {
@@ -118,6 +139,26 @@ export default function StudioPage() {
     }
   }
 
+  function handleQuickAddMany(items: WardrobeItem[]) {
+    setItems((prev) => [...items, ...prev]);
+    if (items.length > 0) {
+      const firstId = items[0].id;
+      const currentSelected = useAppStore.getState().selectedItemIds;
+      const next = currentSelected.includes(firstId) ? currentSelected : [...currentSelected, firstId].slice(-2);
+      setSelected(next);
+    }
+  }
+
+  async function performDelete(id: string) {
+    try {
+      await apiDelete(`/api/wardrobe/${id}`);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      toast.success("Item removed.");
+    } catch (e) {
+      toast.error(`Delete failed: ${e instanceof Error ? e.message : "unknown"}`);
+    }
+  }
+
   // Tasks live in a global store -> survive page navigation
   const startTryOn = useTasks((s) => s.startTryOn);
   const startEventScene = useTasks((s) => s.startEventScene);
@@ -141,8 +182,24 @@ export default function StudioPage() {
 
   useEffect(() => {
     if (!user) return;
-    apiGet<WardrobeItem[]>(`/api/wardrobe`).then(setItems).catch(() => {});
-    apiGet<TryOnResult[]>("/api/tryon/recent?all=true").then(r => setRecentTryOns(r.slice(0, 8))).catch(() => {});
+
+    // Show the cached selfie immediately — no shimmer on repeat visits.
+    const borrowed = typeof window !== "undefined" ? sessionStorage.getItem("studio_borrowed_face") : null;
+    if (borrowed) {
+      setActiveFaceUrl(borrowed);
+      sessionStorage.removeItem("studio_borrowed_face");
+      setHasPhoto(true);
+      setSelfiesLoaded(true);
+      toast.success("Using a borrowed face for this session");
+    } else if (avatarSelfieUrl) {
+      setActiveFaceUrl(avatarSelfieUrl);
+      setHasPhoto(true);
+      setSelfiesLoaded(true);
+    }
+
+    // Background fetches — update state and cache when they land.
+    apiGet<WardrobeItem[]>(`/api/wardrobe`).then(data => { setItems(data); setCachedWardrobe(data); }).catch(() => {});
+    apiGet<TryOnResult[]>("/api/tryon/recent?all=true").then(r => { const s = r.slice(0, 8); setRecentTryOns(s); setCachedRecent(s); }).catch(() => {});
     Promise.all([
       apiGet<{ selfie_urls: string[]; primary_url: string | null }>("/api/avatar/selfies").catch(() => null),
       apiGet<{ full_body_url: string | null }>("/api/avatar/full-body").catch(() => null),
@@ -151,24 +208,21 @@ export default function StudioPage() {
       const photoExists = !!(d?.primary_url || selfies.length || b?.full_body_url);
       setHasPhoto(photoExists);
       setAllSelfies(selfies);
-      const borrowed = typeof window !== "undefined" ? sessionStorage.getItem("studio_borrowed_face") : null;
-      if (borrowed) {
-        setActiveFaceUrl(borrowed);
-        sessionStorage.removeItem("studio_borrowed_face");
-        toast.success("Using a borrowed face for this session");
-      } else if (photoExists) {
-        setActiveFaceUrl((cur) => cur || d?.primary_url || selfies[0] || b?.full_body_url || avatarSelfieUrl);
-      } else {
-        // No photo on file -> don't fall back to a cached/other avatar.
-        setActiveFaceUrl(null);
+      if (!borrowed) {
+        if (photoExists) {
+          setActiveFaceUrl((cur) => cur || d?.primary_url || selfies[0] || b?.full_body_url || avatarSelfieUrl);
+        } else {
+          setActiveFaceUrl(null);
+        }
       }
       setSelfiesLoaded(true);
     }).catch(() => { setActiveFaceUrl(avatarSelfieUrl); setSelfiesLoaded(true); });
   }, [user, avatarSelfieUrl]);
 
-  // Fetch + poll stylized full-body avatar (auto-generated server-side on selfie upload).
+  // Poll stylized avatar only when it isn't already ready in the cache.
   useEffect(() => {
     if (!user) return;
+    if (stylizedAvatarStatus === "ready") return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function tick() {
@@ -183,13 +237,14 @@ export default function StudioPage() {
     }
     tick();
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [user, setStylized]);
+  }, [user, stylizedAvatarStatus, setStylized]);
 
   const selectedItems = items.filter((i) => selectedItemIds.includes(i.id));
   const effectiveSelfieUrl = activeFaceUrl || avatarSelfieUrl;
 
   const CAT_ORDER = ["tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"];
-  const groupedItems = items.reduce<Record<string, WardrobeItem[]>>((acc, it) => {
+  const filteredItems = filterCategory === "all" ? items : items.filter((i) => (i.category || "other").toLowerCase() === filterCategory);
+  const groupedItems = filteredItems.reduce<Record<string, WardrobeItem[]>>((acc, it) => {
     const cat = (it.category || "other").toLowerCase();
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(it);
@@ -322,7 +377,7 @@ export default function StudioPage() {
           <div className="surface p-5 mb-6 flex items-start gap-3" style={{ background: "var(--surface2)" }}>
             <AlertCircle size={18} style={{ color: "var(--text-muted)", flexShrink: 0, marginTop: 2 }} />
             <div className="text-sm">
-              <strong>Avatar not set.</strong> Upload your selfie in <Link href="/onboarding" style={{ color: "var(--text)", textDecoration: "underline" }}>Avatar Setup</Link> to enable try-ons.
+              <strong>Avatar not set.</strong> Upload your selfie in <Link href="/settings" style={{ color: "var(--text)", textDecoration: "underline" }}>Settings</Link> to enable try-ons.
             </div>
           </div>
         )}
@@ -331,15 +386,54 @@ export default function StudioPage() {
           <div className="surface p-5 mb-6 flex items-start gap-3">
             <Shirt size={18} style={{ color: "var(--text-dim)", flexShrink: 0, marginTop: 2 }} />
             <div className="text-sm">
-              <strong>Empty wardrobe.</strong> Add items in <Link href="/wardrobe" style={{ color: "var(--text)", textDecoration: "underline" }}>Wardrobe</Link> first.
+              <strong>Empty wardrobe.</strong>{" "}
+              <button onClick={() => setShowQuickAdd(true)} className="underline" style={{ color: "var(--gold)", background: "none", border: "none", cursor: "pointer", padding: 0, font: "inherit" }}>Add your first item</button>
             </div>
           </div>
         )}
+
+        <div className="flex items-center justify-between mb-3 relative" data-filter-menu>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Wardrobe</span>
+            <button
+              onClick={() => setShowFilterMenu((v) => !v)}
+              className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded"
+              style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer" }}
+            >
+              {filterCategory === "all" ? "All" : filterCategory} <ChevronDown size={10} />
+            </button>
+            {showFilterMenu && (
+              <div className="absolute top-full left-0 mt-1 surface z-50 py-1" style={{ minWidth: 120 }}>
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => { setFilterCategory(c); setShowFilterMenu(false); }}
+                    className="w-full text-left text-xs px-3 py-1.5"
+                    style={{
+                      background: filterCategory === c ? "var(--gold-dim)" : "none",
+                      color: filterCategory === c ? "var(--gold)" : "var(--text-muted)",
+                      border: "none", cursor: "pointer",
+                    }}
+                  >
+                    {c === "all" ? "All items" : c.charAt(0).toUpperCase() + c.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setShowQuickAdd(true)}
+            className="btn-secondary text-xs"
+            style={{ padding: "0.25rem 0.6rem", minHeight: "unset" }}
+          >
+            <Plus size={12} style={{ marginRight: 4 }} /> Add
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
-      <div className="lg:h-full flex flex-col lg:grid lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-3">
+      <div className="lg:h-full flex flex-col lg:grid lg:grid-cols-12 lg:grid-rows-1 gap-6">
+        <div className="lg:col-span-3 lg:min-h-0 lg:overflow-hidden">
           {/* Mobile: flat horizontal scroll */}
           <div className="flex gap-2 overflow-x-auto pb-2 lg:hidden">
             {items.map((it) => {
@@ -367,7 +461,12 @@ export default function StudioPage() {
           </div>
 
           {/* Desktop: grouped by category with section headers */}
-          <div className="hidden lg:flex lg:flex-col gap-3 overflow-y-auto max-h-[600px] pr-1">
+          <div className="hidden lg:flex lg:flex-col gap-3 overflow-y-auto h-full pr-1">
+            {sortedCategories.length === 0 && filterCategory !== "all" && (
+              <div className="text-xs text-center py-6" style={{ color: "var(--text-dim)" }}>
+                No items in {filterCategory}.
+              </div>
+            )}
             {sortedCategories.map((cat) => (
               <div key={cat}>
                 <div
@@ -383,19 +482,30 @@ export default function StudioPage() {
                       <button
                         key={it.id}
                         onClick={() => selectItem(it)}
-                        className="surface overflow-hidden relative"
+                        className="surface overflow-hidden relative group"
                         style={{ padding: 0, cursor: "pointer", background: "#fff", borderColor: sel ? "var(--ink)" : "var(--border)" }}
                         title={it.name}
                       >
                         <div className="relative w-full aspect-square">
                           <Image src={it.image_url} alt={it.name} fill className="object-cover" sizes="120px" />
+                          {sel && (
+                            <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                                 style={{ background: "var(--ink)", color: "var(--parchment)" }}>
+                              {selectedItemIds.indexOf(it.id) + 1}
+                            </div>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPendingDelete(it); }}
+                            className="absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                            style={{ background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", cursor: "pointer" }}
+                            aria-label={`Delete ${it.name}`}
+                          >
+                            <Trash2 size={10} />
+                          </button>
                         </div>
-                        {sel && (
-                          <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
-                               style={{ background: "var(--ink)", color: "var(--parchment)" }}>
-                            {selectedItemIds.indexOf(it.id) + 1}
-                          </div>
-                        )}
+                        <div className="px-1.5 py-1">
+                          <div className="truncate text-[10px]" style={{ color: "var(--text-dim)" }}>{it.name}</div>
+                        </div>
                       </button>
                     );
                   })}
@@ -405,7 +515,7 @@ export default function StudioPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-6 lg:min-h-0 lg:overflow-y-auto">
           {generating ? (
             <GeneratingState avatarUrl={effectiveSelfieUrl} itemUrls={activeTryOn?.itemImageUrls || []} startedAt={activeTryOn?.startedAt} />
           ) : resultUrl ? (
@@ -437,9 +547,9 @@ export default function StudioPage() {
               )}
             </motion.div>
           ) : (
-            <div className="flex justify-center">
+            <div className="flex justify-center lg:h-full">
               <div className="surface overflow-hidden relative"
-                   style={{ width: "100%", maxWidth: 360, aspectRatio: "3/4" }}>
+                   style={{ height: "min(100%, 72vh)", aspectRatio: "3/4" }}>
                 {hasPhoto !== false && (stylizedAvatarUrl || effectiveSelfieUrl) ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -492,7 +602,7 @@ export default function StudioPage() {
                       <div className="text-sm font-medium" style={{ color: "var(--text)" }}>Set up your avatar</div>
                       <div className="text-xs mt-1">
                         Add a selfie (and optionally a full-body photo) in{" "}
-                        <Link href="/onboarding" style={{ color: "var(--gold)" }}>Avatar Setup</Link>{" "}
+                        <Link href="/settings" style={{ color: "var(--gold)" }}>Settings</Link>{" "}
                         to use the Studio and Aria&apos;s manifest.
                       </div>
                     </div>
@@ -521,7 +631,7 @@ export default function StudioPage() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={r.event_scene_url || r.result_image_url}
-                      alt="Past try-on"
+                      alt={r.event_context || r.prompt_used || "Past try-on"}
                       style={{ width: 52, height: 52, objectFit: "cover", display: "block" }}
                     />
                   </button>
@@ -564,7 +674,7 @@ export default function StudioPage() {
           )}
         </div>
 
-        <div className="lg:col-span-3 flex flex-col gap-3 lg:overflow-y-auto">
+        <div className="lg:col-span-3 flex flex-col gap-3 lg:overflow-y-auto lg:min-h-0">
           {/* FACE picker - shows current selfie + lets user switch */}
           <div className="surface p-5">
             <div className="flex items-center justify-between mb-3">
@@ -929,6 +1039,23 @@ export default function StudioPage() {
         defaultValue={selectedItems.map((i) => i.name).join(" + ").slice(0, 60)}
         confirmLabel="Save outfit"
         onSubmit={saveOutfit}
+      />
+
+      <AddItemModal
+        isOpen={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+        onAddedMany={handleQuickAddMany}
+        compact
+      />
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        title="Remove this item?"
+        description={pendingDelete?.name}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => { if (pendingDelete) performDelete(pendingDelete.id); setPendingDelete(null); }}
       />
     </div>
   );

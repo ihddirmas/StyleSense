@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Public+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,32 +7,32 @@
 :root {
   color-scheme: light;
 
-  /* Backgrounds — warm cream */
-  --bg:        #F4F2DF;
-  --surface:   #f7f1ea;
-  --surface2:  #f0e9df;
-  --surface3:  #e6dcce;
+  /* Backgrounds — Pale Oak */
+  --bg:        #DDD9CE;
+  --surface:   #E5E1D6;
+  --surface2:  #D4CFBF;
+  --surface3:  #C6C0AE;
 
-  /* Borders — warm brown at low opacity */
-  --border:       rgba(81, 50, 41, 0.12);
-  --border-hover: rgba(81, 50, 41, 0.35);
-  --border-gold:  rgba(81, 50, 41, 0.12);
+  /* Borders — Espresso at low opacity */
+  --border:       rgba(60, 36, 21, 0.10);
+  --border-hover: rgba(60, 36, 21, 0.32);
+  --border-gold:  rgba(60, 36, 21, 0.10);
 
   /* Text */
-  --text:       #3d1f14;
-  --text-muted: #7a5a4a;
-  --text-dim:   #b89882;
+  --text:       #3C2415;
+  --text-muted: #84634c;
+  --text-dim:   #c2aa8e;
 
-  /* Brand accent — muted parchment */
-  --gold:       #E7E3BD;
-  --gold-light: #E2DEC8;
-  --gold-dim:   rgba(215, 212, 177, 0.25);
-  --gold-glow:  rgba(215, 212, 177, 0.40);
-  --on-gold:    #1a1410;  /* dark text on light gold backgrounds */
+  /* Brand accent — champagne yellow */
+  --gold:       #E7E2BC;
+  --gold-light: #EDE9CC;
+  --gold-dim:   rgba(231, 226, 188, 0.35);
+  --gold-glow:  rgba(231, 226, 188, 0.55);
+  --on-gold:    #3C2415;
 
-  /* Refined Minimal Outline palette */
-  --ink:       #513229;   /* exact brand brown */
-  --parchment: #D7D4B1;   /* active chip/tab fill */
+  /* Core palette */
+  --ink:       #3C2415;
+  --parchment: #DDD9CE;
 
   /* Accents */
   --purple: #8b6fe8;
@@ -42,10 +42,10 @@
   --red:    #e85c5c;
 
   /* Radii */
-  --radius-sm:  8px;
-  --radius:     12px;
-  --radius-lg:  16px;
-  --radius-btn: 0px;
+  --radius-sm:  6px;
+  --radius:     10px;
+  --radius-lg:  14px;
+  --radius-btn: 2px;
 }
 
 * { box-sizing: border-box; }
@@ -55,7 +55,7 @@ html, body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Public Sans', sans-serif;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -66,7 +66,7 @@ html, body {
 
 .font-display {
   font-family: 'Cormorant Garamond', serif;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.01em;
 }
 
@@ -108,8 +108,8 @@ html, body {
   color: var(--parchment);
 }
 .btn-primary:hover:not(:disabled) {
-  background: #3a2019;
-  border-color: #3a2019;
+  background: #2a1810;
+  border-color: #2a1810;
   color: var(--parchment);
 }
 
@@ -126,8 +126,20 @@ html, body {
 .btn-primary:disabled,
 .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
 
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible) { outline: none; }
+
 .input {
-  background: var(--surface);
+  background: #ece7d8;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
@@ -135,10 +147,21 @@ html, body {
   font-family: inherit;
   font-size: 0.95rem;
   width: 100%;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.input:focus { outline: none; border-color: var(--ink); }
+.input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-dim);
+}
 .input::placeholder { color: var(--text-dim); }
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #ece7d8 inset;
+  -webkit-text-fill-color: var(--text);
+  transition: background-color 9999s ease-in-out 0s;
+}
 
 .label {
   display: block;

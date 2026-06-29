@@ -12,7 +12,7 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from typing import Optional, Literal
 from services import supabase_service, wardrobe_vision_service
 from services.auth_service import current_user
-from services.image_service import validate_image_bytes
+from services.image_service import validate_image_bytes, fetch_image_from_url
 from services.garment_cleaner import clean_garment_bytes, clean_with_runway, runway_isolate_item, make_cutout
 from models.schemas import (
     AddWardrobeFromUrl,
@@ -286,13 +286,9 @@ async def detect_items_url(req: DetectFromUrlRequest, user = Depends(current_use
     The frontend then routes through the same review checklist + /add-multi (which
     isolates each garment on a clean background)."""
     try:
-        r = httpx.get(req.image_url, timeout=20.0, follow_redirects=True,
-                      headers={"User-Agent": "Mozilla/5.0 StyleSense/1.0"})
-        r.raise_for_status()
-        content = r.content
-        ctype = r.headers.get("content-type", "image/jpeg").split(";")[0].strip()
-        if ctype not in ("image/jpeg", "image/png", "image/webp"):
-            ctype = "image/jpeg"
+        content, ctype = fetch_image_from_url(req.image_url)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     except Exception as e:
         raise HTTPException(400, f"Could not download image from URL: {e}")
 

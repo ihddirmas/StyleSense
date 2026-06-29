@@ -20,15 +20,15 @@ export default function LandingNav() {
         onEnter: () => {
           gsap.to(navRef.current, {
             backdropFilter: "blur(16px)",
-            backgroundColor: "rgba(244, 242, 223, 0.92)",
-            borderBottomColor: "rgba(81, 50, 41, 0.12)",
+            backgroundColor: "rgba(221, 217, 206, 0.92)",
+            borderBottomColor: "rgba(60, 36, 21, 0.12)",
             duration: 0.35,
           });
         },
         onLeaveBack: () => {
           gsap.to(navRef.current, {
             backdropFilter: "blur(0px)",
-            backgroundColor: "rgba(244, 242, 223, 0)",
+            backgroundColor: "rgba(221, 217, 206, 0)",
             borderBottomColor: "transparent",
             duration: 0.3,
           });
@@ -60,7 +60,7 @@ export default function LandingNav() {
         right: 0,
         zIndex: 50,
         borderBottom: "1px solid transparent",
-        backgroundColor: "rgba(244, 242, 223, 0)",
+        backgroundColor: "rgba(221, 217, 206, 0)",
       }}
     >
       {/* Scroll progress bar */}
@@ -122,7 +122,7 @@ export default function LandingNav() {
                 border: "none",
                 cursor: "pointer",
                 letterSpacing: "0.04em",
-                fontFamily: "DM Sans, sans-serif",
+                fontFamily: "Public Sans, sans-serif",
                 transition: "color 0.2s",
                 padding: 0,
               }}
