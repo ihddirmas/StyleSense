@@ -6,11 +6,12 @@ import { motion } from "framer-motion";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import {
   Sparkles, MapPin, Film, Loader2, Save, ArrowLeftRight, Shirt, AlertCircle, Share2,
-  User as UserIcon, RefreshCw, Upload, X, Plus, Trash2, ChevronDown,
+  User as UserIcon, RefreshCw, Upload, X, Plus, Trash2, ChevronDown, Download,
 } from "lucide-react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { GeneratingState } from "@/components/studio/GeneratingState";
+import { downloadWithWatermark } from "@/components/studio/ShareCard";
 import { ShareToFriendModal } from "@/components/ShareToFriendModal";
 import { PromptDialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
@@ -983,6 +984,13 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               </button>
               <button className="btn-secondary w-full" onClick={() => setShowShare(true)} disabled={!resultId}>
                 <Share2 size={14} /> Share with friend
+              </button>
+              <button
+                className="btn-secondary w-full"
+                onClick={() => downloadWithWatermark(eventUrl || resultUrl!)}
+                disabled={!resultUrl}
+              >
+                <Download size={14} /> Download look
               </button>
             </div>
           )}
