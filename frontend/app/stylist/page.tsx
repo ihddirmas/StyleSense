@@ -734,11 +734,16 @@ function FormattedReply({
       <div className="aria-md">
         <ReactMarkdown
           components={{
-            p: ({ children }) => <p style={{ margin: "0 0 0.5rem" }}>{children}</p>,
-            ul: ({ children }) => <ul style={{ margin: "0.25rem 0 0.5rem", paddingLeft: "1.1rem", listStyle: "disc" }}>{children}</ul>,
-            ol: ({ children }) => <ol style={{ margin: "0.25rem 0 0.5rem", paddingLeft: "1.2rem" }}>{children}</ol>,
-            li: ({ children }) => <li style={{ margin: "0.1rem 0" }}>{children}</li>,
-            strong: ({ children }) => <strong style={{ color: "#3C2415", fontWeight: 700 }}>{children}</strong>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            p: ({ children, ...rest }: any) => <p style={{ margin: "0 0 0.5rem" }} {...rest}>{children}</p>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ul: ({ children, ...rest }: any) => <ul style={{ margin: "0.25rem 0 0.5rem", paddingLeft: "1.1rem", listStyle: "disc" }} {...rest}>{children}</ul>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ol: ({ children, ...rest }: any) => <ol style={{ margin: "0.25rem 0 0.5rem", paddingLeft: "1.2rem" }} {...rest}>{children}</ol>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            li: ({ children, ...rest }: any) => <li style={{ margin: "0.1rem 0" }} {...rest}>{children}</li>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            strong: ({ children, ...rest }: any) => <strong style={{ color: "#3C2415", fontWeight: 700 }} {...rest}>{children}</strong>,
           }}
         >
           {stripped}

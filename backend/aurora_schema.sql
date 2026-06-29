@@ -97,10 +97,21 @@ CREATE TABLE IF NOT EXISTS outfits (
   created_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- STYLIST CHAT SESSIONS
+CREATE TABLE IF NOT EXISTS stylist_sessions (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         UUID NOT NULL,
+  messages        JSONB NOT NULL DEFAULT '[]'::jsonb,
+  title           TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Helpful indexes for the per-user list queries.
-CREATE INDEX IF NOT EXISTS idx_wardrobe_user   ON wardrobe_items (user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_tryon_user_saved ON try_on_results (user_id, saved, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_outfits_user    ON outfits (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wardrobe_user             ON wardrobe_items (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tryon_user_saved          ON try_on_results (user_id, saved, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_outfits_user              ON outfits (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_stylist_sessions_user_updated ON stylist_sessions (user_id, updated_at DESC);
 
 -- Pre-seed the demo user (fixed UUID, mirrors the Supabase schema).
 INSERT INTO users (id, email, full_name)

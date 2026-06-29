@@ -1,4 +1,5 @@
 """Saved outfits CRUD."""
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from models.schemas import SaveOutfit
 from services import supabase_service
@@ -14,6 +15,11 @@ async def list_outfits(user = Depends(current_user)):
 
 @router.post("/save")
 async def save_outfit(req: SaveOutfit, user = Depends(current_user)):
+    for iid in req.item_ids:
+        try:
+            uuid.UUID(iid)
+        except ValueError:
+            raise HTTPException(422, f"Invalid item_id (not a UUID): {iid!r}")
     outfit = supabase_service.save_outfit(
         user_id=user["id"],
         name=req.name,
