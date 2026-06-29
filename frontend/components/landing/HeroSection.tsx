@@ -7,62 +7,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ── Wardrobe UI mockup shown inside the hero browser frame ─────────────────── //
-
-const HERO_ITEMS = [
-  { color: "#8b6fe8", label: "Silk Blouse",    badge: "Try-on ✓" },
-  { color: "#c9a84c", label: "Linen Blazer",   badge: null         },
-  { color: "#3C2415", label: "Trench Coat",    badge: "Try-on ✓" },
-  { color: "#5cb8b2", label: "Midi Dress",     badge: null         },
-  { color: "#e87f8a", label: "Pleated Skirt",  badge: "Try-on ✓" },
-  { color: "#6b8e5f", label: "Wide-leg Pants", badge: null         },
-  { color: "#b5905a", label: "Suede Loafers",  badge: null         },
-  { color: "#9e7e9e", label: "Cashmere Coat",  badge: "Try-on ✓" },
-];
-
 function HeroAppMockup() {
   return (
-    <div style={{ display: "flex", height: "100%", background: "var(--bg)", overflow: "hidden" }}>
-      {/* Slim sidebar */}
-      <div style={{ width: 44, background: "#ede9d9", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 18, flexShrink: 0 }}>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} style={{ width: 20, height: 20, borderRadius: 3, background: i === 1 ? "var(--ink)" : "rgba(60,36,21,0.12)" }} />
-        ))}
-      </div>
-
-      {/* Main panel */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* Panel header */}
-        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, background: "var(--surface)" }}>
-          <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>My Wardrobe</span>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            {["All", "Tops", "Dresses"].map((cat, i) => (
-              <span key={cat} style={{ fontSize: 9, padding: "3px 8px", border: "1px solid var(--border)", fontFamily: "Public Sans, sans-serif", color: i === 0 ? "var(--ink)" : "var(--text-muted)", background: i === 0 ? "rgba(60,36,21,0.06)" : "transparent" }}>{cat}</span>
-            ))}
-          </div>
-          <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 9, padding: "4px 10px", fontFamily: "Public Sans, sans-serif", letterSpacing: "0.05em", cursor: "pointer", marginLeft: 4 }}>+ ADD</div>
-        </div>
-
-        {/* Grid */}
-        <div style={{ flex: 1, padding: "12px 14px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, overflowY: "hidden" }}>
-          {HERO_ITEMS.map((item) => (
-            <div key={item.label} style={{ background: `${item.color}10`, border: `1px solid ${item.color}28`, display: "flex", flexDirection: "column", cursor: "pointer", position: "relative" }}>
-              {item.badge && (
-                <div style={{ position: "absolute", top: 5, right: 5, background: "var(--ink)", color: "#f7f1ea", fontSize: 7, padding: "2px 4px", fontFamily: "JetBrains Mono, monospace", zIndex: 1 }}>
-                  {item.badge}
-                </div>
-              )}
-              <div style={{ width: "100%", aspectRatio: "3/4", background: `${item.color}1a`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ width: "34%", height: "55%", background: item.color, opacity: 0.6, borderRadius: 1 }} />
-              </div>
-              <div style={{ padding: "5px 6px" }}>
-                <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <img
+      src="/screenshots/dashboard.png"
+      alt="StyleSense dashboard"
+      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left", display: "block" }}
+    />
   );
 }
 
@@ -73,7 +24,6 @@ export default function HeroSection() {
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const subtextRef = useRef<HTMLParagraphElement>(null);
   const ctasRef = useRef<HTMLDivElement>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const frameWrapRef = useRef<HTMLDivElement>(null);
 
@@ -85,12 +35,6 @@ export default function HeroSection() {
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       const ctx = gsap.context(() => {
         // ── Entrance sequence ──────────────────────────────────────────────── //
-        // Badge
-        gsap.fromTo(badgeRef.current,
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.6, delay: 0.05, ease: "power2.out" }
-        );
-
         // Headline words stagger up with 3D tilt
         const words = headlineRef.current?.querySelectorAll(".hero-word");
         if (words) {
@@ -144,7 +88,7 @@ export default function HeroSection() {
 
     mm.add("(prefers-reduced-motion: reduce)", () => {
       // Just show everything
-      gsap.set([badgeRef.current, headlineRef.current, subtextRef.current, ctasRef.current, frameRef.current], { opacity: 1, y: 0 });
+      gsap.set([headlineRef.current, subtextRef.current, ctasRef.current, frameRef.current], { opacity: 1, y: 0 });
     });
 
     return () => mm.revert();
@@ -173,24 +117,6 @@ export default function HeroSection() {
           width: "100%",
         }}
       >
-        {/* Eyebrow badge */}
-        <div
-          ref={badgeRef}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            border: "1px solid var(--border)",
-            padding: "5px 14px",
-            marginBottom: 32,
-            opacity: 0,
-          }}
-        >
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#e87f8a", display: "inline-block" }} />
-          <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
-            Runway AI Hackathon 2026
-          </span>
-        </div>
 
         <h1
           ref={headlineRef}

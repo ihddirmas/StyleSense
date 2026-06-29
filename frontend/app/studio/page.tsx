@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import {
   Sparkles, MapPin, Film, Loader2, Save, ArrowLeftRight, Shirt, AlertCircle, Share2,
-  User as UserIcon, RefreshCw, Upload, X, Plus, Trash2, ChevronDown, Download,
+  User as UserIcon, RefreshCw, X, Plus, Trash2, ChevronDown, Download,
 } from "lucide-react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -18,7 +18,7 @@ import { AddItemModal } from "@/components/wardrobe/AddItemModal";
 import { useAppStore } from "@/store/app";
 import { useAuth } from "@/components/AuthProvider";
 import { useTasks, selectActiveTryOn } from "@/store/tasks";
-import { apiGet, apiPost, apiUpload, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { TRYON_MODELS, VIDEO_MODELS } from "@/lib/models";
 import { useSeenOnce } from "@/lib/useSeenOnce";
@@ -68,14 +68,8 @@ export default function StudioPage() {
   const [quality, setQuality] = useState<"standard" | "pro">("pro");
   const [settingInput, setSettingInput] = useState("");
   const [enhancePrompt, setEnhancePrompt] = useState(true);
-  // Face picker: which selfie URL to use as the avatar reference for try-on
+  // Which selfie URL to use as the avatar reference for try-on (own primary, or a borrowed one)
   const [activeFaceUrl, setActiveFaceUrl] = useState<string | null>(null);
-  const [allSelfies, setAllSelfies] = useState<string[]>([]);
-  // Optional 2nd reference selfie (Gemini uses up to 2 selfies for sharper identity)
-  const [extraRefSelfies, setExtraRefSelfies] = useState<string[]>([]);
-  const [showFacePicker, setShowFacePicker] = useState(false);
-  const [customFaceUrl, setCustomFaceUrl] = useState("");
-  const [uploadingFace, setUploadingFace] = useState(false);
   const [refreshingAvatar, setRefreshingAvatar] = useState(false);
   // null = still loading; false = the user has uploaded no photo at all.
   const [hasPhoto, setHasPhoto] = useState<boolean | null>(null);
@@ -118,25 +112,6 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
       toast.error(`Refresh failed: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
       setRefreshingAvatar(false);
-    }
-  }
-
-  async function handleFaceUpload(file: File) {
-    setUploadingFace(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await apiUpload<{ selfie_url: string; selfie_urls?: string[] }>(
-        "/api/avatar/upload-selfie", fd
-      );
-      if (res.selfie_urls) setAllSelfies(res.selfie_urls);
-      switchFace(res.selfie_url);
-      setShowFacePicker(false);
-      toast.success("Face uploaded — using it for the next try-on.");
-    } catch (e) {
-      toast.error(`Upload failed: ${e instanceof Error ? e.message : "unknown"}`);
-    } finally {
-      setUploadingFace(false);
     }
   }
 
@@ -208,7 +183,6 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
       const selfies = d?.selfie_urls || [];
       const photoExists = !!(d?.primary_url || selfies.length || b?.full_body_url);
       setHasPhoto(photoExists);
-      setAllSelfies(selfies);
       if (!borrowed) {
         if (photoExists) {
           setActiveFaceUrl((cur) => cur || d?.primary_url || selfies[0] || b?.full_body_url || avatarSelfieUrl);
@@ -288,16 +262,6 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
     useTasks.getState().clearDone();
   }
 
-  // Switching the face must refresh the canvas: drop the lingering previous result
-  // so the idle view shows the NEWLY chosen face (otherwise the old model photo
-  // stays on screen and it looks like nothing changed).
-  function switchFace(url: string) {
-    setActiveFaceUrl(url);
-    setShowCompare(false);
-    setExtraRefSelfies([]);
-    useTasks.getState().clearDone();
-  }
-
   function generate() {
     if (!effectiveSelfieUrl) { toast.error("Upload your selfie first (Avatar Setup)."); return; }
     if (selectedItems.length === 0) { toast.error("Select at least one item from your wardrobe."); return; }
@@ -309,9 +273,6 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
       quality,
       model: tryonModel,
       enhancePrompt,
-      referenceSelfieUrls: extraRefSelfies.length
-        ? extraRefSelfies.filter((u) => u !== effectiveSelfieUrl)
-        : undefined,
     });
   }
 
@@ -393,35 +354,15 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-3 relative" data-filter-menu>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Wardrobe</span>
-            <button
-              onClick={() => setShowFilterMenu((v) => !v)}
-              className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded"
-              style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer" }}
-            >
-              {filterCategory === "all" ? "All" : filterCategory} <ChevronDown size={10} />
-            </button>
-            {showFilterMenu && (
-              <div className="absolute top-full left-0 mt-1 surface z-50 py-1" style={{ minWidth: 120 }}>
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => { setFilterCategory(c); setShowFilterMenu(false); }}
-                    className="w-full text-left text-xs px-3 py-1.5"
-                    style={{
-                      background: filterCategory === c ? "var(--gold-dim)" : "none",
-                      color: filterCategory === c ? "var(--gold)" : "var(--text-muted)",
-                      border: "none", cursor: "pointer",
-                    }}
-                  >
-                    {c === "all" ? "All items" : c.charAt(0).toUpperCase() + c.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="flex items-center gap-2 mb-3 relative" data-filter-menu>
+          <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Wardrobe</span>
+          <button
+            onClick={() => setShowFilterMenu((v) => !v)}
+            className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded"
+            style={{ background: "var(--surface2)", border: "1px solid var(--border-hover)", color: "var(--text-muted)", cursor: "pointer" }}
+          >
+            {filterCategory === "all" ? "All" : filterCategory} <ChevronDown size={10} />
+          </button>
           <button
             onClick={() => setShowQuickAdd(true)}
             className="btn-secondary text-xs"
@@ -429,12 +370,31 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           >
             <Plus size={12} style={{ marginRight: 4 }} /> Add
           </button>
+          {showFilterMenu && (
+            <div className="absolute top-full left-0 mt-1 surface z-50 py-1" style={{ minWidth: 120 }}>
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => { setFilterCategory(c); setShowFilterMenu(false); }}
+                  className="w-full text-left text-xs px-3 py-1.5"
+                  style={{
+                    background: filterCategory === c ? "var(--gold-dim)" : "none",
+                    color: filterCategory === c ? "var(--gold)" : "var(--text-muted)",
+                    border: "none", cursor: "pointer",
+                  }}
+                >
+                  {c === "all" ? "All items" : c.charAt(0).toUpperCase() + c.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
       <div className="lg:h-full flex flex-col lg:grid lg:grid-cols-12 lg:grid-rows-1 gap-6">
-        <div className="lg:col-span-3 lg:min-h-0 lg:overflow-hidden">
+        <div className="lg:col-span-3 lg:min-h-0 lg:h-full">
+          <div className="surface p-3 lg:h-full flex flex-col" style={{ background: "var(--surface3)" }}>
           {/* Mobile: flat horizontal scroll */}
           <div className="flex gap-2 overflow-x-auto pb-2 lg:hidden">
             {items.map((it) => {
@@ -443,8 +403,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 <button
                   key={it.id}
                   onClick={() => selectItem(it)}
-                  className="surface overflow-hidden relative flex-shrink-0 w-20 h-20"
-                  style={{ padding: 0, cursor: "pointer", background: "#fff", borderColor: sel ? "var(--ink)" : "var(--border)" }}
+                  className="overflow-hidden relative flex-shrink-0 w-20 h-20 rounded"
+                  style={{ padding: 0, cursor: "pointer", background: "#fff", border: sel ? "2px solid var(--ink)" : "1px solid var(--border-hover)" }}
                   title={it.name}
                 >
                   <div className="relative w-full aspect-square">
@@ -462,17 +422,17 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           </div>
 
           {/* Desktop: grouped by category with section headers */}
-          <div className="hidden lg:flex lg:flex-col gap-3 overflow-y-auto h-full pr-1">
+          <div className="hidden lg:flex lg:flex-col gap-3 overflow-y-auto flex-1 min-h-0 pr-1">
             {sortedCategories.length === 0 && filterCategory !== "all" && (
-              <div className="text-xs text-center py-6" style={{ color: "var(--text-dim)" }}>
+              <div className="text-xs text-center py-6" style={{ color: "var(--text-muted)" }}>
                 No items in {filterCategory}.
               </div>
             )}
             {sortedCategories.map((cat) => (
               <div key={cat}>
                 <div
-                  className="text-[9px] font-mono uppercase tracking-widest mb-1.5 px-0.5"
-                  style={{ color: "var(--text-dim)" }}
+                  className="text-[9px] font-mono uppercase tracking-widest mb-1.5 px-0.5 font-semibold"
+                  style={{ color: "var(--text-muted)" }}
                 >
                   {cat}
                 </div>
@@ -483,8 +443,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                       <button
                         key={it.id}
                         onClick={() => selectItem(it)}
-                        className="surface overflow-hidden relative group"
-                        style={{ padding: 0, cursor: "pointer", background: "#fff", borderColor: sel ? "var(--ink)" : "var(--border)" }}
+                        className="overflow-hidden relative group rounded"
+                        style={{ padding: 0, cursor: "pointer", background: "#fff", border: sel ? "2px solid var(--ink)" : "1px solid var(--border-hover)" }}
                         title={it.name}
                       >
                         <div className="relative w-full aspect-square">
@@ -504,8 +464,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                             <Trash2 size={10} />
                           </button>
                         </div>
-                        <div className="px-1.5 py-1">
-                          <div className="truncate text-[10px]" style={{ color: "var(--text-dim)" }}>{it.name}</div>
+                        <div className="px-1.5 py-1" style={{ background: "var(--surface)" }}>
+                          <div className="truncate text-[10px] font-medium" style={{ color: "var(--text)" }}>{it.name}</div>
                         </div>
                       </button>
                     );
@@ -513,6 +473,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 </div>
               </div>
             ))}
+          </div>
           </div>
         </div>
 
@@ -675,162 +636,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           )}
         </div>
 
-        <div className="lg:col-span-3 flex flex-col gap-3 lg:overflow-y-auto lg:min-h-0">
-          {/* FACE picker - shows current selfie + lets user switch */}
-          <div className="surface p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                Face on the model
-              </div>
-              <button
-                onClick={() => setShowFacePicker((v) => !v)}
-                className="text-xs flex items-center gap-1"
-                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
-              >
-                <RefreshCw size={11} /> Switch
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              {effectiveSelfieUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={effectiveSelfieUrl}
-                  alt="Active face"
-                  className="rounded-full object-cover"
-                  style={{ width: 56, height: 56, border: "2px solid var(--border)" }}
-                />
-              ) : (
-                <div className="rounded-full flex items-center justify-center"
-                     style={{ width: 56, height: 56, background: "var(--surface2)", border: "1px dashed var(--border)", color: "var(--text-dim)" }}>
-                  <UserIcon size={20} />
-                </div>
-              )}
-              <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                {effectiveSelfieUrl
-                  ? (activeFaceUrl && activeFaceUrl !== avatarSelfieUrl
-                      ? "Using a different face"
-                      : "Your primary selfie")
-                  : "Upload a selfie in Avatar Setup"}
-              </div>
-            </div>
-
-            {showFacePicker && (
-              <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
-                <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Your selfies
-                </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {allSelfies.map((url) => (
-                    <button
-                      key={url}
-                      onClick={() => { switchFace(url); setShowFacePicker(false); }}
-                      className="surface overflow-hidden"
-                      style={{
-                        width: 50, height: 50, padding: 0, cursor: "pointer",
-                        borderColor: url === effectiveSelfieUrl ? "var(--ink)" : undefined,
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-
-                {allSelfies.length > 1 && (
-                  <div className="mb-3">
-                    <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
-                      2nd reference selfie · Gemini
-                    </div>
-                    <div className="text-[10px] mb-2" style={{ color: "var(--text-dim)" }}>
-                      Add another angle to sharpen the face (Gemini only).
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {allSelfies.filter((u) => u !== effectiveSelfieUrl).map((url) => {
-                        const on = extraRefSelfies.includes(url);
-                        return (
-                          <button
-                            key={url}
-                            onClick={() => setExtraRefSelfies(on ? [] : [url])}
-                            className="surface overflow-hidden relative"
-                            style={{ width: 50, height: 50, padding: 0, cursor: "pointer", borderColor: on ? "var(--gold)" : undefined }}
-                            title={on ? "Remove 2nd reference" : "Use as 2nd reference"}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt="" className="w-full h-full object-cover" />
-                            {on && (
-                              <div className="absolute top-0 right-0 text-[9px] px-1 font-bold"
-                                   style={{ background: "var(--gold)", color: "var(--on-gold)" }}>2</div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Upload a photo
-                </div>
-                <label
-                  className="surface flex items-center justify-center cursor-pointer mb-3"
-                  style={{ height: 60, borderStyle: "dashed", color: "var(--text-dim)", fontSize: "0.75rem" }}
-                >
-                  {uploadingFace ? (
-                    <Loader2 size={16} className="spin" style={{ color: "var(--text-muted)" }} />
-                  ) : (
-                    <>
-                      <Upload size={14} style={{ marginRight: 6 }} />
-                      <span>Click to upload a face photo</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={(e) => e.target.files?.[0] && handleFaceUpload(e.target.files[0])}
-                    disabled={uploadingFace}
-                  />
-                </label>
-
-                <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Or paste an image URL
-                </div>
-                <div className="flex gap-1">
-                  <input
-                    className="input"
-                    placeholder="https://..."
-                    value={customFaceUrl}
-                    onChange={(e) => setCustomFaceUrl(e.target.value)}
-                    style={{ fontSize: "0.75rem" }}
-                  />
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      if (!customFaceUrl.trim()) return;
-                      setActiveFaceUrl(customFaceUrl.trim());
-                      setShowFacePicker(false);
-                      setCustomFaceUrl("");
-                      toast.success("Custom face set for this session");
-                    }}
-                    style={{ padding: "0.4rem 0.7rem", fontSize: "0.75rem" }}
-                  >
-                    Use
-                  </button>
-                </div>
-                {activeFaceUrl !== avatarSelfieUrl && (
-                  <button
-                    className="text-xs mt-3 underline"
-                    onClick={() => { setActiveFaceUrl(avatarSelfieUrl); setShowFacePicker(false); }}
-                    style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer" }}
-                  >
-                    ← Reset to my primary selfie
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="surface p-5">
+        <div className="lg:col-span-3 flex flex-col gap-2 lg:overflow-y-auto lg:min-h-0">
+          <div className="surface p-4">
             <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>
               Selected ({selectedItems.length}/2)
             </div>
@@ -896,17 +703,13 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 Clear & reset
               </button>
             )}
+            <button className="btn-secondary w-full mt-2" onClick={() => setShowCompare((v) => !v)} disabled={!resultUrl || !avatarSelfieUrl}>
+              <ArrowLeftRight size={14} /> {showCompare ? "Hide before/after" : "Before / After"}
+            </button>
           </div>
 
           <>
-            <div className="surface p-5">
-              <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Compare</div>
-              <button className="btn-secondary w-full" onClick={() => setShowCompare((v) => !v)} disabled={!resultUrl || !avatarSelfieUrl}>
-                <ArrowLeftRight size={14} /> {showCompare ? "Hide before/after" : "Before / After"}
-              </button>
-            </div>
-
-            <div className="surface p-5">
+            <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Place in event</div>
               <input className="input mb-2" placeholder="e.g. beach wedding"
                      value={eventInput} onChange={(e) => setEventInput(e.target.value)}
@@ -935,7 +738,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               </div>
             </div>
 
-            <div className="surface p-5">
+            <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Animate your current scene</div>
               {eventUrl && (
                 <div className="text-[11px] mb-2" style={{ color: "var(--gold)" }}>
@@ -975,7 +778,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           </>
 
           {resultUrl && (
-            <div className="surface p-5 space-y-2">
+            <div className="surface p-4 space-y-2">
               <button className="btn-primary w-full" onClick={() => setShowSaveDialog(true)}>
                 <Save size={14} /> Save as outfit
               </button>

@@ -6,163 +6,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ── Inline app-UI mockups (no real screenshots needed) ────────────────────── //
-
-function TopbarMock({ active }: { active: string }) {
-  const nav = ["DASHBOARD", "WARDROBE", "STUDIO", "OUTFITS", "ARIA"];
+function ScreenShot({ src, alt }: { src: string; alt: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", padding: "0 20px", height: 44, borderBottom: "1px solid var(--border)", gap: 24, background: "#f7f1ea", flexShrink: 0 }}>
-      <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: 14, color: "var(--ink)", fontWeight: 600, letterSpacing: "0.02em" }}>StyleSense</span>
-      <div style={{ display: "flex", gap: 16, marginLeft: 8 }}>
-        {nav.map((n) => (
-          <span key={n} style={{ fontSize: 10, letterSpacing: "0.06em", color: n === active ? "var(--ink)" : "var(--text-muted)", fontWeight: n === active ? 700 : 400, fontFamily: "Public Sans, sans-serif" }}>{n}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function OnboardingMock() {
-  return (
-    <div style={{ height: 360, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--bg)", gap: 16, padding: 32 }}>
-      <div style={{ width: 96, height: 96, borderRadius: "50%", border: "2px dashed var(--border-hover)", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface)" }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5"><path d="M12 5v14M5 12h14"/></svg>
-      </div>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontFamily: "Public Sans, sans-serif", marginBottom: 4 }}>Upload your selfie</div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif" }}>One photo unlocks every try-on</div>
-      </div>
-      <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 11, padding: "8px 20px", fontFamily: "Public Sans, sans-serif", letterSpacing: "0.06em", cursor: "pointer" }}>
-        CHOOSE PHOTO
-      </div>
-      <div style={{ display: "flex", gap: 20, marginTop: 16 }}>
-        {["natural light", "neutral bg", "full body"].map((tip) => (
-          <div key={tip} style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace", letterSpacing: "0.08em", textTransform: "uppercase" }}>✓ {tip}</div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function WardrobeMock() {
-  const items = [
-    { color: "#8b6fe8", label: "Silk Blouse",    cat: "tops"      },
-    { color: "#c9a84c", label: "Linen Blazer",   cat: "outerwear" },
-    { color: "#3C2415", label: "Trench Coat",    cat: "outerwear" },
-    { color: "#5cb8b2", label: "Midi Dress",     cat: "dresses"   },
-    { color: "#e87f8a", label: "Pleated Skirt",  cat: "bottoms"   },
-    { color: "#6b8e5f", label: "Wide-leg Pants", cat: "bottoms"   },
-  ];
-  return (
-    <div style={{ height: 360, display: "flex", flexDirection: "column", background: "var(--bg)" }}>
-      {/* URL bar */}
-      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", gap: 8, alignItems: "center", background: "var(--surface)", flexShrink: 0 }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        <div style={{ flex: 1, background: "#f4f2df", fontSize: 10, color: "var(--text-muted)", padding: "3px 10px", fontFamily: "JetBrains Mono, monospace", borderRadius: 3 }}>
-          paste amazon / asos / any retailer URL…
-        </div>
-        <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 10, padding: "3px 10px", fontFamily: "Public Sans, sans-serif", borderRadius: 2, cursor: "pointer" }}>ADD</div>
-      </div>
-      {/* Grid */}
-      <div style={{ flex: 1, padding: "14px 16px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, overflow: "hidden" }}>
-        {items.map((item) => (
-          <div key={item.label} style={{ background: `${item.color}14`, border: `1px solid ${item.color}30`, padding: "10px 8px 8px", display: "flex", flexDirection: "column", gap: 6, cursor: "pointer" }}>
-            <div style={{ width: "100%", aspectRatio: "3/4", background: `${item.color}22`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ width: 28, height: 42, background: item.color, opacity: 0.55, borderRadius: 1 }} />
-            </div>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{item.label}</div>
-            <div style={{ fontSize: 8, color: item.color, fontFamily: "JetBrains Mono, monospace", textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.cat}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StudioMock() {
-  return (
-    <div style={{ height: 360, display: "flex", background: "var(--bg)" }}>
-      {/* Left — item list */}
-      <div style={{ width: 100, borderRight: "1px solid var(--border)", padding: "12px 8px", display: "flex", flexDirection: "column", gap: 8, background: "var(--surface)", flexShrink: 0 }}>
-        <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Selected</div>
-        {[{ color: "#8b6fe8", label: "Silk Blouse" }, { color: "#5cb8b2", label: "Midi Dress" }].map((it) => (
-          <div key={it.label} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <div style={{ width: 28, height: 36, background: `${it.color}25`, border: `1px solid ${it.color}50`, flexShrink: 0 }} />
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", lineHeight: 1.3 }}>{it.label}</div>
-          </div>
-        ))}
-        <div style={{ marginTop: "auto" }}>
-          <div style={{ background: "var(--ink)", color: "#f7f1ea", fontSize: 9, padding: "6px 8px", textAlign: "center", fontFamily: "Public Sans, sans-serif", letterSpacing: "0.06em", cursor: "pointer" }}>TRY ON ✦</div>
-        </div>
-      </div>
-
-      {/* Right — canvas / result */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, position: "relative" }}>
-        {/* compare slider mock */}
-        <div style={{ width: "75%", aspectRatio: "3/4", position: "relative", overflow: "hidden", border: "1px solid var(--border)" }}>
-          {/* "before" — flat garment */}
-          <div style={{ position: "absolute", left: 0, top: 0, width: "50%", height: "100%", background: "#8b6fe814", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "2px solid var(--ink)" }}>
-            <div style={{ width: 32, height: 52, background: "#8b6fe860", borderRadius: 2 }} />
-          </div>
-          {/* "after" — person wearing */}
-          <div style={{ position: "absolute", right: 0, top: 0, width: "50%", height: "100%", background: "#5cb8b210", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 20, height: 52, background: "#3C241540", borderRadius: 1 }}>
-              <div style={{ width: "100%", height: 26, background: "#8b6fe880", borderRadius: "1px 1px 0 0" }} />
-            </div>
-          </div>
-          {/* slider handle */}
-          <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 22, height: 22, borderRadius: "50%", background: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "ew-resize", zIndex: 2 }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f7f1ea" strokeWidth="2.5"><path d="M21 12H3M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4"/></svg>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif" }}>← Before</div>
-          <div style={{ fontSize: 9, color: "var(--ink)", fontFamily: "Public Sans, sans-serif", fontWeight: 600 }}>After →</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AnimateMock() {
-  return (
-    <div style={{ height: 360, display: "flex", gap: 0, background: "var(--bg)" }}>
-      {/* Saved outfit card */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, gap: 12 }}>
-        <div style={{ width: "100%", maxWidth: 180, border: "1px solid var(--border)", background: "var(--surface)" }}>
-          {/* Video thumbnail */}
-          <div style={{ width: "100%", aspectRatio: "9/16", background: "linear-gradient(160deg,#8b6fe830,#5cb8b220)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {/* Silhouette */}
-            <div style={{ width: 30, height: 70, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#3C241540" }} />
-              <div style={{ width: 22, height: 32, background: "#8b6fe860", borderRadius: "2px 2px 0 0" }} />
-              <div style={{ width: 18, height: 20, background: "#3C241525", display: "flex", gap: 2 }}>
-                <div style={{ flex: 1, background: "#5cb8b240" }} />
-                <div style={{ flex: 1, background: "#5cb8b240" }} />
-              </div>
-            </div>
-            {/* Play button */}
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(60,36,21,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#f7f1ea"><polygon points="5,3 19,12 5,21"/></svg>
-              </div>
-            </div>
-            {/* Duration tag */}
-            <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(60,36,21,0.7)", color: "#f7f1ea", fontSize: 9, padding: "2px 5px", fontFamily: "JetBrains Mono, monospace" }}>5s</div>
-          </div>
-          <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)" }}>
-            <div style={{ fontSize: 10, color: "var(--text)", fontFamily: "Public Sans, sans-serif", fontWeight: 600 }}>Summer Editorial</div>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", marginTop: 2 }}>Silk Blouse · Midi Dress</div>
-          </div>
-        </div>
-        {/* Share row */}
-        <div style={{ display: "flex", gap: 8 }}>
-          {["↗ Share", "⬇ Download"].map((label) => (
-            <div key={label} style={{ fontSize: 9, padding: "5px 10px", border: "1px solid var(--border)", color: "var(--text-muted)", fontFamily: "Public Sans, sans-serif", cursor: "pointer" }}>{label}</div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <img
+      src={src}
+      alt={alt}
+      style={{ width: "100%", height: 360, objectFit: "cover", objectPosition: "top left", display: "block" }}
+    />
   );
 }
 
@@ -182,8 +32,6 @@ function BrowserFrame({ children }: { children: React.ReactNode }) {
           <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>app.stylesense.ai</span>
         </div>
       </div>
-      {/* App topbar */}
-      <TopbarMock active="" />
       {children}
     </div>
   );
@@ -197,28 +45,32 @@ const DEMOS = [
     title: "Upload your selfie",
     desc: "One photo is all it takes. StyleSense places you in every look, forever.",
     accent: "#8b6fe8",
-    Screen: OnboardingMock,
+    src: "/screenshots/dashboard.png",
+    alt: "StyleSense dashboard showing your digital runway",
   },
   {
     step: "02",
     title: "Add any garment",
     desc: "Paste a URL from Amazon, ASOS, or any retailer. We extract and clean the garment automatically.",
     accent: "#5cb8b2",
-    Screen: WardrobeMock,
+    src: "/screenshots/wardrobe.png",
+    alt: "StyleSense wardrobe with real clothing items",
   },
   {
     step: "03",
     title: "Try it on instantly",
     desc: "Photorealistic AI try-on in under 10 seconds. Compare before and after with the built-in slider.",
     accent: "#e87f8a",
-    Screen: StudioMock,
+    src: "/screenshots/studio.png",
+    alt: "StyleSense studio try-on interface",
   },
   {
     step: "04",
-    title: "Animate & share",
-    desc: "Turn any look into a 5-second ramp-walk video. Download or share directly from StyleSense.",
+    title: "Ask your AI stylist",
+    desc: "Chat with Aria, your personal stylist who knows every piece in your closet. Get outfit advice for any occasion.",
     accent: "#c9a84c",
-    Screen: AnimateMock,
+    src: "/screenshots/stylist.png",
+    alt: "StyleSense Aria AI stylist chat",
   },
 ];
 
@@ -383,24 +235,21 @@ export default function ProductDemo() {
             position: "relative",
           }}
         >
-          {DEMOS.map((demo, i) => {
-            const Screen = demo.Screen;
-            return (
-              <div
-                key={i}
-                ref={(el) => { screenRefs.current[i] = el; }}
-                style={{
-                  position: "absolute",
-                  inset: "32px 48px",
-                  opacity: i === 0 ? 1 : 0,
-                }}
-              >
-                <BrowserFrame>
-                  <Screen />
-                </BrowserFrame>
-              </div>
-            );
-          })}
+          {DEMOS.map((demo, i) => (
+            <div
+              key={i}
+              ref={(el) => { screenRefs.current[i] = el; }}
+              style={{
+                position: "absolute",
+                inset: "32px 48px",
+                opacity: i === 0 ? 1 : 0,
+              }}
+            >
+              <BrowserFrame>
+                <ScreenShot src={demo.src} alt={demo.alt} />
+              </BrowserFrame>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -69,36 +69,15 @@ export default function DashboardPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="flex flex-col gap-4 pb-6 max-w-3xl">
+      <div className="flex flex-col gap-5 pb-8 max-w-5xl mx-auto">
 
+        {/* Header row: title + inline stats */}
+        <div className="flex items-end justify-between gap-4 flex-wrap">
           <h1 className="font-display text-3xl md:text-4xl leading-tight">
             Your Digital Runway
           </h1>
-
-          {/* First-run welcome hint */}
-          {!hintSeen && !hintDismissed && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-start gap-2 mt-2 max-w-lg"
-            >
-              <p className="flex-1 text-sm" style={{ color: "var(--text-muted)" }}>
-                Add items to your Wardrobe, then head to Studio to try them on your avatar.
-              </p>
-              <button
-                onClick={() => setHintDismissed(true)}
-                aria-label="Dismiss hint"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: "2px", flexShrink: 0, lineHeight: 1 }}
-              >
-                <X size={14} />
-              </button>
-            </motion.div>
-          )}
-
-          {/* Stats row */}
-          {(items.length > 0 || recent.length > 0) ? (
-            <div className="flex items-center gap-3 flex-wrap -mt-1">
+          {(items.length > 0 || recent.length > 0) && (
+            <div className="flex items-center gap-3 flex-wrap pb-1">
               {items.length > 0 && (
                 <span className="font-mono text-xs" style={{ color: "var(--text-dim)" }}>
                   {items.length} items
@@ -121,88 +100,122 @@ export default function DashboardPage() {
                 </>
               )}
             </div>
-          ) : null}
+          )}
+        </div>
 
-          {/* Style insight — signals appear immediately, Claude text slots in when ready */}
-          <StyleInsightCard insight={insight} items={items} recent={recent} />
+        {/* First-run welcome hint */}
+        {!hintSeen && !hintDismissed && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex items-start gap-2 -mt-2 max-w-lg"
+          >
+            <p className="flex-1 text-sm" style={{ color: "var(--text-muted)" }}>
+              Add items to your Wardrobe, then head to Studio to try them on your avatar.
+            </p>
+            <button
+              onClick={() => setHintDismissed(true)}
+              aria-label="Dismiss hint"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: "2px", flexShrink: 0, lineHeight: 1 }}
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
 
-          {/* Hero ramp video */}
+        {/* Hero + Insight: side-by-side when insight present, full-width video otherwise */}
+        <div className="grid gap-4" style={{ gridTemplateColumns: insight || items.length > 0 ? "1fr 340px" : "1fr" }}>
           <HeroVideo />
-
-          {/* Recent try-ons — auto-advancing carousel */}
-          {fetchError ? (
-            <div className="text-sm" style={{ color: "var(--text-dim)" }}>
-              Couldn&apos;t load your wardrobe.{" "}
-              <button
-                onClick={() => setRetryKey(k => k + 1)}
-                style={{ textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
-              >
-                Retry
-              </button>
-            </div>
-          ) : recent.length > 0 ? (
-            <div>
-              <h3
-                className="text-xs font-semibold uppercase tracking-widest mb-3"
-                style={{ color: "var(--text-dim)" }}
-              >
-                Recent Try-Ons
-              </h3>
-              <TryOnCarousel
-                results={recent}
-                aspect="4/5"
-                onOpen={(r) => setLightboxUrl(r.event_scene_url || r.result_image_url)}
-              />
-            </div>
-          ) : null}
-
-          {/* Lightbox */}
-          <AnimatePresence>
-            {lightboxUrl && (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 flex items-center justify-center"
-                style={{ background: "rgba(8,8,13,0.92)", zIndex: 200 }}
-                onClick={() => setLightboxUrl(null)}
-              >
-                <button
-                  onClick={() => setLightboxUrl(null)}
-                  style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#fff", cursor: "pointer" }}
-                >
-                  <X size={22} />
-                </button>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={lightboxUrl}
-                  alt="Try-on"
-                  style={{ maxHeight: "88vh", maxWidth: "90vw", objectFit: "contain" }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </motion.div>
+          <div className="flex flex-col gap-4">
+            <StyleInsightCard insight={insight} items={items} recent={recent} />
+            {/* Action cards stacked in the sidebar column when insight is present */}
+            {(insight || items.length > 0) && (
+              <div className="flex flex-col gap-2">
+                <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
+                <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
+                <ActionCard href="/stylist" icon={<MessageCircle size={16} />} title="Ask your stylist" />
+              </div>
             )}
-          </AnimatePresence>
+          </div>
+        </div>
 
-          {/* Shortcut cards — always visible */}
-          <div className={`grid gap-3 ${recent.length > 0 ? "grid-cols-3" : "grid-cols-1 sm:grid-cols-3"}`}>
+        {/* Recent try-ons */}
+        {fetchError ? (
+          <div className="text-sm" style={{ color: "var(--text-dim)" }}>
+            Couldn&apos;t load your wardrobe.{" "}
+            <button
+              onClick={() => setRetryKey(k => k + 1)}
+              style={{ textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
+            >
+              Retry
+            </button>
+          </div>
+        ) : recent.length > 0 ? (
+          <div className="max-w-[280px]">
+            <h3
+              className="text-xs font-semibold uppercase tracking-widest mb-3"
+              style={{ color: "var(--text-dim)" }}
+            >
+              Recent Try-Ons
+            </h3>
+            <TryOnCarousel
+              results={recent}
+              aspect="4/5"
+              onOpen={(r) => setLightboxUrl(r.event_scene_url || r.result_image_url)}
+            />
+          </div>
+        ) : null}
+
+        {/* Shortcut cards — full-width row when user has no data yet */}
+        {!insight && items.length === 0 && (
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
             <ActionCard
               href="/wardrobe"
               icon={<Plus size={18} />}
               title="Add to closet"
-              desc={recent.length > 0 ? undefined : "Upload a photo or paste a product URL."}
+              desc="Upload a photo or paste a product URL."
             />
             <ActionCard
               href="/studio"
               icon={<Sparkles size={18} />}
               title="Try on an outfit"
-              desc={recent.length > 0 ? undefined : "Compose a look and see it on your avatar."}
+              desc="Compose a look and see it on your avatar."
             />
             <ActionCard
               href="/stylist"
               icon={<MessageCircle size={18} />}
               title="Ask your stylist"
-              desc={recent.length > 0 ? undefined : "Get item picks for your next event."}
+              desc="Get item picks for your next event."
             />
           </div>
+        )}
+
+        {/* Lightbox */}
+        <AnimatePresence>
+          {lightboxUrl && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 flex items-center justify-center"
+              style={{ background: "rgba(8,8,13,0.92)", zIndex: 200 }}
+              onClick={() => setLightboxUrl(null)}
+            >
+              <button
+                onClick={() => setLightboxUrl(null)}
+                style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#fff", cursor: "pointer" }}
+              >
+                <X size={22} />
+              </button>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightboxUrl}
+                alt="Try-on"
+                style={{ maxHeight: "88vh", maxWidth: "90vw", objectFit: "contain" }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

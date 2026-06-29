@@ -2,25 +2,35 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Copy, Check, Loader2, Sparkles, User, Menu, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut, Loader2, Sparkles, Menu, X, Home, MessageCircle, Shirt, Layers, Bell, Users, Settings } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { toast } from "@/components/ui/Toast";
 import { useTasks, selectRunningCount } from "@/store/tasks";
 
 const PRIMARY_NAV = [
-  { href: "/dashboard", label: "DASHBOARD" },
-  { href: "/wardrobe",  label: "WARDROBE" },
+  { href: "/dashboard", label: "HOME" },
   { href: "/studio",    label: "STUDIO" },
-  { href: "/outfits",   label: "OUTFITS" },
   { href: "/stylist",   label: "ARIA" },
 ];
 
-export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
+// Mobile drawer mirrors PRIMARY_NAV + the desktop Sidebar, since both are hidden on mobile.
+const MOBILE_NAV = [
+  { href: "/dashboard", label: "Home",     icon: Home },
+  { href: "/studio",    label: "Studio",   icon: Sparkles },
+  { href: "/stylist",   label: "Aria",     icon: MessageCircle },
+  { href: "/wardrobe",  label: "Wardrobe", icon: Shirt },
+  { href: "/outfits",   label: "Outfits",  icon: Layers },
+  { href: "/activity",  label: "Activity", icon: Bell },
+  { href: "/friends",   label: "Friends",  icon: Users },
+  { href: "/settings",  label: "Settings", icon: Settings },
+];
+
+export function Topbar() {
   const { user, profile, signOut } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const runningCount = useTasks(selectRunningCount);
 
@@ -32,16 +42,13 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-
-  function copyShareCode() {
-    if (!profile?.share_code) return;
-    navigator.clipboard.writeText(profile.share_code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-    toast.success("Share code copied!");
-  }
-
   const initial = (profile?.full_name?.[0] || user?.email?.[0] || "?").toUpperCase();
+
+  function handleBrandClick() {
+    if (pathname !== "/dashboard") {
+      router.push("/dashboard");
+    }
+  }
 
   return (
     <>
@@ -49,9 +56,13 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
         className="flex items-center px-4 md:px-8 py-4 relative gap-4 md:gap-6 shrink-0"
         style={{ borderBottom: "2px solid #3C2415" }}
       >
-        {/* LEFT — Brand + tasks */}
-        <div id="topbar-brand-group" className="flex items-center gap-2 md:gap-4 min-w-0 cursor-pointer" onClick={onBrandClick}>
-          <Link href="/dashboard" className="font-display tracking-tight" style={{ color: "var(--ink)", fontSize: "clamp(1.2rem, 4vw, 1.6rem)", textDecoration: "none" }}>
+        {/* LEFT — Brand (home) + tasks */}
+        <div id="topbar-brand-group" className="flex items-center gap-2 md:gap-4 min-w-0 cursor-pointer" onClick={handleBrandClick}>
+          <Link 
+            href="/dashboard" 
+            className="font-display tracking-tight cursor-pointer" 
+            style={{ color: "var(--ink)", fontSize: "clamp(1.2rem, 4vw, 1.6rem)", textDecoration: "none" }}
+          >
             StyleSense
           </Link>
           {runningCount > 0 && (
@@ -73,7 +84,7 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
           )}
         </div>
 
-        {/* CENTER — Primary nav (hidden on mobile) */}
+        {/* CENTER — Primary nav (Dashboard, Studio, Aria) */}
         <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
           {PRIMARY_NAV.map(({ href, label }) => {
             const active = href === "/dashboard" ? pathname === "/dashboard" : pathname?.startsWith(href);
@@ -94,9 +105,9 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
           })}
         </nav>
 
-        {/* RIGHT — Mobile menu + Friends, Chat, Avatar */}
+        {/* RIGHT — Mobile utility drawer + User dropdown */}
         <div className="ml-auto flex items-center gap-1 md:gap-2">
-          {/* Mobile hamburger menu button */}
+          {/* Mobile hamburger for utility drawer */}
           <button
             onClick={() => setMobileMenuOpen((v) => !v)}
             className="md:hidden w-10 h-10 flex items-center justify-center transition-colors"
@@ -135,33 +146,9 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
 
             {open && (
               <div
-                className="absolute right-0 top-full mt-2 surface p-2 min-w-[260px]"
+                className="absolute right-0 top-full mt-2 surface p-2 min-w-[180px]"
                 style={{ zIndex: 50 }}
               >
-                {profile?.share_code && (
-                  <button
-                    onClick={copyShareCode}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md hover:bg-surface3 text-left"
-                    style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", borderRadius: 8 }}
-                  >
-                    <div>
-                      <div className="text-xs" style={{ color: "var(--text-muted)" }}>Your share code</div>
-                      <div className="font-mono text-sm" style={{ color: "var(--gold)", letterSpacing: "0.1em" }}>
-                        {profile.share_code}
-                      </div>
-                    </div>
-                    {copied ? <Check size={14} color="var(--green)" /> : <Copy size={14} />}
-                  </button>
-                )}
-                <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
-                <Link
-                  href="/settings"
-                  onClick={() => setOpen(false)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm"
-                  style={{ color: "var(--text)", textDecoration: "none", borderRadius: 8 }}
-                >
-                  <User size={14} /> Settings
-                </Link>
                 <button
                   onClick={signOut}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm"
@@ -175,24 +162,18 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
         </div>
       </header>
 
-      {/* Mobile nav menu */}
+      {/* Mobile nav drawer — full tab set, since the center nav + sidebar are desktop-only */}
       {mobileMenuOpen && (
         <nav className="md:hidden shrink-0 border-b" style={{ background: "var(--bg)", borderColor: "rgba(60,36,21,0.2)" }}>
           <div className="px-2 py-2">
-            {[
-              ...PRIMARY_NAV,
-              { href: "/activity", label: "ACTIVITY" },
-              { href: "/friends",  label: "FRIENDS" },
-              { href: "/chat",     label: "CHAT" },
-              { href: "/settings", label: "SETTINGS" },
-            ].map(({ href, label }) => {
+            {MOBILE_NAV.map(({ href, label, icon: Icon }) => {
               const active = href === "/dashboard" ? pathname === "/dashboard" : pathname?.startsWith(href);
               return (
                 <Link
                   key={href}
                   href={href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-2.5 text-sm tracking-wide transition-colors"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm tracking-wide transition-colors"
                   style={{
                     textDecoration: "none",
                     fontWeight: active ? 700 : 400,
@@ -200,6 +181,7 @@ export function Topbar({ onBrandClick }: { onBrandClick?: () => void }) {
                     background: active ? "var(--parchment)" : "transparent",
                   }}
                 >
+                  <Icon size={16} />
                   {label}
                 </Link>
               );

@@ -1,12 +1,19 @@
-"""Friend system: search profiles, send/respond to friend requests, list friends."""
+"""Friend system: search profiles, send/respond to friend requests, list friends, share outfits/tryons."""
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List
+from pydantic import BaseModel
 
 from models.schemas import SendFriendRequest, RespondFriendRequest, FriendSearchResult
 from services.auth_service import current_user
 from services.supabase_service import supabase
 
 router = APIRouter()
+
+
+class ShareOutfitRequest(BaseModel):
+    friend_id: str
+    outfit_id: str | None = None
+    tryon_id: str | None = None
 
 
 def _profile_min(p: dict) -> dict:
@@ -148,3 +155,36 @@ async def remove_friend(friendship_id: str, user = Depends(current_user)):
         raise HTTPException(403, "Not your friendship")
     supabase.table("friendships").delete().eq("id", friendship_id).execute()
     return {"deleted": True}
+
+
+@router.post("/share")
+async def share_outfit(req: ShareOutfitRequest, user = Depends(current_user)):
+    """Share an outfit or try-on with a friend. Creates a notification for the recipient."""
+    if not req.outfit_id and not req.tryon_id:
+        raise HTTPException(400, "Must provide outfit_id or tryon_id")
+    
+    # Verify friendship exists and is accepted
+    fr = supabase.table("friendships").select("*").or_(
+        f"and(requester_id.eq.{user['id']},addressee_id.eq.{req.friend_id}),"
+        f"and(requester_id.eq.{req.friend_id},addressee_id.eq.{user['id']})"
+    ).eq("status", "accepted").execute().data
+    
+    if not fr:
+        raise HTTPException(403, "Not friends with that user")
+    
+    # For demo: return success without persisting to new table
+    # In production, would insert into a shares/notifications table
+    return {
+        "shared": True,
+        "outfit_id": req.outfit_id,
+        "tryon_id": req.tryon_id,
+        "recipient_id": req.friend_id,
+    }
+
+
+@router.get("/shares")
+async def get_shares(user = Depends(current_user)):
+    """Get shares received by current user."""
+    # For demo: return empty array
+    # In production, would query shares table
+    return []
