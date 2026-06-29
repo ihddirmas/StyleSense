@@ -12,7 +12,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-from routers import avatar, tryon, wardrobe, outfits, scrape, stylist, friends  # noqa: E402
+from routers import avatar, tryon, wardrobe, outfits, scrape, stylist, friends, chat  # noqa: E402
 
 app = FastAPI(
     title="StyleAI API",
@@ -39,6 +39,7 @@ app.include_router(outfits.router,   prefix="/api/outfits",   tags=["Outfits"])
 app.include_router(scrape.router,    prefix="/api/scrape",    tags=["Scrape"])
 app.include_router(stylist.router,   prefix="/api/stylist",   tags=["Stylist"])
 app.include_router(friends.router,   prefix="/api/friends",   tags=["Friends"])
+app.include_router(chat.router,      prefix="/api/chat",      tags=["Chat"])
 
 
 @app.get("/health")
