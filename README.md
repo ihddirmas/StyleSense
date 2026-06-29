@@ -99,6 +99,12 @@ flowchart TD
     Graphs -->|Knowledge sync| KB
 ```
 
+## Screenshots
+
+| Dashboard | Wardrobe | Studio | Stylist |
+|-----------|----------|--------|---------|
+| ![Dashboard](docs/screenshots/screenshot-dashboard.png) | ![Wardrobe](docs/screenshots/screenshot-wardrobe.png) | ![Studio](docs/screenshots/screenshot-studio.png) | ![Stylist](docs/screenshots/screenshot-stylist.png) |
+
 ## Local Setup
 
 ### Prerequisites

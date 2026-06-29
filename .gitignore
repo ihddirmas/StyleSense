@@ -30,6 +30,10 @@ desktop.ini
 .claude/
 .kilo/
 .superpowers/
+.agents/
+.remember/
+.playwright-mcp/
+skills-lock.json
 github-project-skill/
 graphify-out/
 temp_architecture.mmd
