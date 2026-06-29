@@ -19,22 +19,6 @@ Working demo, not a deployed product. Single judge laptop runs everything locall
 - **AI**: Runway API (gen4_image, gen4.5 video, characters) + Anthropic Claude (claude-haiku-4-5 for stylist chat)
 - **Garment cleanup**: Runway gen4_image_turbo re-synthesis (primary) + rembg local segmentation (fallback)
 
-## Run commands
-
-```powershell
-# Terminal 1 — Backend (always activate venv first)
-Set-Location "c:\Users\yasht.ASUS\OneDrive\Desktop\hackthon\runway_hackthon\backend"
-.\venv\Scripts\python.exe -m uvicorn main:app --port 8000 --log-level warning
-
-# Terminal 2 — Frontend
-cd c:\Users\yasht.ASUS\OneDrive\Desktop\hackthon\runway_hackthon\frontend
-npm run dev
-# Opens http://localhost:3000
-```
-
-Backend boots at http://localhost:8000 ; FastAPI docs at /docs.
-Frontend at http://localhost:3000 — middleware redirects unauthed traffic to /login.
-
 ## File layout
 
 ```
