@@ -132,6 +132,21 @@ export default function LandingNav() {
               {label}
             </button>
           ))}
+          <Link
+            href="/pricing"
+            style={{
+              fontSize: 14,
+              color: "var(--text-muted)",
+              textDecoration: "none",
+              letterSpacing: "0.04em",
+              fontFamily: "Public Sans, sans-serif",
+              transition: "color 0.2s",
+            }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text)")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text-muted)")}
+          >
+            Pricing
+          </Link>
         </div>
 
         {/* CTAs */}
