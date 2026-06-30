@@ -2,10 +2,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Settings, Bell, Shirt, Layers, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Settings, Bell, Shirt, Layers, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useTasks } from "@/store/tasks";
+import { apiGet } from "@/lib/api";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -17,6 +18,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const { user } = useAuth();
   const supabase = getSupabaseBrowser();
   const [pendingFriends, setPendingFriends] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const finishedTaskCount = useTasks((s) => s.tasks.filter((t) => t.status !== "running").length);
 
   useEffect(() => {
@@ -31,21 +33,29 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
     }
     load();
 
+    apiGet<{ unread: number }[]>("/api/chat/threads")
+      .then((threads) => { if (mounted) setUnreadMessages(threads.reduce((sum, t) => sum + (t.unread || 0), 0)); })
+      .catch(() => {});
+
     const channel = supabase
       .channel(`sidebar:${user.id}`)
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "friendships", filter: `addressee_id=eq.${user.id}` },
         () => setPendingFriends((n) => n + 1))
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `recipient_id=eq.${user.id}` },
+        () => setUnreadMessages((n) => n + 1))
       .subscribe();
 
     return () => { mounted = false; supabase.removeChannel(channel); };
   }, [user, supabase]);
 
   const navItems = [
-    { href: "/wardrobe", icon: Shirt,  label: "Wardrobe", badge: 0                },
-    { href: "/outfits",  icon: Layers, label: "Outfits",  badge: 0                },
-    { href: "/activity", icon: Bell,   label: "Activity", badge: finishedTaskCount },
-    { href: "/friends",  icon: Users,  label: "Friends",  badge: pendingFriends    },
+    { href: "/wardrobe", icon: Shirt,         label: "Wardrobe", badge: 0                },
+    { href: "/outfits",  icon: Layers,        label: "Outfits",  badge: 0                },
+    { href: "/chat",     icon: MessageCircle, label: "Chat",     badge: unreadMessages   },
+    { href: "/activity", icon: Bell,          label: "Activity", badge: finishedTaskCount },
+    { href: "/friends",  icon: Users,         label: "Friends",  badge: pendingFriends    },
   ];
 
   // Collapsed strip — just the chevron to re-open
