@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { LogOut, Loader2, Sparkles, Menu, X, Home, MessageCircle, Shirt, Layers, Bell, Users, Settings } from "lucide-react";
+import { LogOut, Loader2, Sparkles, Menu, X, Home, MessageCircle, Mail, Shirt, Layers, Bell, Users, Settings } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useTasks, selectRunningCount } from "@/store/tasks";
 import { useAppStore } from "@/store/app";
@@ -21,6 +21,7 @@ const MOBILE_NAV = [
   { href: "/stylist",   label: "Aria",     icon: MessageCircle },
   { href: "/wardrobe",  label: "Wardrobe", icon: Shirt },
   { href: "/outfits",   label: "Outfits",  icon: Layers },
+  { href: "/chat",      label: "Chat",     icon: Mail },
   { href: "/activity",  label: "Activity", icon: Bell },
   { href: "/friends",   label: "Friends",  icon: Users },
   { href: "/settings",  label: "Settings", icon: Settings },
