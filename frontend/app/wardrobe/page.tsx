@@ -109,7 +109,7 @@ export default function WardrobePage() {
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
       {loading ? (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="surface aspect-[3/4] shimmer" />
           ))}
@@ -125,7 +125,7 @@ export default function WardrobePage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <AnimatePresence>
             {filtered.map((item, i) => {
               const selected = selectedItemIds.includes(item.id);

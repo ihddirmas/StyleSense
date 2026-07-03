@@ -128,11 +128,11 @@ export default function DashboardPage() {
 
         {/* Hero + Insight: side-by-side when insight present, full-width video otherwise */}
         {insight || items.length > 0 ? (
-          <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 340px" }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
             <HeroVideo />
             <div className="flex flex-col gap-4">
               <StyleInsightCard insight={insight} items={items} recent={recent} />
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
                 <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
                 <ActionCard href="/stylist" icon={<MessageCircle size={16} />} title="Ask your stylist" />
@@ -155,7 +155,7 @@ export default function DashboardPage() {
             </button>
           </div>
         ) : recent.length > 0 ? (
-          <div className="max-w-[280px]">
+          <div className="max-w-sm">
             <h3
               className="text-xs font-semibold uppercase tracking-widest mb-3"
               style={{ color: "var(--text-dim)" }}
@@ -243,12 +243,12 @@ function ActionCard({
       style={{
         textDecoration: "none",
         color: "inherit",
-        padding: desc ? "20px" : "12px 16px",
+        padding: desc ? "20px" : "14px 16px",
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <div
-          className="flex items-center justify-center flex-shrink-0"
+          className="flex items-center justify-center flex-shrink-0 mt-0.5"
           style={{
             width: desc ? 36 : 28,
             height: desc ? 36 : 28,
@@ -259,9 +259,9 @@ function ActionCard({
         >
           {icon}
         </div>
-        <div className="min-w-0">
-          <div className={`font-display leading-tight ${desc ? "text-xl" : "text-base"}`}>{title}</div>
-          {desc && <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>{desc}</p>}
+        <div className="min-w-0 flex-1">
+          <div className={`font-display leading-tight ${desc ? "text-lg" : "text-sm"}`}>{title}</div>
+          {desc && <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{desc}</p>}
         </div>
       </div>
     </Link>

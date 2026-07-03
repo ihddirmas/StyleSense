@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send, MessagesSquare, Loader2, Sparkles, Image as ImageIcon, Layers, Users,
+  Send, MessagesSquare, Loader2, Sparkles, Image as ImageIcon, Layers, Users, ArrowLeft,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/components/AuthProvider";
@@ -96,6 +96,11 @@ function ChatInner() {
     router.replace(`/chat?with=${otherId}`);
   }
 
+  function clearThread() {
+    setActiveOther(null);
+    router.replace("/chat");
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="shrink-0">
@@ -106,9 +111,9 @@ function ChatInner() {
         />
       </div>
 
-      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
-        {/* LEFT: thread list */}
-        <div className="col-span-4 surface flex flex-col min-h-0">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1 min-h-0">
+        {/* LEFT: thread list — hidden on mobile once a chat is open */}
+        <div className={`md:col-span-4 surface flex-col min-h-0 ${activeOther ? "hidden md:flex" : "flex"}`}>
           <div className="px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
             <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
               Your conversations
@@ -134,10 +139,10 @@ function ChatInner() {
           </div>
         </div>
 
-        {/* RIGHT: active chat */}
-        <div className="col-span-8 surface flex flex-col min-h-0">
+        {/* RIGHT: active chat — hidden on mobile until a thread is picked */}
+        <div className={`md:col-span-8 surface flex-col min-h-0 ${activeOther ? "flex" : "hidden md:flex"}`}>
           {activeOther ? (
-            <ChatThread otherId={activeOther} onMessageSent={loadThreads} />
+            <ChatThread otherId={activeOther} onMessageSent={loadThreads} onBack={clearThread} />
           ) : (
             <div className="flex items-center justify-center h-full text-sm" style={{ color: "var(--text-muted)" }}>
               <div className="text-center">
@@ -194,7 +199,7 @@ function ThreadCard({ thread, active, onClick }: { thread: ThreadRow; active: bo
   );
 }
 
-function ChatThread({ otherId, onMessageSent }: { otherId: string; onMessageSent: () => void }) {
+function ChatThread({ otherId, onMessageSent, onBack }: { otherId: string; onMessageSent: () => void; onBack: () => void }) {
   const { user } = useAuth();
   const supabase = getSupabaseBrowser();
   const [other, setOther] = useState<ProfileMin | null>(null);
@@ -266,6 +271,14 @@ function ChatThread({ otherId, onMessageSent }: { otherId: string; onMessageSent
     <>
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+        <button
+          onClick={onBack}
+          className="md:hidden"
+          aria-label="Back to chats"
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, flexShrink: 0 }}
+        >
+          <ArrowLeft size={20} />
+        </button>
         <Avatar name={other?.full_name || other?.email || "?"} />
         <div className="flex-1">
           <div className="font-display text-xl">{other?.full_name || other?.email || "..."}</div>
