@@ -196,12 +196,11 @@ def style_insight(wardrobe_items: list, recent_tryons: list) -> str:
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=120,
+        max_tokens=80,
         system=(
-            "You are a sharp personal stylist. Analyze this wardrobe data and give ONE non-obvious "
-            "insight in 1-2 sentences. Rules: never count items or recite stats back — observe "
-            "patterns, gaps, or hidden potential instead. Name specific items where relevant. "
-            "Use precise, editorial language. Never open with 'I' or 'Your wardrobe'."
+            "You are a sharp personal stylist. Analyze this wardrobe data and give ONE insight "
+            "in exactly ONE sentence (no more). Observe patterns, gaps, or hidden potential. "
+            "Never count items, recite stats, use 'I', or mention 'your wardrobe'. Be precise."
         ),
         messages=[{"role": "user", "content": "\n".join(lines)}],
     )
