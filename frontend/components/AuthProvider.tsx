@@ -35,6 +35,9 @@ export interface Profile {
   share_code: string;
   avatar_url: string | null;
   avatar_selfie_url: string | null;
+  stylized_avatar_url: string | null;
+  stylized_avatar_video_url: string | null;
+  stylized_avatar_video_status: string | null;
 }
 
 interface AuthCtx {
@@ -61,10 +64,12 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
   const [loading, setLoading] = useState(false);
 
   const fetchProfile = useCallback(async (uid: string) => {
-    // users table has selfie/avatar fields; profiles table has share_code + social fields.
+    // users table has selfie/avatar/stylized fields; profiles table has share_code + social fields.
     // Merge both so the Profile context has everything.
     const [u, p] = await Promise.all([
-      supabase.from("users").select("*").eq("id", uid).single(),
+      supabase.from("users").select(
+        "id, email, full_name, username, avatar_url, avatar_selfie_url, stylized_avatar_url, stylized_avatar_video_url, stylized_avatar_video_status"
+      ).eq("id", uid).single(),
       supabase.from("profiles").select("share_code, username, full_name, avatar_url, email").eq("id", uid).single(),
     ]);
     if (u.data || p.data) {

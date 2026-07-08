@@ -13,7 +13,7 @@ interface StylizedVideoShape {
 }
 
 export function HeroVideo() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const {
     avatarSelfieUrl,
     stylizedVideoUrl,
@@ -26,6 +26,16 @@ export function HeroVideo() {
   } = useAppStore();
   const [triggering, setTriggering] = useState(false);
 
+  // Initialize stylized video from profile on auth load (avoid polling if already ready)
+  useEffect(() => {
+    if (!profile || stylizedVideoUrl !== null) return; // already loaded
+    if (profile.stylized_avatar_video_url && profile.stylized_avatar_video_status === "ready") {
+      setStylizedVideo(profile.stylized_avatar_video_url, "ready");
+    } else if (profile.stylized_avatar_video_status === "generating") {
+      setStylizedVideo(null, "generating");
+    }
+  }, [profile, stylizedVideoUrl, setStylizedVideo]);
+
   // Only fetch Aria once — store persists it so subsequent visits are instant.
   useEffect(() => {
     if (ariaVideoUrl !== null) return;
@@ -34,10 +44,11 @@ export function HeroVideo() {
     ).then((d) => setAria(d.hero_video_url, d.image_url, d.name)).catch(() => {});
   }, [ariaVideoUrl, setAria]);
 
-  // Only poll stylized-video if it's generating. If already ready, skip the call.
+  // Only poll stylized-video if it's generating. If already ready, don't poll.
   useEffect(() => {
     if (!user) return;
-    if (stylizedVideoStatus === "ready") return;
+    if (stylizedVideoStatus === "ready") return; // Already loaded from profile
+    if (!stylizedVideoStatus || stylizedVideoStatus === "idle") return; // Not generating
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     async function tick() {
@@ -63,10 +74,15 @@ export function HeroVideo() {
     setStylizedVideo(null, "generating" as never);
     try {
       await apiPost("/api/avatar/regenerate-stylized?video=true", {});
-      toast.success("Generating your ramp video... ~60s.");
+      toast.success("Generating your ramp video... ~60 seconds.");
     } catch (e) {
       setStylizedVideo(null, "failed" as never);
-      toast.error(`Could not start: ${e instanceof Error ? e.message : "unknown"}`);
+      const msg = e instanceof Error ? e.message : "unknown error";
+      if (msg.includes("409")) {
+        toast.error("You already have a ramp video! (Future: Premium tier will allow regeneration.)");
+      } else {
+        toast.error(`Could not start: ${msg}`);
+      }
     } finally {
       setTriggering(false);
     }
