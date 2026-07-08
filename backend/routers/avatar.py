@@ -437,13 +437,27 @@ async def regenerate_stylized(
 ):
     """On-demand 'Refresh my avatar'. Regenerates the realistic hero still (~2-5cr).
     Default model is Gemini Flash; pass ?model=gen4_image for the gen4 path.
-    Pass ?video=true to also (re)generate the ramp-walking video (~60-100cr)."""
+    Pass ?video=true to also (re)generate the ramp-walking video (~60-100cr).
+
+    Guard: prevents duplicate video generation if one is already ready/generating.
+    (Future: make this a premium feature with rate limiting per tier.)"""
     if model not in {"gemini_2.5_flash", "gen4_image"}:
         raise HTTPException(400, f"Unsupported model: {model}")
     row = supabase_service.get_user(user["id"]) or {}
     selfie = color_service.best_face_source(row)
     if not selfie:
         raise HTTPException(400, "No selfie or full-body photo to use. Upload one first.")
+
+    # Guard: prevent duplicate video generation (payment tier feature)
+    if video:
+        video_status = row.get("stylized_avatar_video_status")
+        if video_status in {"ready", "generating"}:
+            raise HTTPException(
+                409,
+                f"Ramp video already {video_status}. Regeneration limited to prevent credit waste. "
+                f"(Future: Premium tier feature.)"
+            )
+
     background_tasks.add_task(_bg_generate_stylized, user["id"], selfie, still_only=not video, model=model)
     return {"queued": True, "with_video": video, "model": model}
 
