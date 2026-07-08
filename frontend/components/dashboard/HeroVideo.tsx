@@ -136,19 +136,19 @@ export function HeroVideo() {
 
       {/* Top-left badge: who is on screen */}
       <div
-        className="absolute top-4 left-4 px-3 py-1 rounded-full flex items-center gap-2"
+        className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 rounded-full flex items-center gap-1.5 sm:gap-2"
         style={{
-          background: "rgba(8,8,13,0.6)",
-          border: "1px solid var(--border-gold)",
+          background: "rgba(8,8,13,0.7)",
+          border: "1px solid var(--border-hover)",
           backdropFilter: "blur(8px)",
         }}
       >
-        <Sparkles size={11} style={{ color: "var(--gold)" }} />
+        <Sparkles size={10} className="sm:w-3" style={{ color: "var(--gold)" }} />
         <span
-          className="text-xs"
+          className="text-[10px] sm:text-xs font-semibold"
           style={{ color: "var(--gold)", letterSpacing: "0.1em", textTransform: "uppercase" }}
         >
-          {showUser ? "You on the runway" : "Aria, your stylist"}
+          {showUser ? "You" : "Aria"}
         </span>
       </div>
 
@@ -159,16 +159,16 @@ export function HeroVideo() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute bottom-4 right-4 px-3 py-2 rounded-full flex items-center gap-2"
+            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2"
             style={{
-              background: "rgba(8,8,13,0.7)",
-              border: "1px solid var(--border-gold)",
+              background: "rgba(8,8,13,0.75)",
+              border: "1px solid var(--border-hover)",
               backdropFilter: "blur(8px)",
             }}
           >
-            <Loader2 size={12} className="spin" style={{ color: "var(--gold)" }} />
-            <span className="text-xs" style={{ color: "var(--text)" }}>
-              Creating your ramp video... ~60s
+            <Loader2 size={11} className="sm:w-3 spin" style={{ color: "var(--gold)" }} />
+            <span className="text-[10px] sm:text-xs font-medium" style={{ color: "var(--gold)" }}>
+              Generating... 60s
             </span>
           </motion.div>
         )}
@@ -183,12 +183,11 @@ export function HeroVideo() {
             exit={{ opacity: 0 }}
             onClick={backfill}
             disabled={triggering}
-            className="absolute bottom-4 right-4 px-3 py-2 rounded-full flex items-center gap-2"
+            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs"
             style={{
               background: "var(--gold)",
               color: "var(--on-gold)",
-              border: "1px solid var(--border-gold)",
-              fontSize: "0.78rem",
+              border: "1px solid var(--border-hover)",
               fontWeight: 600,
               cursor: triggering ? "not-allowed" : "pointer",
               boxShadow: "0 8px 24px -8px rgba(0,0,0,0.7)",

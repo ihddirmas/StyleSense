@@ -40,31 +40,31 @@ export function StyleInsightCard({
   if (!insight && !signals.length) return null;
 
   return (
-    <div className="surface" style={{ borderColor: "var(--border-gold)", padding: "20px 22px" }}>
+    <div className="surface" style={{ borderColor: "var(--border-hover)", padding: "16px md:20px md:22px" }}>
       <div className="flex items-center gap-2 mb-3">
         <Sparkles size={13} style={{ color: "var(--gold)" }} />
-        <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>
+        <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>
           Style Read
         </span>
       </div>
 
       {insight && (
-        <p className="font-display text-lg leading-snug" style={{ color: "var(--text)" }}>
+        <p className="font-display text-base sm:text-lg leading-snug" style={{ color: "var(--text)" }}>
           {insight}
         </p>
       )}
 
       {signals.length > 0 && (
         <div
-          className="flex flex-wrap gap-x-6 gap-y-2 mt-4 pt-4"
+          className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-x-6 sm:gap-y-2 mt-3 md:mt-4 pt-3 md:pt-4"
           style={{ borderTop: insight ? "1px solid var(--border)" : "none", marginTop: insight ? undefined : 0, paddingTop: insight ? undefined : 0 }}
         >
           {signals.map(s => (
             <div key={s.label}>
-              <div className="text-[9px] font-mono uppercase tracking-widest mb-0.5" style={{ color: "var(--text-dim)" }}>
+              <div className="text-[8px] sm:text-[9px] font-mono uppercase tracking-widest mb-0.5" style={{ color: "var(--text-dim)" }}>
                 {s.label}
               </div>
-              <div className="text-sm font-mono" style={{ color: "var(--text)" }}>
+              <div className="text-xs sm:text-sm font-mono" style={{ color: "var(--text)" }}>
                 {s.value}
               </div>
             </div>
