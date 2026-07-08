@@ -18,10 +18,10 @@
   --border-hover: rgba(60, 36, 21, 0.32);
   --border-gold:  rgba(60, 36, 21, 0.10);
 
-  /* Text */
+  /* Text — improved contrast for accessibility */
   --text:       #3C2415;
-  --text-muted: #84634c;
-  --text-dim:   #c2aa8e;
+  --text-muted: #6B4B38;
+  --text-dim:   #8B6F5C;
 
   /* Brand accent — champagne yellow */
   --gold:       #E7E2BC;
