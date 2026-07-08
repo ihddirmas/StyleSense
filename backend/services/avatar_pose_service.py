@@ -12,6 +12,7 @@ Pipeline:
 import asyncio
 import logging
 import httpx
+from io import BytesIO
 
 from runwayml import TaskFailedError, TaskTimeoutError
 
@@ -29,8 +30,10 @@ RAMP_WALK_PROMPT = (
     "The subject walks confidently forward toward the camera in a smooth catwalk "
     "strut with a natural model gait, subtle head movement and gentle hair sway, "
     "as the camera tracks softly. The look, character style and warm grey studio "
-    "background from the source image stay consistent. Seamless loopable motion, "
-    "smooth cinematic 5 second fashion runway clip."
+    "background from the source image stay consistent. CRITICAL: This must be a seamless "
+    "looping video where the LAST FRAME matches the FIRST FRAME exactly so it loops infinitely "
+    "smooth without any jump or stutter. Make the ending pose/position identical to the start. "
+    "Smooth cinematic 5 second fashion runway clip. 16:9 landscape orientation."
 )
 
 
@@ -60,6 +63,35 @@ STYLIZED_PROMPT_BODY = (
     "subtle gold rim light, background in sharp focus. Natural realistic skin texture with "
     "fine detail, high-resolution fashion magazine quality, shot on a full-frame camera."
 )
+
+
+async def _verify_video_aspect_ratio(video_bytes: bytes) -> tuple[bool, str]:
+    """
+    Check if video is 16:9 landscape. Runway sometimes ignores aspect ratio
+    requests. Returns (is_valid, reason).
+    """
+    try:
+        # Try to detect aspect ratio via ffmpeg if available
+        import subprocess
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "csv=p=0", "-"],
+            input=video_bytes, capture_output=True, timeout=10,
+        )
+        if result.returncode == 0:
+            w, h = map(int, result.stdout.decode().strip().split(","))
+            aspect = w / h if h else 0
+            # Accept 16:9 (1.777...) with some tolerance
+            if abs(aspect - (16/9)) < 0.05:
+                return True, f"✓ {w}x{h} (16:9)"
+            else:
+                return False, f"Wrong aspect {w}x{h} ({aspect:.2f}), expected 16:9"
+        else:
+            logger.warning("ffprobe check failed, assuming OK")
+            return True, "ffprobe unavailable (skipped check)"
+    except Exception as e:
+        logger.warning(f"Video aspect check failed: {e}")
+        return True, f"Check skipped: {e}"
 
 
 async def _safe_ref(user_id: str, url: str) -> str:
@@ -334,6 +366,13 @@ async def generate_stylized_video(
     async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as c:
         v = await c.get(runway_url)
         v.raise_for_status()
+
+    # Verify video is 16:9 landscape (Runway sometimes ignores ratio param)
+    is_correct, reason = await _verify_video_aspect_ratio(v.content)
+    if not is_correct:
+        logger.warning(f"User {user_id} stylized video: {reason}. Proceeding anyway.")
+    else:
+        logger.info(f"User {user_id} stylized video verified: {reason}")
 
     permanent_url = supabase_service.upload_to_storage(
         bucket="selfies",
