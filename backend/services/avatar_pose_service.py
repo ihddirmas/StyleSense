@@ -18,6 +18,7 @@ from runwayml import TaskFailedError, TaskTimeoutError
 
 from services import supabase_service
 from services.runway_service import client as runway_client, runway_animate
+from services.video_processor import fix_aspect_ratio_and_loop
 
 logger = logging.getLogger(__name__)
 
@@ -370,14 +371,21 @@ async def generate_stylized_video(
     # Verify video is 16:9 landscape (Runway sometimes ignores ratio param)
     is_correct, reason = await _verify_video_aspect_ratio(v.content)
     if not is_correct:
-        logger.warning(f"User {user_id} stylized video: {reason}. Proceeding anyway.")
+        logger.warning(f"User {user_id} stylized video aspect incorrect: {reason}. Post-processing...")
+        # Fix aspect ratio + create seamless palindromic loop in executor
+        loop = asyncio.get_running_loop()
+        video_bytes = await loop.run_in_executor(
+            None,
+            lambda: fix_aspect_ratio_and_loop(v.content),
+        )
     else:
         logger.info(f"User {user_id} stylized video verified: {reason}")
+        video_bytes = v.content
 
     permanent_url = supabase_service.upload_to_storage(
         bucket="selfies",
         user_id=user_id,
-        file_bytes=v.content,
+        file_bytes=video_bytes,
         filename="stylized-ramp.mp4",
         content_type="video/mp4",
     )
