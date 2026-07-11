@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { LogOut, Camera, Loader2, Star, Trash2, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAppStore } from "@/store/app";
+import { useTasks } from "@/store/tasks";
 import { useAuth } from "@/components/AuthProvider";
 import { TRYON_MODELS, VIDEO_MODELS } from "@/lib/models";
 import { apiGet, apiUpload, apiDelete } from "@/lib/api";
@@ -35,6 +36,9 @@ export default function SettingsPage() {
   const [fullBodyUrl, setFullBodyUrl] = useState<string | null>(null);
   const [uploadingFull, setUploadingFull] = useState(false);
   const [bodyAnalysis, setBodyAnalysis] = useState<string | null>(null);
+  const avatarTask = useTasks((s) =>
+    s.tasks.find((t) => (t.kind === "avatar_still" || t.kind === "avatar_video") && t.status === "running")
+  );
 
   const refreshSelfies = useCallback(async () => {
     try {
@@ -66,6 +70,9 @@ export default function SettingsPage() {
       if (res.selfie_urls) setSelfies(res.selfie_urls);
       await refreshSelfies();
       toast.success("Selfie uploaded.");
+      // Backend auto-kicks off stylized-avatar generation off this selfie;
+      // track it so it shows up in Activity instead of silently finishing.
+      useTasks.getState().watchAvatarStill();
     } catch (e) {
       toast.error(`Upload failed: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
@@ -110,6 +117,9 @@ export default function SettingsPage() {
       setFullBodyUrl(res.full_body_url || localUrl);
       setBodyAnalysis(res.body_analysis || "Hourglass silhouette · Warm autumn palette · Balanced proportions");
       toast.success("Body photo uploaded — style recommendations personalised.");
+      // Only actually kicks off generation server-side the first time (no
+      // avatar yet) — watchAvatarStill quietly no-ops otherwise.
+      useTasks.getState().watchAvatarStill();
     } catch {
       setBodyAnalysis("Hourglass silhouette · Warm autumn palette · Balanced proportions");
     } finally {
@@ -133,15 +143,25 @@ export default function SettingsPage() {
     "Delete one to upload another.";
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="shrink-0">
-        <PageHeader eyebrow="Preferences" tutorialKey="settings" subtitle="Generation quality, avatar photos, and account." />
-      </div>
+    <div className="h-full overflow-y-auto">
+      <PageHeader eyebrow="Preferences" tutorialKey="settings" subtitle="Generation quality, avatar photos, and account." />
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-5 pb-4">
+      {avatarTask && (
+        <div
+          className="flex items-center gap-2 px-3 py-2 mb-4"
+          style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}
+        >
+          <Loader2 size={14} className="spin" style={{ color: "var(--gold)" }} />
+          <span className="text-xs" style={{ color: "var(--text)" }}>
+            {avatarTask.kind === "avatar_video" ? "Generating your ramp-walk video…" : "Generating your stylized avatar…"}
+          </span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-8">
 
         {/* COL 1 — Generation quality + Account */}
-        <div className="flex flex-col gap-5 min-h-0 overflow-y-auto">
+        <div className="flex flex-col gap-5">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="surface p-6">
             <h2 className="font-display text-2xl mb-1">Generation quality</h2>
             <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
@@ -163,7 +183,7 @@ export default function SettingsPage() {
         </div>
 
         {/* COL 2 — Face photos + Body silhouette + Body analysis */}
-        <div className="flex flex-col gap-5 min-h-0 overflow-y-auto">
+        <div className="flex flex-col gap-5">
           {/* Face photos */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="surface p-6">
             <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink)", fontWeight: 600 }}>
@@ -186,13 +206,13 @@ export default function SettingsPage() {
                     )}
                     {!isPrimary && (
                       <button onClick={() => handleSetPrimary(url)}
-                        className="absolute top-1 left-1 px-1.5 py-0.5 text-[10px] opacity-0 group-hover:opacity-100 transition flex items-center gap-1"
+                        className="absolute top-1 left-1 px-1.5 py-0.5 text-[10px] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition flex items-center gap-1"
                         style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer" }}>
                         <Star size={9} /> Set primary
                       </button>
                     )}
                     <button onClick={() => setPendingDelete(url)}
-                      className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition"
+                      className="absolute top-1 right-1 p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
                       style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--red)", cursor: "pointer" }}
                       aria-label="Remove">
                       <Trash2 size={10} />
@@ -202,7 +222,7 @@ export default function SettingsPage() {
               })}
               {selfies.length < 3 && (
                 <label className="flex flex-col items-center justify-center cursor-pointer flex-shrink-0"
-                  style={{ width: 100, height: 122, border: "2px dashed rgba(60,36,21,0.45)", color: "var(--text-dim)" }}>
+                  style={{ width: 100, height: 122, border: "2px dashed rgba(60,36,21,0.45)", color: "var(--text-muted)" }}>
                   {uploading
                     ? <Loader2 size={20} className="spin" style={{ color: "var(--gold)" }} />
                     : selfies.length === 0
@@ -266,7 +286,7 @@ export default function SettingsPage() {
             <div className="flex items-start gap-3">
               <label className="flex flex-col items-center justify-center cursor-pointer flex-shrink-0"
                 style={{ width: 72, height: 90, border: fullBodyUrl ? "2px solid #3C2415" : "2px dashed rgba(60,36,21,0.45)",
-                  color: "var(--text-dim)", position: "relative", overflow: "hidden" }}>
+                  color: "var(--text-muted)", position: "relative", overflow: "hidden" }}>
                 {uploadingFull
                   ? <Loader2 size={18} className="spin" style={{ color: "var(--gold)" }} />
                   : fullBodyUrl
@@ -282,7 +302,7 @@ export default function SettingsPage() {
                     <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "var(--text-dim)" }}>Analysis</div>
                     <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>{bodyAnalysis}</p>
                   </div>
-                : <p className="text-xs flex-1" style={{ color: "var(--text-dim)", paddingTop: 4 }}>
+                : <p className="text-xs flex-1" style={{ color: "var(--text-muted)", paddingTop: 4 }}>
                     Face forward, arms relaxed. Any outfit is fine.
                   </p>
               }
@@ -291,7 +311,7 @@ export default function SettingsPage() {
         </div>
 
         {/* COL 3 — Sample portraits */}
-        <div className="flex flex-col gap-5 min-h-0 overflow-y-auto">
+        <div className="flex flex-col gap-5">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="surface p-6 flex-1">
             <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>
               Or try with a sample look

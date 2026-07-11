@@ -15,3 +15,4 @@ psycopg2-binary==2.9.10
 boto3==1.35.71
 rembg==2.0.59            # garment cutouts (closet display) + cleaner fallback
 onnxruntime==1.20.1      # rembg backend
+sentry-sdk[fastapi]==2.19.2   # error monitoring, no-op unless SENTRY_DSN is set

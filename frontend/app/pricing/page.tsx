@@ -1,4 +1,7 @@
+"use client";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 const tiers = [
   {
@@ -58,16 +61,44 @@ const tiers = [
 ] as const;
 
 export default function PricingPage() {
+  const { user } = useAuth();
+
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100%",
+        overflowY: "auto",
         background: "var(--bg)",
         color: "var(--text)",
         fontFamily: "Public Sans, sans-serif",
         padding: "80px 24px 64px",
       }}
     >
+      {/* Back to landing — only needed when there's no app shell already providing one */}
+      {!user && (
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5"
+          style={{
+            position: "fixed",
+            top: 28,
+            left: 28,
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--text-muted)",
+            textDecoration: "none",
+            letterSpacing: "0.04em",
+            zIndex: 3,
+            transition: "color 0.15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+        >
+          <ArrowLeft size={14} />
+          StyleSense
+        </Link>
+      )}
+
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 64 }}>
         <p
@@ -229,10 +260,20 @@ export default function PricingPage() {
                       border: "1px solid var(--border-hover)",
                       borderRadius: "var(--radius-btn)",
                       fontFamily: "Public Sans, sans-serif",
-                      transition: "border-color 0.2s",
+                      transition: "background 0.2s, border-color 0.2s",
                       marginBottom: 28,
                     }
               }
+              onMouseEnter={(e) => {
+                if (tier.popular) return;
+                e.currentTarget.style.background = "rgba(60, 36, 21, 0.05)";
+                e.currentTarget.style.borderColor = "var(--ink)";
+              }}
+              onMouseLeave={(e) => {
+                if (tier.popular) return;
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = "var(--border-hover)";
+              }}
             >
               {tier.cta}
             </Link>
