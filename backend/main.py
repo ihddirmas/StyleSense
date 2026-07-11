@@ -12,6 +12,18 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
+# Error monitoring. No-op until SENTRY_DSN is set (see backend/.env.example).
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
+        send_default_pii=True,
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")),
+    )
+
 from routers import avatar, tryon, wardrobe, outfits, scrape, stylist, friends, chat  # noqa: E402
 
 app = FastAPI(

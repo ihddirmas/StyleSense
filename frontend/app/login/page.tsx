@@ -1,7 +1,8 @@
 "use client";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Toaster } from "@/components/ui/Toast";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { FashionBackground } from "@/components/ui/FashionBackground";
 import { AuthCard } from "@/components/ui/AuthCard";
 
@@ -18,10 +19,32 @@ function LoginInner() {
   const next = search.get("next") || "/dashboard";
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ position: "relative", zIndex: 1 }}>
+    <div className="h-screen overflow-y-auto" style={{ position: "relative", zIndex: 1 }}>
       <FashionBackground />
-      <Toaster />
-      <AuthCard initialMode="login" next={next} />
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5"
+        style={{
+          position: "fixed",
+          top: 28,
+          left: 28,
+          fontSize: 13,
+          fontWeight: 500,
+          color: "var(--text-muted)",
+          textDecoration: "none",
+          letterSpacing: "0.04em",
+          zIndex: 3,
+          transition: "color 0.15s",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+      >
+        <ArrowLeft size={14} />
+        StyleSense
+      </Link>
+      <div className="min-h-full flex items-center justify-center px-4 py-16">
+        <AuthCard initialMode="login" next={next} />
+      </div>
     </div>
   );
 }
