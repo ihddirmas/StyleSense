@@ -167,6 +167,7 @@ export default function StylistPage() {
     <div className="h-full flex flex-col">
       <div className="shrink-0">
         <PageHeader
+          eyebrow="AI Stylist"
           tutorialKey="stylist"
           subtitle="Ask anything — I know your full wardrobe and pick specific items."
         />
@@ -566,7 +567,7 @@ function ThisOrThat({ items }: { items: WardrobeItem[] }) {
             key={feedbackLine}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="text-xs text-center"
-            style={{ color: choices > 0 ? "var(--gold)" : "var(--text-muted)" }}
+            style={{ color: choices > 0 ? "var(--text)" : "var(--text-muted)" }}
           >
             {feedbackLine}
           </motion.p>
@@ -584,7 +585,7 @@ function ThisOrThat({ items }: { items: WardrobeItem[] }) {
 
         {mode === "styles" && (
           loadingStyle || !stylePair ? (
-            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-dim)" }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
               <Loader2 size={14} className="spin" /> Loading styles…
             </div>
           ) : (
@@ -611,7 +612,7 @@ function ThisOrThat({ items }: { items: WardrobeItem[] }) {
         {choices >= 3 && (
           <div
             className="text-[10px] text-center max-w-xs"
-            style={{ color: "var(--text-dim)", borderTop: "1px solid var(--border)", paddingTop: 12 }}
+            style={{ color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: 12 }}
           >
             Switch to Text Chat and ask Aria for an outfit — she now knows your aesthetic from these choices.
           </div>
@@ -673,7 +674,7 @@ function StyleArchetypePair({ a, b, onPick }: { a: StyleCard; b: StyleCard; onPi
           </div>
           {card.description && (
             <div className="p-2">
-              <div className="text-[9px] leading-relaxed" style={{ color: "var(--text-dim)" }}>
+              <div className="text-[9px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
                 {card.description}
               </div>
             </div>

@@ -44,28 +44,32 @@ export default function OutfitsPage() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4">
-      <PageHeader
-        eyebrow="Outfits"
-        title="Saved Looks"
-        tutorialKey="outfits"
-        subtitle="Every outfit you save from Studio or Aria lives here. Click any card to view items, re-try, or share."
-        action={
-          <Link
-            href="/studio"
-            className="surface surface-hover px-4 py-2 text-sm flex items-center gap-2"
-            style={{ textDecoration: "none", color: "inherit" }}
-          >
-            <Sparkles size={14} style={{ color: "var(--gold)" }} />
-            New look
-          </Link>
-        }
-      />
+    <div className="h-full flex flex-col">
+      <div className="shrink-0 max-w-5xl w-full mx-auto">
+        <PageHeader
+          eyebrow="Outfits"
+          title="Saved Looks"
+          tutorialKey="outfits"
+          subtitle="Every outfit you save from Studio or Aria lives here. Click any card to view items, re-try, or share."
+          action={
+            <Link
+              href="/studio"
+              className="surface surface-hover px-4 py-2 text-sm flex items-center gap-2"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <Sparkles size={14} style={{ color: "var(--gold)" }} />
+              New look
+            </Link>
+          }
+        />
+      </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto pb-4">
+      <div className="max-w-5xl w-full mx-auto">
       {loading ? (
         <div
           className="grid gap-3"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))" }}
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))" }}
         >
           {Array.from({ length: 6 }).map((_, i) => (
             <div
@@ -76,7 +80,7 @@ export default function OutfitsPage() {
           ))}
         </div>
       ) : outfits.length === 0 ? (
-        <div className="surface p-12 text-center flex-1" style={{ color: "var(--text-muted)" }}>
+        <div className="surface p-12 text-center" style={{ color: "var(--text-muted)" }}>
           <Layers size={32} className="mx-auto mb-3" style={{ color: "var(--text-dim)" }} />
           <p className="text-sm mb-4">No saved outfits yet.</p>
           <p className="text-xs" style={{ color: "var(--text-dim)" }}>
@@ -92,8 +96,8 @@ export default function OutfitsPage() {
         </div>
       ) : (
         <div
-          className="grid gap-3 pb-4"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))" }}
+          className="grid gap-3"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))" }}
         >
           <AnimatePresence>
             {outfits.map((o, i) => (
@@ -109,6 +113,8 @@ export default function OutfitsPage() {
           </AnimatePresence>
         </div>
       )}
+      </div>
+      </div>
 
       <AnimatePresence>
         {shareTarget && (
