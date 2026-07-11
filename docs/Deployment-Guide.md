@@ -22,34 +22,32 @@ cluster's port 5432, and enough IAM permission to call `rds:GenerateDBAuthToken`
 
 ---
 
-## Part 0 — Repo/branch topology (two remotes, two Vercel projects)
+## Part 0 — Repo/branch topology (two remotes, one deploy target for you)
 
 This repo has two GitHub remotes with different jobs:
 
-- **`upstream` → `github.com/ihddirmas/StyleSense`, branch `feature/ui-on-aurora`** — the live,
-  continuously-deployed app. Both Render (backend) and one Vercel project (frontend) track this
-  repo/branch. Push here for anything meant to reach real users.
-- **`origin` → `github.com/yashthenuia/StyleSense`** — the hackathon-submission fork. A second,
-  separate Vercel project tracks this repo (its own branch, e.g. `main`) so the submission link
-  stays independent of ongoing live-app work. Not auto-synced from `upstream` — push to it
-  explicitly and intentionally, not as a side effect of shipping to live.
+- **`upstream` → `github.com/ihddirmas/StyleSense`, branch `feature/ui-on-aurora`** — the live
+  app. **This is the one you deploy, on your own Render + Vercel accounts.** Push here for
+  anything meant to reach real users; Render and Vercel both track this repo/branch and
+  auto-deploy on every push once connected.
+- **`origin` → `github.com/yashthenuia/StyleSense`** — the hackathon-submission fork. Your
+  teammate already deploys this independently on their own personal Render/Vercel accounts.
+  Nothing here needs your setup or attention — noted for context only, not an action item.
 
-Both Vercel projects can point at the **same** Render backend (CORS already allows every
-`*.vercel.app` domain via `allow_origin_regex` in `backend/main.py` — see below — so a second
-Vercel project needs no backend-side change unless it gets a custom domain).
+(Future consideration, not needed now: both Vercel projects — yours and your teammate's — could
+in principle point at the same Render backend, since CORS already allows every `*.vercel.app`
+domain via `allow_origin_regex` in `backend/main.py`. Worth thinking about later if the two
+deployments ever need to converge; irrelevant to getting your own deploy live today.)
 
 ---
 
 ## Part 1 — Frontend on Vercel
 
 The repo already ships [`frontend/vercel.json`](../frontend/vercel.json) with the build command,
-security headers, and function config wired up. Set up **two separate Vercel projects** per the
-topology above — same steps, different repo/branch and (for the submission project) probably no
-custom domain.
+security headers, and function config wired up.
 
-1. **Import the repo** in the Vercel dashboard → New Project → point at the target repo
-   (`ihddirmas/StyleSense` for the live project, `yashthenuia/StyleSense` for the submission
-   project) → pick the branch (`feature/ui-on-aurora` for live) → set **Root Directory** to
+1. **Import the repo** in the Vercel dashboard → New Project → point at
+   `github.com/ihddirmas/StyleSense`, branch `feature/ui-on-aurora` → set **Root Directory** to
    `frontend` (the monorepo has `backend/` alongside it, so Vercel must not build from repo root).
 2. **Add environment variables** (Project Settings → Environment Variables — plain dashboard
    values, `vercel.json` no longer declares `@secret` references; an earlier attempt used
@@ -61,7 +59,7 @@ custom domain.
    | `NEXT_PUBLIC_SUPABASE_URL` | Same as `backend/.env`'s `SUPABASE_URL` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key (not the service role key) |
    | `RUNWAYML_API_SECRET` | Same Runway key used by the backend (used by the Next.js API route that mints realtime avatar sessions) |
-   | `NEXT_PUBLIC_SITE_URL` | This Vercel project's own production URL — drives `metadataBase` so Open Graph images/canonical links resolve correctly instead of localhost. **Set separately per project** (the live and submission projects have different URLs). |
+   | `NEXT_PUBLIC_SITE_URL` | Your Vercel project's production URL — drives `metadataBase` so Open Graph images/canonical links resolve correctly instead of localhost. |
    | `NEXT_PUBLIC_DEMO_USER_ID` | Optional — demo account UUID if you keep one |
    | `NEXT_PUBLIC_STYLIST_CHARACTER_ID` / `NEXT_PUBLIC_STYLIST_HERO_VIDEO_URL` | From the one-time admin stylist setup scripts (see CLAUDE.md) |
    | `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` | Optional — leave unset to keep Sentry fully disabled |
