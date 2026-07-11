@@ -22,27 +22,54 @@ cluster's port 5432, and enough IAM permission to call `rds:GenerateDBAuthToken`
 
 ---
 
+## Part 0 — Repo/branch topology (two remotes, two Vercel projects)
+
+This repo has two GitHub remotes with different jobs:
+
+- **`upstream` → `github.com/ihddirmas/StyleSense`, branch `feature/ui-on-aurora`** — the live,
+  continuously-deployed app. Both Render (backend) and one Vercel project (frontend) track this
+  repo/branch. Push here for anything meant to reach real users.
+- **`origin` → `github.com/yashthenuia/StyleSense`** — the hackathon-submission fork. A second,
+  separate Vercel project tracks this repo (its own branch, e.g. `main`) so the submission link
+  stays independent of ongoing live-app work. Not auto-synced from `upstream` — push to it
+  explicitly and intentionally, not as a side effect of shipping to live.
+
+Both Vercel projects can point at the **same** Render backend (CORS already allows every
+`*.vercel.app` domain via `allow_origin_regex` in `backend/main.py` — see below — so a second
+Vercel project needs no backend-side change unless it gets a custom domain).
+
+---
+
 ## Part 1 — Frontend on Vercel
 
 The repo already ships [`frontend/vercel.json`](../frontend/vercel.json) with the build command,
-security headers, and env-var placeholders wired up. Steps:
+security headers, and function config wired up. Set up **two separate Vercel projects** per the
+topology above — same steps, different repo/branch and (for the submission project) probably no
+custom domain.
 
-1. **Import the repo** in the Vercel dashboard → New Project → set **Root Directory** to
+1. **Import the repo** in the Vercel dashboard → New Project → point at the target repo
+   (`ihddirmas/StyleSense` for the live project, `yashthenuia/StyleSense` for the submission
+   project) → pick the branch (`feature/ui-on-aurora` for live) → set **Root Directory** to
    `frontend` (the monorepo has `backend/` alongside it, so Vercel must not build from repo root).
-2. **Add environment variables** (Project Settings → Environment Variables), matching the
-   `@stylesense-*` secret references in `vercel.json`:
+2. **Add environment variables** (Project Settings → Environment Variables — plain dashboard
+   values, `vercel.json` no longer declares `@secret` references; an earlier attempt used
+   `@stylesense-*` secret refs and broke the build because those secrets were never created via
+   `vercel secrets add` — fixed by dropping the `env` block from `vercel.json` entirely):
    | Variable | Value |
    |---|---|
    | `NEXT_PUBLIC_API_URL` | Your backend's public URL (e.g. `https://styleai-backend.onrender.com`) |
    | `NEXT_PUBLIC_SUPABASE_URL` | Same as `backend/.env`'s `SUPABASE_URL` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key (not the service role key) |
    | `RUNWAYML_API_SECRET` | Same Runway key used by the backend (used by the Next.js API route that mints realtime avatar sessions) |
+   | `NEXT_PUBLIC_SITE_URL` | This Vercel project's own production URL — drives `metadataBase` so Open Graph images/canonical links resolve correctly instead of localhost. **Set separately per project** (the live and submission projects have different URLs). |
    | `NEXT_PUBLIC_DEMO_USER_ID` | Optional — demo account UUID if you keep one |
    | `NEXT_PUBLIC_STYLIST_CHARACTER_ID` / `NEXT_PUBLIC_STYLIST_HERO_VIDEO_URL` | From the one-time admin stylist setup scripts (see CLAUDE.md) |
+   | `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` | Optional — leave unset to keep Sentry fully disabled |
 3. **Deploy.** Vercel builds `frontend/` with `npm run build` and gives you a
-   `*.vercel.app` URL immediately, plus a unique preview URL per PR/branch.
+   `*.vercel.app` URL immediately, plus a unique preview URL per PR/branch. Once connected, every
+   push to the tracked branch auto-deploys — no extra CI config needed for this part.
 4. **Custom domain (optional):** Project Settings → Domains → add your domain, update DNS per
-   Vercel's instructions.
+   Vercel's instructions. If you add one, also update that project's `NEXT_PUBLIC_SITE_URL`.
 
 **Why the backend needs to know about Vercel, not just the other way around:**
 `backend/main.py` sets CORS with `allow_origin_regex=r"https://.*\.vercel\.app"`, so every preview
@@ -56,8 +83,9 @@ backend builds a link back to the frontend).
 
 The repo already has [`backend/render.yaml`](../backend/render.yaml) as a Blueprint. Steps:
 
-1. Render Dashboard → **New → Blueprint** → point at this GitHub repo. Render reads
-   `backend/render.yaml` automatically (`rootDir: backend`).
+1. Render Dashboard → **New → Blueprint** → point at `github.com/ihddirmas/StyleSense`, branch
+   `feature/ui-on-aurora` (see Part 0 — this is the live-app repo/branch, not the hackathon-submission
+   fork). Render reads `backend/render.yaml` automatically (`rootDir: backend`).
 2. Render will ask you to fill in every `sync: false` secret from the blueprint. Paste values from
    `backend/.env`:
    - `RUNWAY_API_KEY`, `ANTHROPIC_API_KEY`
