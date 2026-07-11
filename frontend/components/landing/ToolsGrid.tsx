@@ -106,6 +106,7 @@ export default function ToolsGrid() {
         </div>
 
         <div
+          className="landing-grid-3col"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",

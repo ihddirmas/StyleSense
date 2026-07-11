@@ -4,13 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api";
 import { useAppStore } from "@/store/app";
+import { useTasks } from "@/store/tasks";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "@/components/ui/Toast";
-
-interface StylizedVideoShape {
-  url: string | null;
-  status: "idle" | "generating" | "ready" | "failed" | "no_selfie";
-}
 
 export function HeroVideo() {
   const { user, profile } = useAuth();
@@ -44,26 +40,13 @@ export function HeroVideo() {
     ).then((d) => setAria(d.hero_video_url, d.image_url, d.name)).catch(() => {});
   }, [ariaVideoUrl, setAria]);
 
-  // Only poll stylized-video if it's generating. If already ready, don't poll.
+  // Delegate polling to the shared tasks store (dedupes with any watch
+  // already running, and surfaces progress/completion in Activity too).
   useEffect(() => {
     if (!user) return;
-    if (stylizedVideoStatus === "ready") return; // Already loaded from profile
-    if (!stylizedVideoStatus || stylizedVideoStatus === "idle") return; // Not generating
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    async function tick() {
-      try {
-        const d = await apiGet<StylizedVideoShape>("/api/avatar/stylized-video");
-        if (cancelled) return;
-        setStylizedVideo(d.url, d.status as never);
-        if (d.status === "generating") timer = setTimeout(tick, 5000);
-      } catch {
-        if (!cancelled) timer = setTimeout(tick, 10000);
-      }
-    }
-    tick();
-    return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [user, stylizedVideoStatus, setStylizedVideo]);
+    if (stylizedVideoStatus === "ready") return;
+    useTasks.getState().watchAvatarVideo();
+  }, [user, stylizedVideoStatus]);
 
   const showUser = !!stylizedVideoUrl && stylizedVideoStatus === "ready";
   const generating = !!avatarSelfieUrl && stylizedVideoStatus === "generating";

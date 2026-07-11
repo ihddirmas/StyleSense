@@ -83,7 +83,7 @@ export default function ProductDemo() {
   useEffect(() => {
     const mm = gsap.matchMedia();
 
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
+    mm.add("(prefers-reduced-motion: no-preference) and (min-width: 861px)", () => {
       const ctx = gsap.context(() => {
         // Initial state
         screenRefs.current.forEach((el, i) => {
@@ -132,7 +132,7 @@ export default function ProductDemo() {
       return () => ctx.revert();
     });
 
-    mm.add("(prefers-reduced-motion: reduce)", () => {
+    mm.add("(prefers-reduced-motion: reduce), (max-width: 860px)", () => {
       screenRefs.current.forEach((el) => {
         if (el) gsap.set(el, { opacity: 1, y: 0 });
       });
@@ -143,9 +143,10 @@ export default function ProductDemo() {
 
   return (
     // Outer: provides the scroll distance (1 viewport per step)
-    <div ref={wrapperRef} style={{ height: `${DEMOS.length * 100}vh`, background: "var(--surface)" }}>
+    <div ref={wrapperRef} className="product-demo-wrapper" style={{ height: `${DEMOS.length * 100}vh`, background: "var(--surface)" }}>
       {/* Sticky panel */}
       <div
+        className="product-demo-sticky"
         style={{
           position: "sticky",
           top: 0,
@@ -158,6 +159,7 @@ export default function ProductDemo() {
       >
         {/* ── Left: step list ── */}
         <div
+          className="product-demo-left"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -226,6 +228,7 @@ export default function ProductDemo() {
 
         {/* ── Right: stacked screens ── */}
         <div
+          className="product-demo-right"
           style={{
             display: "flex",
             alignItems: "center",
@@ -239,6 +242,7 @@ export default function ProductDemo() {
             <div
               key={i}
               ref={(el) => { screenRefs.current[i] = el; }}
+              className="product-demo-screen"
               style={{
                 position: "absolute",
                 inset: "32px 48px",

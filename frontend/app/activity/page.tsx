@@ -1,11 +1,11 @@
 "use client";
 import type { ReactNode } from "react";
-import { Loader2, CheckCircle2, XCircle, Trash2, X, Clapperboard, Sparkles, ImageIcon } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Trash2, X, Clapperboard, Sparkles, ImageIcon, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useTasks } from "@/store/tasks";
-import type { TaskKind, TaskStatus, TryOnTask, EventTask, AnimateTask } from "@/store/tasks";
+import type { TaskKind, TaskStatus, TryOnTask, EventTask, AnimateTask, AvatarTask } from "@/store/tasks";
 
-type AnyTask = TryOnTask | EventTask | AnimateTask;
+type AnyTask = TryOnTask | EventTask | AnimateTask | AvatarTask;
 
 function timeAgo(ms: number) {
   const diff = Date.now() - ms;
@@ -21,18 +21,25 @@ const KIND_LABELS: Record<TaskKind, string> = {
   tryon: "TRY-ON",
   event: "SCENE",
   animate: "VIDEO",
+  avatar_still: "AVATAR",
+  avatar_video: "RAMP VIDEO",
 };
 
 const KIND_ICONS: Record<TaskKind, ReactNode> = {
   tryon: <Sparkles size={10} />,
   event: <ImageIcon size={10} />,
   animate: <Clapperboard size={10} />,
+  avatar_still: <UserRound size={10} />,
+  avatar_video: <Clapperboard size={10} />,
 };
 
 function thumbUrl(task: AnyTask): string | undefined {
   if (task.kind === "tryon") return (task as TryOnTask).resultUrl ?? (task as TryOnTask).itemImageUrls?.[0];
   if (task.kind === "event") return (task as EventTask).resultUrl;
   if (task.kind === "animate") return (task as AnimateTask).sourceUrl;
+  // avatar_still's result is an image (fine as a thumb); avatar_video's result
+  // is an mp4 — an <img> can't render that, so fall back to the placeholder icon.
+  if (task.kind === "avatar_still") return (task as AvatarTask).resultUrl;
   return undefined;
 }
 

@@ -48,7 +48,7 @@ export default function HowItWorks() {
   useEffect(() => {
     const mm = gsap.matchMedia();
 
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
+    mm.add("(prefers-reduced-motion: no-preference) and (min-width: 861px)", () => {
       const ctx = gsap.context(() => {
         // ── Build a scrub timeline across the entire wrapper scroll distance ──
         const tl = gsap.timeline({
@@ -117,8 +117,8 @@ export default function HowItWorks() {
       return () => ctx.revert();
     });
 
-    // reduced-motion fallback: simple triggered stagger
-    mm.add("(prefers-reduced-motion: reduce)", () => {
+    // reduced-motion fallback + mobile: skip pinned scrub, just show all steps stacked
+    mm.add("(prefers-reduced-motion: reduce), (max-width: 860px)", () => {
       const ctx = gsap.context(() => {
         panelRefs.current.forEach((el) => {
           if (!el) return;
@@ -135,11 +135,13 @@ export default function HowItWorks() {
     <div
       id="how-it-works"
       ref={wrapperRef}
+      className="how-it-works-wrapper"
       style={{ height: `${STEPS.length * 100}vh` }}
     >
       {/* Sticky viewport — stays in view while wrapper scrolls past */}
       <div
         ref={stickyRef}
+        className="how-it-works-sticky"
         style={{
           position: "sticky",
           top: 0,
@@ -228,6 +230,7 @@ export default function HowItWorks() {
             <div
               key={i}
               ref={(el) => { panelRefs.current[i] = el; }}
+              className="how-it-works-panel"
               style={{
                 position: "absolute",
                 inset: 0,

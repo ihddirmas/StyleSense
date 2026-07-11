@@ -26,6 +26,7 @@ export default function HeroSection() {
   const ctasRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const frameWrapRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
 
   const headline = "Wear it before you buy it";
 
@@ -97,7 +98,19 @@ export default function HeroSection() {
   return (
     <section
       ref={sectionRef}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        if (glowRef.current) {
+          glowRef.current.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+          glowRef.current.style.setProperty("--my", `${e.clientY - rect.top}px`);
+          glowRef.current.style.opacity = "1";
+        }
+      }}
+      onMouseLeave={() => {
+        if (glowRef.current) glowRef.current.style.opacity = "0";
+      }}
       style={{
+        position: "relative",
         minHeight: "100vh",
         paddingTop: 64,
         background: "var(--bg)",
@@ -107,9 +120,26 @@ export default function HeroSection() {
         alignItems: "center",
       }}
     >
+      {/* ── Cursor-follow highlight glow ── */}
+      <div
+        ref={glowRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          opacity: 0,
+          transition: "opacity 0.4s ease",
+          pointerEvents: "none",
+          background:
+            "radial-gradient(500px circle at var(--mx, 50%) var(--my, 50%), rgba(231,226,188,0.55), transparent 60%)",
+          zIndex: 0,
+        }}
+      />
+
       {/* ── Centered copy block ── */}
       <div
         style={{
+          position: "relative",
+          zIndex: 1,
           maxWidth: 760,
           margin: "0 auto",
           padding: "80px 32px 60px",
@@ -200,6 +230,8 @@ export default function HeroSection() {
       <div
         ref={frameWrapRef}
         style={{
+          position: "relative",
+          zIndex: 1,
           width: "100%",
           maxWidth: 1100,
           padding: "0 24px",
