@@ -148,7 +148,7 @@ export default function FeaturesTab() {
         </div>
 
         {/* Tab bar */}
-        <div style={{ position: "relative", marginBottom: 56, borderBottom: "1px solid var(--border)" }}>
+        <div style={{ position: "relative", marginBottom: 56, borderBottom: "1px solid var(--border)", overflowX: "auto" }}>
           <div style={{ display: "flex", gap: 0 }}>
             {TABS.map((t, i) => (
               <button
@@ -190,6 +190,7 @@ export default function FeaturesTab() {
         {/* Content panel */}
         <div
           ref={contentRef}
+          className="landing-grid-2col"
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",

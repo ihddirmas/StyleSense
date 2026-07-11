@@ -93,7 +93,9 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showFilterMenu]);
 
-  // On-demand "Refresh my avatar": regenerates the realistic hero still (~5cr) + polls.
+  // On-demand "Refresh my avatar": regenerates the realistic hero still (~5cr).
+  // Progress/completion is tracked by the shared tasks store, which also
+  // surfaces it in Activity — no need to block this button on the poll.
   async function refreshAvatar() {
     if (refreshingAvatar) return;
     setRefreshingAvatar(true);
@@ -101,12 +103,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
     try {
       await apiPost("/api/avatar/regenerate-stylized", {}); // still only (no video)
       toast.success("Refreshing your avatar…");
-      for (let i = 0; i < 24; i++) {
-        await new Promise((r) => setTimeout(r, 5000));
-        const d = await apiGet<{ url: string | null; status: string }>("/api/avatar/stylized");
-        setStylized(d.url, d.status as never);
-        if (d.status === "ready" || d.status === "failed") break;
-      }
+      useTasks.getState().watchAvatarStill();
     } catch (e) {
       setStylized(stylizedAvatarUrl, "failed" as never);
       toast.error(`Refresh failed: ${e instanceof Error ? e.message : "unknown"}`);
@@ -439,9 +436,12 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                   {groupedItems[cat].map((it) => {
                     const sel = selectedItemIds.includes(it.id);
                     return (
-                      <button
+                      <div
                         key={it.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => selectItem(it)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectItem(it); } }}
                         className="overflow-hidden relative group rounded"
                         style={{ padding: 0, cursor: "pointer", background: "#fff", border: sel ? "2px solid var(--ink)" : "1px solid var(--border-hover)" }}
                         title={it.name}
@@ -466,7 +466,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                         <div className="px-1.5 py-1" style={{ background: "var(--surface)" }}>
                           <div className="truncate text-[10px] font-medium" style={{ color: "var(--text)" }}>{it.name}</div>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

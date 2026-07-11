@@ -1,15 +1,33 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Menu, X } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const NAV_LINKS = [
+  { id: "features",     label: "Features"      },
+  { id: "how-it-works", label: "How it works" },
+  { id: "faq",          label: "FAQ"           },
+];
 
 export default function LandingNav() {
   const navRef = useRef<HTMLElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const scrollToSection = (id: string) => {
+    const scroller = document.querySelector(".landing-scroll");
+    const target = document.getElementById(id);
+    if (scroller && target) {
+      const top = target.getBoundingClientRect().top + scroller.scrollTop;
+      scroller.scrollTo({ top, behavior: "smooth" });
+    }
+    setMobileOpen(false);
+  };
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -99,22 +117,11 @@ export default function LandingNav() {
         </Link>
 
         {/* Center links */}
-        <div style={{ display: "flex", gap: 40 }}>
-          {[
-            { id: "features",    label: "Features"      },
-            { id: "how-it-works", label: "How it works" },
-            { id: "faq",         label: "FAQ"           },
-          ].map(({ id, label }) => (
+        <div className="landing-nav-center" style={{ display: "flex", gap: 40 }}>
+          {NAV_LINKS.map(({ id, label }) => (
             <button
               key={id}
-              onClick={() => {
-                const scroller = document.querySelector(".landing-scroll");
-                const target = document.getElementById(id);
-                if (scroller && target) {
-                  const top = target.getBoundingClientRect().top + scroller.scrollTop;
-                  scroller.scrollTo({ top, behavior: "smooth" });
-                }
-              }}
+              onClick={() => scrollToSection(id)}
               style={{
                 fontSize: 14,
                 color: "var(--text-muted)",
@@ -153,6 +160,7 @@ export default function LandingNav() {
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <Link
             href="/login"
+            className="landing-nav-signin"
             style={{
               fontSize: 14,
               color: "var(--ink)",
@@ -172,8 +180,87 @@ export default function LandingNav() {
           >
             Get started
           </Link>
+
+          {/* Mobile hamburger toggle — shown only under 860px via CSS */}
+          <button
+            className="landing-nav-toggle"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            style={{
+              display: "none",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 4,
+              color: "var(--ink)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile dropdown menu */}
+      {mobileOpen && (
+        <div
+          style={{
+            background: "var(--bg)",
+            borderTop: "1px solid var(--border)",
+            borderBottom: "1px solid var(--border)",
+            padding: "16px 32px 24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          {NAV_LINKS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => scrollToSection(id)}
+              style={{
+                fontSize: 16,
+                color: "var(--text)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                padding: "12px 0",
+                fontFamily: "Public Sans, sans-serif",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+          <Link
+            href="/pricing"
+            onClick={() => setMobileOpen(false)}
+            style={{
+              fontSize: 16,
+              color: "var(--text)",
+              textDecoration: "none",
+              padding: "12px 0",
+              fontFamily: "Public Sans, sans-serif",
+            }}
+          >
+            Pricing
+          </Link>
+          <Link
+            href="/login"
+            onClick={() => setMobileOpen(false)}
+            style={{
+              fontSize: 16,
+              color: "var(--text)",
+              textDecoration: "none",
+              padding: "12px 0",
+              fontFamily: "Public Sans, sans-serif",
+            }}
+          >
+            Sign in
+          </Link>
+        </div>
+      )}
     </nav>
   );
 }

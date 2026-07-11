@@ -119,8 +119,9 @@ async def send_message(req: SendMessageRequest, user = Depends(current_user)):
     if not _are_friends(user["id"], req.recipient_id):
         raise HTTPException(403, "You can only message friends.")
 
-    if not (req.content or req.shared_outfit_id or req.shared_tryon_id or req.shared_image_url):
-        raise HTTPException(400, "Message must have content or an attachment.")
+    # Only allow outfit/try-on sharing — no plain text messages
+    if not (req.shared_outfit_id or req.shared_tryon_id or req.shared_image_url):
+        raise HTTPException(400, "Messages must include a shared outfit, try-on, or image.")
 
     payload = {
         "sender_id": user["id"],

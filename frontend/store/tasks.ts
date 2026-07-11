@@ -12,11 +12,12 @@
  * nav within the same tab is fully preserved.
  */
 import { create } from "zustand";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
+import { useAppStore } from "@/store/app";
 
 export type TaskStatus = "running" | "done" | "error";
-export type TaskKind = "tryon" | "event" | "animate";
+export type TaskKind = "tryon" | "event" | "animate" | "avatar_still" | "avatar_video";
 
 interface BaseTask {
   id: string;
@@ -60,7 +61,17 @@ export interface AnimateTask extends BaseTask {
   videoUrl?: string;
 }
 
-type Task = TryOnTask | EventTask | AnimateTask;
+// Selfie-driven avatar pipeline jobs (stylized hero still / ramp-walk video).
+// These run entirely server-side (kicked off on selfie upload or an explicit
+// refresh) with no page keeping local state, so they're tracked here purely
+// so Activity has something to show — the source of truth for the resulting
+// URL/status still lives in useAppStore (read by the Dashboard hero + Studio).
+export interface AvatarTask extends BaseTask {
+  kind: "avatar_still" | "avatar_video";
+  resultUrl?: string;
+}
+
+type Task = TryOnTask | EventTask | AnimateTask | AvatarTask;
 
 interface State {
   tasks: Task[];
@@ -91,6 +102,9 @@ interface State {
   cancelTryOn: () => void;
   clearDone: () => void;
   remove: (id: string) => void;
+  // Starts polling if no watch of that kind is already running; no-op otherwise.
+  watchAvatarStill: () => string;
+  watchAvatarVideo: () => string;
 }
 
 const newId = () => Math.random().toString(36).slice(2, 10);
@@ -239,6 +253,77 @@ export const useTasks = create<State>((set, get) => ({
         toast.error(`Animation failed: ${msg.slice(0, 80)}`);
       });
 
+    return id;
+  },
+
+  watchAvatarStill() {
+    const running = get().tasks.find((t) => t.kind === "avatar_still" && t.status === "running");
+    if (running) return running.id;
+
+    const id = newId();
+    const task: AvatarTask = { id, kind: "avatar_still", status: "running", startedAt: Date.now(), label: "Stylized avatar" };
+    set((s) => ({ tasks: [...s.tasks, task] }));
+
+    let attempts = 0;
+    const tick = async () => {
+      attempts++;
+      try {
+        const d = await apiGet<{ url: string | null; status: string }>("/api/avatar/stylized");
+        useAppStore.getState().setStylized(d.url, d.status as never);
+        if (d.status === "ready") {
+          update<AvatarTask>(set, id, { status: "done", finishedAt: Date.now(), resultUrl: d.url ?? undefined });
+          toast.success("Your stylized avatar is ready!");
+        } else if (d.status === "failed") {
+          update<AvatarTask>(set, id, { status: "error", finishedAt: Date.now(), error: "Generation failed." });
+          toast.error("Stylized avatar generation failed.");
+        } else if (d.status === "generating" || (d.status !== "ready" && attempts < 4)) {
+          // "idle"/"no_selfie" in the first few ticks can just mean the
+          // background job hasn't flipped the DB row yet — keep polling briefly.
+          if (attempts < 90) setTimeout(tick, d.status === "generating" ? 5000 : 1500);
+          else update<AvatarTask>(set, id, { status: "error", finishedAt: Date.now(), error: "Timed out." });
+        } else {
+          // Confirmed nothing is actually running — drop the task quietly.
+          set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+        }
+      } catch {
+        if (attempts < 90) setTimeout(tick, 8000);
+      }
+    };
+    tick();
+    return id;
+  },
+
+  watchAvatarVideo() {
+    const running = get().tasks.find((t) => t.kind === "avatar_video" && t.status === "running");
+    if (running) return running.id;
+
+    const id = newId();
+    const task: AvatarTask = { id, kind: "avatar_video", status: "running", startedAt: Date.now(), label: "Ramp-walk video" };
+    set((s) => ({ tasks: [...s.tasks, task] }));
+
+    let attempts = 0;
+    const tick = async () => {
+      attempts++;
+      try {
+        const d = await apiGet<{ url: string | null; status: string }>("/api/avatar/stylized-video");
+        useAppStore.getState().setStylizedVideo(d.url, d.status as never);
+        if (d.status === "ready") {
+          update<AvatarTask>(set, id, { status: "done", finishedAt: Date.now(), resultUrl: d.url ?? undefined });
+          toast.success("Your ramp-walk video is ready!");
+        } else if (d.status === "failed") {
+          update<AvatarTask>(set, id, { status: "error", finishedAt: Date.now(), error: "Generation failed." });
+          toast.error("Ramp video generation failed.");
+        } else if (d.status === "generating" || (d.status !== "ready" && attempts < 4)) {
+          if (attempts < 90) setTimeout(tick, d.status === "generating" ? 5000 : 1500);
+          else update<AvatarTask>(set, id, { status: "error", finishedAt: Date.now(), error: "Timed out." });
+        } else {
+          set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+        }
+      } catch {
+        if (attempts < 90) setTimeout(tick, 8000);
+      }
+    };
+    tick();
     return id;
   },
 

@@ -40,6 +40,7 @@ export default function LandingFooter() {
     >
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div
+          className="landing-footer-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "2fr 1fr 1fr 1fr",
@@ -100,6 +101,7 @@ export default function LandingFooter() {
 
         {/* Bottom bar */}
         <div
+          className="landing-footer-bottom"
           style={{
             borderTop: "1px solid var(--border)",
             paddingTop: 32,

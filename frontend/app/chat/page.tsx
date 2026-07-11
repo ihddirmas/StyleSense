@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send, MessagesSquare, Loader2, Sparkles, Image as ImageIcon, Layers, Users, ArrowLeft,
+  MessagesSquare, Sparkles, Image as ImageIcon, Layers, Users, ArrowLeft,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/components/AuthProvider";
@@ -107,7 +107,7 @@ function ChatInner() {
         <PageHeader
           eyebrow="Direct messages"
           tutorialKey="chat"
-          subtitle="Talk to your friends. Share outfits and try-ons. Get a second opinion."
+          subtitle="Share your looks with friends. Get a second opinion on outfits and try-ons."
         />
       </div>
 
@@ -204,8 +204,6 @@ function ChatThread({ otherId, onMessageSent, onBack }: { otherId: string; onMes
   const supabase = getSupabaseBrowser();
   const [other, setOther] = useState<ProfileMin | null>(null);
   const [messages, setMessages] = useState<MessageRow[]>([]);
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [openTryOn, setOpenTryOn] = useState<TryOnResult | null>(null);
   const [openOutfit, setOpenOutfit] = useState<Outfit | null>(null);
@@ -251,21 +249,7 @@ function ChatThread({ otherId, onMessageSent, onBack }: { otherId: string; onMes
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, sending]);
-
-  async function send() {
-    if (!text.trim() || sending) return;
-    setSending(true);
-    try {
-      await apiPost("/api/chat/send", { recipient_id: otherId, content: text.trim() });
-      setText("");
-      onMessageSent();
-    } catch (e) {
-      toast.error(`Send failed: ${e instanceof Error ? e.message : "unknown"}`);
-    } finally {
-      setSending(false);
-    }
-  }
+  }, [messages]);
 
   return (
     <>
@@ -327,32 +311,27 @@ function ChatThread({ otherId, onMessageSent, onBack }: { otherId: string; onMes
         )}
       </AnimatePresence>
 
-      {/* Composer */}
+      {/* Composer — try-on/outfit sharing only */}
       <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
         {showShare && (
           <ShareTray otherId={otherId} onShared={() => { setShowShare(false); fetchThread(); onMessageSent(); }} />
         )}
-        <div className="flex gap-2">
-          <button
-            className="btn-secondary"
-            onClick={() => setShowShare((v) => !v)}
-            style={{ padding: "0.6rem 0.9rem" }}
-            title="Share an outfit or try-on"
-          >
-            <Sparkles size={14} />
-          </button>
-          <input
-            className="input"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-            disabled={sending}
-          />
-          <button className="btn-primary" onClick={send} disabled={!text.trim() || sending}>
-            {sending ? <Loader2 size={14} className="spin" /> : <Send size={14} />}
-          </button>
-        </div>
+        {!showShare && (
+          <div className="text-center">
+            <button
+              className="btn-secondary inline-flex items-center gap-2"
+              onClick={() => setShowShare(true)}
+              style={{ padding: "0.75rem 1.25rem" }}
+              title="Share an outfit or try-on"
+            >
+              <Sparkles size={14} />
+              Share an outfit or try-on
+            </button>
+            <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
+              💡 Share your looks with your friends
+            </p>
+          </div>
+        )}
       </div>
     </>
   );
