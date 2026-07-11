@@ -52,11 +52,5 @@
       "source": "/api/avatar/connect",
       "destination": "/api/avatar/connect"
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@stylesense-api-url",
-    "NEXT_PUBLIC_SUPABASE_URL": "@stylesense-supabase-url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@stylesense-supabase-anon-key",
-    "RUNWAYML_API_SECRET": "@stylesense-runway-secret"
-  }
+  ]
 }
