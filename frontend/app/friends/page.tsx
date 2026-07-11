@@ -113,14 +113,17 @@ export default function FriendsPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0">
+      <div className="shrink-0 max-w-2xl w-full mx-auto">
         <PageHeader
+          eyebrow="Friends"
+          title="Your Circle"
           tutorialKey="friends"
           subtitle="Search by email, username, or share code. Once you're friends you can DM and share outfits."
         />
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-16">
+      <div className="max-w-2xl w-full mx-auto">
       {/* Your share code card */}
       <div
         className="surface p-5 mb-6 flex items-center justify-between"
@@ -214,7 +217,7 @@ export default function FriendsPage() {
       )}
 
       {/* Friends */}
-      <Section title="Your friends" count={accepted.length}>
+      <Section title="Your friends" count={loading ? undefined : accepted.length}>
         {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => <div key={i} className="surface p-4 shimmer" style={{ height: 70 }} />)}
@@ -244,6 +247,7 @@ export default function FriendsPage() {
         )}
       </Section>
       </div>
+      </div>
 
       <ConfirmDialog
         open={!!pendingRemove}
@@ -259,7 +263,7 @@ export default function FriendsPage() {
 }
 
 function Section({ title, count, eyebrow, children }: {
-  title: string; count: number; eyebrow?: string; children: React.ReactNode;
+  title: string; count?: number; eyebrow?: string; children: React.ReactNode;
 }) {
   return (
     <div className="mb-8">
@@ -270,7 +274,9 @@ function Section({ title, count, eyebrow, children }: {
               {eyebrow}
             </div>
           )}
-          <h2 className="font-display text-2xl">{title} <span style={{ color: "var(--text-dim)" }}>({count})</span></h2>
+          <h2 className="font-display text-2xl">
+            {title} {typeof count === "number" && <span style={{ color: "var(--text-dim)" }}>({count})</span>}
+          </h2>
         </div>
       </div>
       {children}
@@ -282,27 +288,31 @@ function SearchResultRow({ r, onSend }: { r: SearchResult; onSend: () => void })
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="surface px-4 py-3 flex items-center gap-3"
+      className="surface px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3"
     >
-      <Avatar name={r.full_name || r.email || "?"} />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{r.full_name || r.email}</div>
-        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {r.email && <span>{r.email}</span>}
-          {r.share_code && <span style={{ marginLeft: 8 }}>· code <span className="font-mono" style={{ color: "var(--text)" }}>{r.share_code}</span></span>}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <Avatar name={r.full_name || r.email || "?"} />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium truncate">{r.full_name || r.email}</div>
+          <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
+            {r.email && <span>{r.email}</span>}
+            {r.share_code && <span style={{ marginLeft: 8 }}>· code <span className="font-mono" style={{ color: "var(--text)" }}>{r.share_code}</span></span>}
+          </div>
         </div>
       </div>
-      {r.relationship === "friend" ? (
-        <span className="chip chip-active">Already friends</span>
-      ) : r.relationship === "request_sent" ? (
-        <span className="chip">Request sent</span>
-      ) : r.relationship === "request_received" ? (
-        <span className="chip">In your inbox</span>
-      ) : (
-        <button className="btn-primary" onClick={onSend} style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
-          <UserPlus size={14} /> Add
-        </button>
-      )}
+      <div className="shrink-0">
+        {r.relationship === "friend" ? (
+          <span className="chip chip-active">Already friends</span>
+        ) : r.relationship === "request_sent" ? (
+          <span className="chip">Request sent</span>
+        ) : r.relationship === "request_received" ? (
+          <span className="chip">In your inbox</span>
+        ) : (
+          <button className="btn-primary" onClick={onSend} style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
+            <UserPlus size={14} /> Add
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -311,21 +321,23 @@ function FriendRow({ friend, actions }: { friend: FriendRow; actions: React.Reac
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-      className="surface px-4 py-3 flex items-center gap-3"
+      className="surface px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3"
     >
-      <Avatar name={friend.other.full_name || friend.other.email || "?"} />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">
-          {friend.other.full_name || friend.other.email}
-        </div>
-        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {friend.other.email}
-          {friend.other.share_code && (
-            <span style={{ marginLeft: 8 }}>· code <span className="font-mono" style={{ color: "var(--text)" }}>{friend.other.share_code}</span></span>
-          )}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <Avatar name={friend.other.full_name || friend.other.email || "?"} />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium truncate">
+            {friend.other.full_name || friend.other.email}
+          </div>
+          <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
+            {friend.other.email}
+            {friend.other.share_code && (
+              <span style={{ marginLeft: 8 }}>· code <span className="font-mono" style={{ color: "var(--text)" }}>{friend.other.share_code}</span></span>
+            )}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">{actions}</div>
+      <div className="flex items-center gap-2 shrink-0">{actions}</div>
     </motion.div>
   );
 }

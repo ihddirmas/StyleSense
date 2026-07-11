@@ -132,7 +132,7 @@ export function AvatarWidget() {
               style={{ borderColor: "var(--border-gold)", background: "var(--gold-dim)", maxWidth: 360 }}
             >
               <Loader2 size={14} className="spin" style={{ color: "var(--gold)" }} />
-              <span className="text-xs" style={{ color: "var(--gold)" }}>
+              <span className="text-xs" style={{ color: "var(--text)" }}>
                 Stylist is initializing on Runway... ready in ~30 seconds
               </span>
             </div>
@@ -143,21 +143,21 @@ export function AvatarWidget() {
               style={{ borderColor: "var(--red)", maxWidth: 360 }}
             >
               <AlertCircle size={14} style={{ color: "var(--red)" }} />
-              <span className="text-xs" style={{ color: "var(--red)" }}>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                 Stylist character failed. Admin: re-run setup_admin_stylist.
               </span>
             </div>
           )}
           {stylist?.voice_name && stylist.ready && (
-            <p className="text-xs mb-3" style={{ color: "var(--text-dim)" }}>
+            <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
               Voice: {stylist.voice_name}
             </p>
           )}
 
           {noMic && (
             <div className="surface px-3 py-2 mb-3 flex items-center gap-2 text-xs"
-                 style={{ borderColor: "var(--red)", color: "var(--red)" }}>
-              <AlertCircle size={14} />
+                 style={{ borderColor: "var(--red)", color: "var(--text-muted)" }}>
+              <AlertCircle size={14} style={{ color: "var(--red)" }} />
               <span>No microphone detected. Sessions need a mic.</span>
             </div>
           )}
@@ -206,7 +206,7 @@ export function AvatarWidget() {
             {isProcessing ? "Waiting for stylist..." : "Start session"}
           </button>
 
-          <p className="text-xs mt-3" style={{ color: "var(--text-dim)" }}>
+          <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
             {useCamera
               ? "Real-time conversation. Browser will ask for mic + camera access."
               : "Audio only — no camera will be used."}
@@ -224,7 +224,7 @@ export function AvatarWidget() {
           <div className="text-sm" style={{ color: "var(--text-muted)" }}>
             Preparing your stylist...
           </div>
-          <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
+          <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
             Syncing your wardrobe so she can suggest specific items.
           </div>
         </div>

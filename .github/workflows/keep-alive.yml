@@ -1,0 +1,33 @@
+name: Keep Render backend alive
+
+# Render's free tier spins the service down after 15 minutes of no inbound
+# traffic. The next request then pays a ~50s cold start. This workflow pings
+# /health often enough that the service never sees 15 idle minutes.
+#
+# This only prevents idle-timeout spin-down -- it does not prevent Render's
+# own maintenance restarts or a fresh cold start right after a deploy.
+
+on:
+  schedule:
+    # Every 10 minutes -- comfortably under Render's 15-min free-tier
+    # spin-down window, without hammering Actions minutes.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend /health
+        env:
+          # Set a repo variable BACKEND_HEALTH_URL (Settings -> Secrets and
+          # variables -> Actions -> Variables) if the deployed URL differs
+          # from the fallback below.
+          HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL || 'https://styleai-backend.onrender.com/health' }}
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$HEALTH_URL")
+          echo "Response status: $status"
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Health check failed with status $status"
+            exit 1
+          fi

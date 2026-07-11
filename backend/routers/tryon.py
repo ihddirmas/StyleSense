@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from models.schemas import TryOnRequest, MultiItemTryOnRequest, EventSceneRequest, AnimateRequest
 from services import runway_service, supabase_service
 from services.auth_service import current_user
+from services.rate_limit import check_cooldown
 from graphs import prompt_graph
 
 
@@ -106,6 +107,7 @@ async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
         raise HTTPException(400, "Add a selfie or full-body photo in Avatar Setup first.")
     if "localhost" in req.avatar_selfie_url or "localhost" in req.item_image_url:
         raise HTTPException(400, "URLs must be public HTTPS, not localhost. Upload to Supabase first.")
+    check_cooldown(user["id"], "generate", 5)
 
     setting = req.setting
     if req.enhance_prompt and setting:
@@ -161,6 +163,7 @@ async def generate_multi_tryon(req: MultiItemTryOnRequest, user = Depends(curren
         raise HTTPException(400, "Need at least one item.")
     if len(req.items) > 6:
         raise HTTPException(400, "Max 6 items at once (composite layout limit).")
+    check_cooldown(user["id"], "generate-multi", 5)
 
     setting = req.setting
     if req.enhance_prompt and setting:
@@ -208,6 +211,7 @@ async def generate_multi_tryon(req: MultiItemTryOnRequest, user = Depends(curren
 
 @router.post("/event-scene")
 async def event_scene(req: EventSceneRequest, user = Depends(current_user)):
+    check_cooldown(user["id"], "event-scene", 10)
     try:
         result = await _run_blocking(
             runway_service.runway_event_scene,
@@ -229,6 +233,7 @@ async def event_scene(req: EventSceneRequest, user = Depends(current_user)):
 
 @router.post("/animate")
 async def animate(req: AnimateRequest, user = Depends(current_user)):
+    check_cooldown(user["id"], "animate", 30)
     motion = req.motion_prompt
     scene = req.scene
     if req.enhance_prompt and (req.motion_prompt or req.scene):

@@ -57,6 +57,8 @@ export default function WardrobePage() {
     <div className="h-full flex flex-col">
       <div className="shrink-0">
         <PageHeader
+          eyebrow="Wardrobe"
+          title="Your Closet"
           tutorialKey="wardrobe"
           subtitle="Add items by photo upload or product URL. Select up to 2 items, then open Studio to try them on."
           action={
