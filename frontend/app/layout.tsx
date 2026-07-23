@@ -5,6 +5,7 @@ import { LayoutClient } from "@/components/layout/LayoutClient";
 import { Toaster } from "@/components/ui/Toast";
 import { AuthProvider } from "@/components/AuthProvider";
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
@@ -64,6 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           )}
           <Toaster />
         </AuthProvider>
+        <SpeedInsights />
         <Analytics />
       </body>
     </html>
