@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/Toast";
 import { AuthProvider } from "@/components/AuthProvider";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
@@ -65,6 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Toaster />
         </AuthProvider>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
