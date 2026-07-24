@@ -137,6 +137,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
   const startEventScene = useTasks((s) => s.startEventScene);
   const startAnimate = useTasks((s) => s.startAnimate);
   const cancelTryOn = useTasks((s) => s.cancelTryOn);
+  const removeTask = useTasks((s) => s.remove);
   const activeTryOn = useTasks(selectActiveTryOn);
 
   const generating = activeTryOn?.status === "running";
@@ -479,6 +480,19 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
         <div className="lg:col-span-6 lg:min-h-0 lg:overflow-y-auto">
           {generating ? (
             <GeneratingState avatarUrl={effectiveSelfieUrl} itemUrls={activeTryOn?.itemImageUrls || []} startedAt={activeTryOn?.startedAt} />
+          ) : activeTryOn?.status === "error" ? (
+            <div className="surface p-8 flex flex-col items-center text-center" style={{ minHeight: 480 }}>
+              <div className="font-display text-2xl mb-3" style={{ color: "var(--ink)" }}>Generation failed</div>
+              <div className="text-sm mb-6 max-w-xs" style={{ color: "var(--text-muted)" }}>
+                {activeTryOn.error ?? "Runway returned an error. This sometimes happens when the queue is busy."}
+              </div>
+              <button
+                className="btn-primary"
+                onClick={() => removeTask(activeTryOn.id)}
+              >
+                Try again
+              </button>
+            </div>
           ) : resultUrl ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
