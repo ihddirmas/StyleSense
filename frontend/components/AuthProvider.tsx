@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useAriaChat } from "@/store/ariaChat";
 import { useAppStore } from "@/store/app";
+import posthog from "posthog-js";
 
 // Clear per-user client state (Aria chat + cached avatar/selfie) so a different
 // account on the same browser never inherits the previous user's data.
@@ -91,6 +92,9 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
       setUser(sess?.user ?? null);
       if (sess?.user) {
         fetchProfile(sess.user.id);
+        posthog.identify(sess.user.id, {
+          name: sess.user.user_metadata?.full_name ?? undefined,
+        });
       } else {
         setProfile(null);
       }
@@ -109,6 +113,8 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
     setLoading(true);
     clearUserScopedStores();
     if (typeof window !== "undefined") window.localStorage.removeItem("stylesense-last-user");
+    posthog.capture("user_logged_out");
+    posthog.reset();
     await supabase.auth.signOut();
     // Hard navigation so the middleware re-evaluates with cleared cookies.
     // router.push is a client-side SPA nav and doesn't re-run the middleware.
