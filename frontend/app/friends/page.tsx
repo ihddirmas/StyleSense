@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
+import posthog from "posthog-js";
 
 interface SearchResult {
   id: string;
@@ -70,6 +71,7 @@ export default function FriendsPage() {
   async function sendRequest(addresseeId: string) {
     try {
       await apiPost("/api/friends/request", { addressee_id: addresseeId });
+      posthog.capture("friend_request_sent");
       toast.success("Request sent.");
       // Optimistically update result row
       setResults((prev) => prev.map((r) => r.id === addresseeId ? { ...r, relationship: "request_sent" } : r));
@@ -82,6 +84,7 @@ export default function FriendsPage() {
   async function respond(friendshipId: string, accept: boolean) {
     try {
       await apiPost("/api/friends/respond", { friendship_id: friendshipId, accept });
+      if (accept) posthog.capture("friend_request_accepted");
       toast.success(accept ? "Friend added." : "Request declined.");
       refresh();
     } catch (e) {
