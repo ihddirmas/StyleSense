@@ -97,9 +97,11 @@ CREATE TABLE IF NOT EXISTS messages (
   sender_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   recipient_id  UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   content       TEXT,
-  -- Attachments: at most one of these is set
-  shared_outfit_id     UUID REFERENCES outfits(id) ON DELETE SET NULL,
-  shared_tryon_id      UUID REFERENCES try_on_results(id) ON DELETE SET NULL,
+  -- Attachments: at most one of these is set. No FK here - outfits/try_on_results
+  -- live in Aurora Postgres, not this database. Existence + ownership is enforced
+  -- at the app layer instead (backend/routers/chat.py send_message).
+  shared_outfit_id     UUID,
+  shared_tryon_id      UUID,
   shared_image_url     TEXT,           -- direct image (e.g. when a try-on is the attachment)
   shared_caption       TEXT,
   read_at              TIMESTAMPTZ,

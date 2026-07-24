@@ -11,7 +11,7 @@ from PIL import Image
 
 from pydantic import BaseModel
 from models.schemas import TryOnRequest, MultiItemTryOnRequest, EventSceneRequest, AnimateRequest
-from services import runway_service, supabase_service
+from services import runway_service, supabase_service, analytics_service
 from services.auth_service import current_user
 from services.rate_limit import check_cooldown
 from services.usage_limits import check_tryon_cap, check_event_scene_cap, check_animate_cap
@@ -149,6 +149,9 @@ async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
         prompt_used=result["prompt_used"],
         runway_task_id=result["task_id"],
     )
+    analytics_service.capture(user["id"], "tryon_generated", {
+        "model_used": result["model_used"], "endpoint": "generate",
+    })
 
     return {
         "result_image_url": image_url,
@@ -204,6 +207,9 @@ async def generate_multi_tryon(req: MultiItemTryOnRequest, user = Depends(curren
         prompt_used=result["prompt_used"],
         runway_task_id=result["task_id"],
     )
+    analytics_service.capture(user["id"], "tryon_generated", {
+        "model_used": result["model_used"], "endpoint": "generate-multi", "item_count": len(req.items),
+    })
 
     return {
         "result_image_url": image_url,
@@ -225,6 +231,7 @@ async def event_scene(req: EventSceneRequest, user = Depends(current_user)):
     except RuntimeError as e:
         raise HTTPException(500, str(e))
     supabase_service.record_usage_event(user["id"], "event_scene")
+    analytics_service.capture(user["id"], "event_scene_generated")
 
     event_image_url = await _rehost(user["id"], result["image_url"])
 
@@ -258,6 +265,7 @@ async def animate(req: AnimateRequest, user = Depends(current_user)):
     except RuntimeError as e:
         raise HTTPException(500, str(e))
     supabase_service.record_usage_event(user["id"], "animate")
+    analytics_service.capture(user["id"], "video_animated", {"model_used": result.get("model_used")})
 
     if req.tryon_result_id:
         supabase_service.update_tryon_video(req.tryon_result_id, result["video_url"], result["task_id"])

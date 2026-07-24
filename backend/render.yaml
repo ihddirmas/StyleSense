@@ -9,13 +9,26 @@ services:
     rootDir: backend
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1}
     healthCheckPath: /health
     autoDeploy: true
     envVars:
       # Pin to 3.12 -- rembg/onnxruntime have no 3.13 wheel (see requirements.txt)
       - key: PYTHON_VERSION
         value: 3.12.9
+
+      # Each worker is a separate process that reloads rembg/onnxruntime into its
+      # own memory -- on the free plan's ~512MB, >1 worker risks OOM. Bump this
+      # only after upgrading off `plan: free`, and set REDIS_URL first (below) or
+      # rate-limit cooldowns will drift per-process instead of being shared.
+      - key: WEB_CONCURRENCY
+        value: "1"
+
+      # Shared rate-limit state across workers (services/rate_limit.py). Optional --
+      # unset means each worker falls back to its own in-memory cooldown dict, which
+      # is only correct at WEB_CONCURRENCY=1. Upstash's free tier works fine here.
+      - key: REDIS_URL
+        sync: false
 
       # --- Secrets: set these in the Render dashboard (copy from backend/.env) ---
       - key: RUNWAY_API_KEY

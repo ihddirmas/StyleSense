@@ -16,8 +16,15 @@ import type { WardrobeItem } from "@/types";
 export default function DashboardPage() {
   const { user } = useAuth();
   const { cachedWardrobe, cachedRecent, setCachedWardrobe, setCachedRecent, avatarSelfieUrl } = useAppStore();
-  const [items, setItems] = useState<WardrobeItem[]>(cachedWardrobe);
-  const [recent, setRecent] = useState<TryOnResult[]>(cachedRecent);
+  const [items, setItems] = useState<WardrobeItem[]>([]);
+  const [recent, setRecent] = useState<TryOnResult[]>([]);
+
+  // Populate from persisted cache after hydration (avoids SSR mismatch)
+  useEffect(() => {
+    if (cachedWardrobe.length) setItems(cachedWardrobe);
+    if (cachedRecent.length) setRecent(cachedRecent);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [fetchError, setFetchError] = useState(false);
@@ -126,22 +133,18 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Hero + Insight: side-by-side on lg, stacked on mobile */}
-        {insight || items.length > 0 ? (
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 md:gap-5">
-            <HeroVideo />
-            <div className="flex flex-col gap-3 md:gap-4">
-              <StyleInsightCard insight={insight} items={items} recent={recent} />
-              <div className="flex flex-col gap-2 md:gap-3">
-                <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
-                <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
-                <ActionCard href="/stylist" icon={<MessageCircle size={16} />} title="Ask your stylist" />
-              </div>
+        {/* Hero + Insight: side-by-side on lg+, stacked below */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 md:gap-5">
+          <HeroVideo />
+          <div className="flex flex-col gap-3 md:gap-4">
+            <StyleInsightCard insight={insight} items={items} recent={recent} />
+            <div className="flex flex-col gap-2">
+              <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
+              <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
+              <ActionCard href="/stylist" icon={<MessageCircle size={16} />} title="Ask your stylist" />
             </div>
           </div>
-        ) : (
-          <HeroVideo />
-        )}
+        </div>
 
         {/* Recent try-ons */}
         {fetchError ? (
@@ -170,29 +173,6 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        {/* Shortcut cards — full-width row when user has no data yet */}
-        {!insight && items.length === 0 && (
-          <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            <ActionCard
-              href="/wardrobe"
-              icon={<Plus size={18} />}
-              title="Add to closet"
-              desc="Upload a photo or paste a product URL."
-            />
-            <ActionCard
-              href="/studio"
-              icon={<Sparkles size={18} />}
-              title="Try on an outfit"
-              desc="Compose a look and see it on your avatar."
-            />
-            <ActionCard
-              href="/stylist"
-              icon={<MessageCircle size={18} />}
-              title="Ask your stylist"
-              desc="Get item picks for your next event."
-            />
-          </div>
-        )}
 
         {/* Lightbox */}
         <AnimatePresence>
@@ -239,12 +219,8 @@ function ActionCard({
   return (
     <Link
       href={href}
-      className="surface surface-hover block"
-      style={{
-        textDecoration: "none",
-        color: "inherit",
-        padding: desc ? "16px md:20px" : "12px sm:14px sm:16px",
-      }}
+      className={`surface surface-hover block ${desc ? "p-4" : "p-3"}`}
+      style={{ textDecoration: "none", color: "inherit" }}
     >
       <div className="flex items-start gap-2 sm:gap-3">
         <div

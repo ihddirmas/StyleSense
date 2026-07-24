@@ -16,3 +16,6 @@ boto3==1.35.71
 rembg==2.0.59            # garment cutouts (closet display) + cleaner fallback
 onnxruntime==1.20.1      # rembg backend
 sentry-sdk[fastapi]==2.19.2   # error monitoring, no-op unless SENTRY_DSN is set
+posthog==3.7.4                # product analytics, no-op unless POSTHOG_API_KEY is set
+resend==2.4.0                 # transactional email, no-op unless RESEND_API_KEY is set
+redis==5.2.1                  # shared rate-limit state across workers, no-op unless REDIS_URL is set

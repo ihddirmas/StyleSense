@@ -4,6 +4,7 @@ import "@runwayml/avatars-react/styles.css";
 import { LayoutClient } from "@/components/layout/LayoutClient";
 import { Toaster } from "@/components/ui/Toast";
 import { AuthProvider } from "@/components/AuthProvider";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -54,15 +55,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body>
-        <AuthProvider initialUser={user} initialProfile={profile}>
-          {user ? (
-            <LayoutClient>{children}</LayoutClient>
-          ) : (
-            // Public pages (landing / login / signup) render their own full-height layout
-            <>{children}</>
-          )}
-          <Toaster />
-        </AuthProvider>
+        <PostHogProvider>
+          <AuthProvider initialUser={user} initialProfile={profile}>
+            {user ? (
+              <LayoutClient>{children}</LayoutClient>
+            ) : (
+              // Public pages (landing / login / signup) render their own full-height layout
+              <>{children}</>
+            )}
+            <Toaster />
+          </AuthProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useAriaChat } from "@/store/ariaChat";
 import { useAppStore } from "@/store/app";
@@ -24,6 +25,17 @@ function syncUserScope(uid: string | null) {
   if (uid && uid !== last) {
     if (last) clearUserScopedStores(); // a different account took over this browser
     window.localStorage.setItem("stylesense-last-user", uid);
+  }
+}
+
+// Ties PostHog events to the real user id instead of an anonymous device id.
+// No-op if NEXT_PUBLIC_POSTHOG_KEY isn't set (PostHogProvider never calls posthog.init()).
+function identifyForAnalytics(user: User | null) {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
+  if (user) {
+    posthog.identify(user.id, { email: user.email });
+  } else {
+    posthog.reset();
   }
 }
 
@@ -82,6 +94,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
       syncUserScope(session?.user?.id ?? null);
       setSession(session);
       setUser(session?.user ?? null);
+      identifyForAnalytics(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
     });
 
@@ -89,6 +102,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
       syncUserScope(sess?.user?.id ?? null);
       setSession(sess);
       setUser(sess?.user ?? null);
+      identifyForAnalytics(sess?.user ?? null);
       if (sess?.user) {
         fetchProfile(sess.user.id);
       } else {

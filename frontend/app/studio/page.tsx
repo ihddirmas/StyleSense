@@ -482,16 +482,24 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             <GeneratingState avatarUrl={effectiveSelfieUrl} itemUrls={activeTryOn?.itemImageUrls || []} startedAt={activeTryOn?.startedAt} />
           ) : activeTryOn?.status === "error" ? (
             <div className="surface p-8 flex flex-col items-center text-center" style={{ minHeight: 480 }}>
-              <div className="font-display text-2xl mb-3" style={{ color: "var(--ink)" }}>Generation failed</div>
+              <div className="font-display text-2xl mb-3" style={{ color: "var(--ink)" }}>
+                {activeTryOn.errorStatus === 402 ? "Free plan limit reached" : "Generation failed"}
+              </div>
               <div className="text-sm mb-6 max-w-xs" style={{ color: "var(--text-muted)" }}>
                 {activeTryOn.error ?? "Runway returned an error. This sometimes happens when the queue is busy."}
               </div>
-              <button
-                className="btn-primary"
-                onClick={() => removeTask(activeTryOn.id)}
-              >
-                Try again
-              </button>
+              {activeTryOn.errorStatus === 402 ? (
+                <Link href="/pricing" className="btn-primary">
+                  See plans
+                </Link>
+              ) : (
+                <button
+                  className="btn-primary"
+                  onClick={() => removeTask(activeTryOn.id)}
+                >
+                  Try again
+                </button>
+              )}
             </div>
           ) : resultUrl ? (
             <motion.div

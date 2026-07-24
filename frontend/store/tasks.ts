@@ -12,7 +12,7 @@
  * nav within the same tab is fully preserved.
  */
 import { create } from "zustand";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, ApiError } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { useAppStore } from "@/store/app";
 
@@ -26,6 +26,7 @@ interface BaseTask {
   startedAt: number;
   finishedAt?: number;
   error?: string;
+  errorStatus?: number;
   label: string;
 }
 
@@ -167,7 +168,8 @@ export const useTasks = create<State>((set, get) => ({
       .catch((e) => {
         if (!get().tasks.some((t) => t.id === id)) return;
         const msg = e instanceof Error ? e.message : String(e);
-        update<TryOnTask>(set, id, { status: "error", finishedAt: Date.now(), error: msg });
+        const errorStatus = e instanceof ApiError ? e.status : undefined;
+        update<TryOnTask>(set, id, { status: "error", finishedAt: Date.now(), error: msg, errorStatus });
         toast.error(`Try-on failed: ${msg.slice(0, 80)}`);
       });
 

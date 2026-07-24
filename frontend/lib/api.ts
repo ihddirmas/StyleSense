@@ -10,6 +10,14 @@ async function authHeader(): Promise<Record<string, string>> {
   return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
 }
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const text = await res.text();
@@ -20,7 +28,7 @@ async function handle<T>(res: Response): Promise<T> {
     } catch {
       // leave as text
     }
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail), res.status);
   }
   // Empty body (DELETE)
   if (res.status === 204) return undefined as T;
