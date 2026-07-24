@@ -1,8 +1,13 @@
-import { registerHighlight } from "@highlight-run/next/server";
+import * as Sentry from "@sentry/nextjs";
 
 export async function register() {
-  const projectId = process.env.HIGHLIGHT_PROJECT_ID;
-  if (projectId) {
-    registerHighlight({ projectID: projectId });
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  }
+
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
   }
 }
+
+export const onRequestError = Sentry.captureRequestError;

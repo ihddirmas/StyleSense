@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
-    "@highlight-run/next": "^7.9.38",
     "@runwayml/avatars-react": "^0.15.0",
     "@runwayml/sdk": "^3.21.0",
+    "@sentry/nextjs": "^10.65.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "framer-motion": "^12.38.0",
