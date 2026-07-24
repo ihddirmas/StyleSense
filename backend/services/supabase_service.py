@@ -298,6 +298,57 @@ def get_tryon(tryon_id: str) -> Optional[dict]:
     return db.query("SELECT * FROM try_on_results WHERE id = :id", {"id": tryon_id}, fetch="one")
 
 
+def get_tryons_by_ids(tryon_ids: list) -> list:
+    """Batch fetch try-ons by id (avoids N+1 when hydrating a chat thread)."""
+    if not tryon_ids:
+        return []
+    return db.query(
+        "SELECT * FROM try_on_results WHERE id = ANY((:ids)::uuid[])",
+        {"ids": list(tryon_ids)},
+        fetch="all",
+    )
+
+
+def count_tryons_this_month(user_id: str) -> int:
+    """Count try-on generations (generate + generate-multi) for the current calendar
+    month, used to enforce the free-tier monthly cap. Counts every generation
+    attempt, not just saved ones, since each one spends Runway credits regardless."""
+    row = db.query(
+        """
+        SELECT COUNT(*) AS count FROM try_on_results
+        WHERE user_id = :user_id
+          AND created_at >= date_trunc('month', now())
+        """,
+        {"user_id": user_id},
+        fetch="one",
+    )
+    return row["count"] if row else 0
+
+
+def record_usage_event(user_id: str, action: str) -> None:
+    """Append-only log for endpoints that don't guarantee a countable row of their
+    own (event_scene/animate can attach to zero or many of the same try-on)."""
+    db.query(
+        "INSERT INTO usage_events (user_id, action) VALUES (:user_id, :action)",
+        {"user_id": user_id, "action": action},
+        fetch="none",
+    )
+
+
+def count_usage_events_this_month(user_id: str, action: str) -> int:
+    row = db.query(
+        """
+        SELECT COUNT(*) AS count FROM usage_events
+        WHERE user_id = :user_id
+          AND action = :action
+          AND created_at >= date_trunc('month', now())
+        """,
+        {"user_id": user_id, "action": action},
+        fetch="one",
+    )
+    return row["count"] if row else 0
+
+
 def get_recent_tryons(user_id: str, limit: int = 12, saved_only: bool = True) -> list:
     # saved_only=True (default): only explicitly saved try-ons (history/dashboard).
     # saved_only=False: all recent generations (used by the chat share tray).
@@ -318,6 +369,17 @@ def get_recent_tryons(user_id: str, limit: int = 12, saved_only: bool = True) ->
 
 def get_outfit(outfit_id: str) -> Optional[dict]:
     return db.query("SELECT * FROM outfits WHERE id = :id", {"id": outfit_id}, fetch="one")
+
+
+def get_outfits_by_ids(outfit_ids: list) -> list:
+    """Batch fetch outfits by id (avoids N+1 when hydrating a chat thread)."""
+    if not outfit_ids:
+        return []
+    return db.query(
+        "SELECT * FROM outfits WHERE id = ANY((:ids)::uuid[])",
+        {"ids": list(outfit_ids)},
+        fetch="all",
+    )
 
 
 def delete_outfit(outfit_id: str) -> None:

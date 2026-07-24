@@ -107,11 +107,22 @@ CREATE TABLE IF NOT EXISTS stylist_sessions (
   updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- USAGE EVENTS (free-tier monthly caps for endpoints without a natural row to count,
+-- e.g. /event-scene and /animate, which optionally attach to an existing try-on row
+-- and would otherwise overwrite-not-append, undercounting real Runway spend).
+CREATE TABLE IF NOT EXISTS usage_events (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL,
+  action      TEXT NOT NULL CHECK (action IN ('event_scene', 'animate')),
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Helpful indexes for the per-user list queries.
 CREATE INDEX IF NOT EXISTS idx_wardrobe_user             ON wardrobe_items (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tryon_user_saved          ON try_on_results (user_id, saved, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_outfits_user              ON outfits (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_stylist_sessions_user_updated ON stylist_sessions (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_usage_events_user_action  ON usage_events (user_id, action, created_at DESC);
 
 -- Pre-seed the demo user (fixed UUID, mirrors the Supabase schema).
 INSERT INTO users (id, email, full_name)
