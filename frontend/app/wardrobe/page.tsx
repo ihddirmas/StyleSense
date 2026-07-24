@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
 import type { WardrobeItem, DetectedItem } from "@/types";
+import posthog from "posthog-js";
 
 const CATEGORIES = ["all", "tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"];
 const OCCASIONS = ["any", "casual", "formal", "evening", "sport", "beach"];
@@ -41,8 +42,10 @@ export default function WardrobePage() {
 
   async function performDelete(id: string) {
     try {
+      const item = items.find((i) => i.id === id);
       await apiDelete(`/api/wardrobe/${id}`);
       setItems((prev) => prev.filter((i) => i.id !== id));
+      posthog.capture("wardrobe_item_deleted", { category: item?.category });
       toast.success("Item removed.");
     } catch (e) {
       toast.error(`Delete failed: ${e instanceof Error ? e.message : "unknown"}`);
