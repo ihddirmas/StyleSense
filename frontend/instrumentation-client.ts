@@ -1,17 +1,11 @@
-import * as Sentry from "@sentry/nextjs";
+import { H } from "@highlight-run/next/client";
 
-// No-op until NEXT_PUBLIC_SENTRY_DSN is set (see frontend/.env.example).
-const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+const projectId = process.env.NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID;
 
-if (dsn) {
-  Sentry.init({
-    dsn,
-    environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || "development",
-    tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-    integrations: [Sentry.replayIntegration()],
+if (projectId) {
+  H.init(projectId, {
+    environment: process.env.NEXT_PUBLIC_HIGHLIGHT_ENVIRONMENT || "development",
+    tracingOrigins: true,
+    networkRecording: { enabled: true, recordHeadersAndBody: false },
   });
 }
-
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
