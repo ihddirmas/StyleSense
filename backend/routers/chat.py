@@ -115,6 +115,17 @@ async def send_message(req: SendMessageRequest, user = Depends(current_user)):
     if not (req.shared_outfit_id or req.shared_tryon_id or req.shared_image_url):
         raise HTTPException(400, "Messages must include a shared outfit, try-on, or image.")
 
+    # outfits/try_on_results live in Aurora now, so Postgres can no longer enforce
+    # this via FK - check existence + ownership here instead.
+    if req.shared_outfit_id:
+        outfit = supabase_service.get_outfit(req.shared_outfit_id)
+        if not outfit or outfit["user_id"] != user["id"]:
+            raise HTTPException(404, "Outfit not found.")
+    if req.shared_tryon_id:
+        tryon = supabase_service.get_tryon(req.shared_tryon_id)
+        if not tryon or tryon["user_id"] != user["id"]:
+            raise HTTPException(404, "Try-on not found.")
+
     payload = {
         "sender_id": user["id"],
         "recipient_id": req.recipient_id,

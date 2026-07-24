@@ -40,7 +40,7 @@ export function StyleInsightCard({
   if (!insight && !signals.length) return null;
 
   return (
-    <div className="surface" style={{ borderColor: "var(--border-hover)", padding: "16px md:20px md:22px" }}>
+    <div className="surface p-4 md:p-5" style={{ borderColor: "var(--border-hover)" }}>
       <div className="flex items-center gap-2 mb-3">
         <Sparkles size={13} style={{ color: "var(--gold)" }} />
         <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>

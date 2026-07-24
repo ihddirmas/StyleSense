@@ -99,6 +99,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "styleai-app-state",
+      skipHydration: true,
       partialize: (s) => ({
         avatarSelfieUrl: s.avatarSelfieUrl,
         stylizedAvatarUrl: s.stylizedAvatarUrl,
