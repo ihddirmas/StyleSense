@@ -1,11 +1,16 @@
-import { H } from "@highlight-run/next/client";
+import * as Sentry from "@sentry/nextjs";
 
-const projectId = process.env.NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID;
+// No-op until NEXT_PUBLIC_SENTRY_DSN is set (see frontend/.env.example).
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
-if (projectId) {
-  H.init(projectId, {
-    environment: process.env.NEXT_PUBLIC_HIGHLIGHT_ENVIRONMENT || "development",
-    tracingOrigins: true,
-    networkRecording: { enabled: true, recordHeadersAndBody: false },
+if (dsn) {
+  Sentry.init({
+    dsn,
+    environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || "development",
+    tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
+    // Session Replay is a Sentry.io-only feature (not implemented by GlitchTip's
+    // ingestion API) — omitted so the SDK doesn't try to send unsupported payloads.
   });
 }
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
