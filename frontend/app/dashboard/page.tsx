@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, MessageCircle, Plus, X } from "lucide-react";
 import { StyleInsightCard } from "@/components/dashboard/StyleInsightCard";
+import { UsageMeter } from "@/components/dashboard/UsageMeter";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { TryOnResult } from "@/types";
 import { HeroVideo } from "@/components/dashboard/HeroVideo";
@@ -138,6 +139,7 @@ export default function DashboardPage() {
           <HeroVideo />
           <div className="flex flex-col gap-3 md:gap-4">
             <StyleInsightCard insight={insight} items={items} recent={recent} />
+            <UsageMeter />
             <div className="flex flex-col gap-2">
               <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
               <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
