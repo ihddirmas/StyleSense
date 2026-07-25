@@ -110,10 +110,15 @@ CREATE TABLE IF NOT EXISTS stylist_sessions (
 -- USAGE EVENTS (free-tier monthly caps for endpoints without a natural row to count,
 -- e.g. /event-scene and /animate, which optionally attach to an existing try-on row
 -- and would otherwise overwrite-not-append, undercounting real Runway spend).
+-- 'cap_email_*' actions are dedupe-ledger markers (usage_limits._notify_cap_hit),
+-- not real usage counts -- reusing this table avoids a second schema for that ledger.
 CREATE TABLE IF NOT EXISTS usage_events (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL,
-  action      TEXT NOT NULL CHECK (action IN ('event_scene', 'animate')),
+  action      TEXT NOT NULL CHECK (action IN (
+                'event_scene', 'animate',
+                'cap_email_tryon', 'cap_email_event_scene', 'cap_email_animate'
+              )),
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
