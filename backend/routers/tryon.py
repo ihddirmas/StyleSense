@@ -11,7 +11,7 @@ from PIL import Image
 
 from pydantic import BaseModel
 from models.schemas import TryOnRequest, MultiItemTryOnRequest, EventSceneRequest, AnimateRequest
-from services import runway_service, supabase_service, analytics_service
+from services import runway_service, supabase_service, analytics_service, usage_limits
 from services.auth_service import current_user
 from services.rate_limit import check_cooldown
 from services.usage_limits import check_tryon_cap, check_event_scene_cap, check_animate_cap
@@ -284,3 +284,9 @@ async def save_tryon(req: SaveTryOnRequest, user = Depends(current_user)):
 @router.get("/recent")
 async def recent(limit: int = 12, all: bool = False, user = Depends(current_user)):
     return supabase_service.get_recent_tryons(user["id"], limit, saved_only=not all)
+
+
+@router.get("/usage-status")
+async def usage_status(user = Depends(current_user)):
+    used = supabase_service.count_tryons_this_month(user["id"])
+    return {"used": used, "limit": usage_limits.FREE_TRYON_MONTHLY_LIMIT}

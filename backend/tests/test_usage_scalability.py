@@ -20,8 +20,11 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
+from main import app
 from services import db, supabase_service, usage_limits
+from services.auth_service import current_user
 
 failures = []
 
@@ -162,6 +165,18 @@ def main():
             check("check_animate_cap raises 402 at 1/1 used", False)
         except HTTPException as e:
             check("check_animate_cap raises 402 at 1/1 used", e.status_code == 402)
+
+        # ── 6. GET /api/tryon/usage-status ──
+        app.dependency_overrides[current_user] = lambda: {"id": test_user_id}
+        client = TestClient(app)
+        try:
+            resp = client.get("/api/tryon/usage-status")
+            check("usage-status returns 200", resp.status_code == 200)
+            body = resp.json()
+            check(f"usage-status used == 5 (got {body.get('used')})", body.get("used") == 5)
+            check(f"usage-status limit == 5 (got {body.get('limit')})", body.get("limit") == 5)
+        finally:
+            app.dependency_overrides.pop(current_user, None)
 
     finally:
         # ── cleanup ──
