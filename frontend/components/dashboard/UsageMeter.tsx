@@ -13,7 +13,7 @@ export function UsageMeter() {
       .catch(() => setFailed(true));
   }, []);
 
-  if (failed || !status) return null;
+  if (failed || !status || status.limit <= 0) return null;
 
   const pct = Math.min(100, Math.round((status.used / status.limit) * 100));
 
