@@ -172,7 +172,14 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
     }
 
     // Background fetches — update state and cache when they land.
-    apiGet<WardrobeItem[]>(`/api/wardrobe`).then(data => { setItems(data); setCachedWardrobe(data); }).catch(() => {});
+    apiGet<WardrobeItem[]>(`/api/wardrobe`).then(data => {
+      setItems(data);
+      setCachedWardrobe(data);
+      const preselectId = new URLSearchParams(window.location.search).get("item");
+      if (preselectId && data.some(i => i.id === preselectId)) {
+        setSelected([preselectId]);
+      }
+    }).catch(() => {});
     apiGet<TryOnResult[]>("/api/tryon/recent?all=true").then(r => { const s = r.slice(0, 8); setRecentTryOns(s); setCachedRecent(s); }).catch(() => {});
     Promise.all([
       apiGet<{ selfie_urls: string[]; primary_url: string | null }>("/api/avatar/selfies").catch(() => null),
