@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, MessageCircle, Plus, X } from "lucide-react";
 import { StyleInsightCard } from "@/components/dashboard/StyleInsightCard";
 import { UsageMeter } from "@/components/dashboard/UsageMeter";
+import { ContinueCard } from "@/components/dashboard/ContinueCard";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { TryOnResult } from "@/types";
 import { HeroVideo } from "@/components/dashboard/HeroVideo";
@@ -49,7 +50,7 @@ export default function DashboardPage() {
     setFetchError(false);
     Promise.allSettled([
       apiGet<WardrobeItem[]>(`/api/wardrobe`),
-      apiGet<TryOnResult[]>(`/api/tryon/recent?all=true`),
+      apiGet<TryOnResult[]>(`/api/tryon/recent?all=true&limit=100`),
     ]).then(([wardrobeRes, recentRes]) => {
       if (wardrobeRes.status === "fulfilled") {
         setItems(wardrobeRes.value);
@@ -74,6 +75,13 @@ export default function DashboardPage() {
   }, [user, retryKey]);
 
   const categoryCount = new Set(items.map(i => i.category)).size;
+
+  const triedItemIds = new Set(
+    recent.filter(r => r.status === "done" && r.wardrobe_item_id).map(r => r.wardrobe_item_id)
+  );
+  const continueItem = [...items]
+    .filter(i => !triedItemIds.has(i.id))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
 
   return (
     <div className="h-full overflow-y-auto">
@@ -140,6 +148,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-3 md:gap-4">
             <StyleInsightCard insight={insight} items={items} recent={recent} />
             <UsageMeter />
+            {continueItem && <ContinueCard item={continueItem} />}
             <div className="flex flex-col gap-2">
               <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
               <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
