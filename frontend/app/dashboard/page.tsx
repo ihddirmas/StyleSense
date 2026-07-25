@@ -57,9 +57,8 @@ export default function DashboardPage() {
         setCachedWardrobe(wardrobeRes.value);
       } else setFetchError(true);
       if (recentRes.status === "fulfilled") {
-        const s = recentRes.value.slice(0, 10);
-        setRecent(s);
-        setCachedRecent(s);
+        setRecent(recentRes.value);
+        setCachedRecent(recentRes.value);
       } else setFetchError(true);
     });
 
@@ -75,6 +74,7 @@ export default function DashboardPage() {
   }, [user, retryKey]);
 
   const categoryCount = new Set(items.map(i => i.category)).size;
+  const displayRecent = recent.slice(0, 10);
 
   const triedItemIds = new Set(
     recent.filter(r => r.status === "done" && r.wardrobe_item_id).map(r => r.wardrobe_item_id)
@@ -92,7 +92,7 @@ export default function DashboardPage() {
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl leading-tight">
             Your Digital Runway
           </h1>
-          {(items.length > 0 || recent.length > 0) && (
+          {(items.length > 0 || displayRecent.length > 0) && (
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap pb-0 sm:pb-1 text-xs sm:text-xs">
               {items.length > 0 && (
                 <span className="font-mono" style={{ color: "var(--text-muted)" }}>
@@ -107,11 +107,11 @@ export default function DashboardPage() {
                   </span>
                 </>
               )}
-              {recent.length > 0 && (
+              {displayRecent.length > 0 && (
                 <>
                   <span style={{ color: "var(--border-hover)" }}>·</span>
                   <span className="font-mono" style={{ color: "var(--text-muted)" }}>
-                    {recent.length} saved {recent.length === 1 ? "look" : "looks"}
+                    {displayRecent.length} saved {displayRecent.length === 1 ? "look" : "looks"}
                   </span>
                 </>
               )}
@@ -146,7 +146,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 md:gap-5">
           <HeroVideo />
           <div className="flex flex-col gap-3 md:gap-4">
-            <StyleInsightCard insight={insight} items={items} recent={recent} />
+            <StyleInsightCard insight={insight} items={items} recent={displayRecent} />
             <UsageMeter />
             {continueItem && <ContinueCard item={continueItem} />}
             <div className="flex flex-col gap-2">
@@ -168,7 +168,7 @@ export default function DashboardPage() {
               Retry
             </button>
           </div>
-        ) : recent.length > 0 ? (
+        ) : displayRecent.length > 0 ? (
           <div className="w-full sm:max-w-lg">
             <h3
               className="text-xs font-semibold uppercase tracking-widest mb-3"
@@ -177,7 +177,7 @@ export default function DashboardPage() {
               Recent Try-Ons
             </h3>
             <TryOnCarousel
-              results={recent}
+              results={displayRecent}
               aspect="4/5"
               onOpen={(r) => setLightboxUrl(r.event_scene_url || r.result_image_url)}
             />
