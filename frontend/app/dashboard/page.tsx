@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, MessageCircle, Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 import { StyleInsightCard } from "@/components/dashboard/StyleInsightCard";
 import { UsageMeter } from "@/components/dashboard/UsageMeter";
 import { ContinueCard } from "@/components/dashboard/ContinueCard";
@@ -32,6 +31,7 @@ export default function DashboardPage() {
   const [fetchError, setFetchError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [insight, setInsight] = useState<string | null>(null);
+  const [atCap, setAtCap] = useState(false);
   const hintSeen = useSeenOnce("dashboard-welcome");
 
   useEffect(() => {
@@ -61,6 +61,11 @@ export default function DashboardPage() {
         setCachedRecent(recentRes.value);
       } else setFetchError(true);
     });
+
+    // Cap check for the Continue card nudge: fire-and-forget, fails soft
+    apiGet<{ used: number; limit: number }>(`/api/tryon/usage-status`)
+      .then(d => setAtCap(d.used >= d.limit))
+      .catch(() => {});
 
     // Insight: fire in parallel, never blocks loading state
     apiGet<{ insight: string | null }>(`/api/stylist/insight`)
@@ -146,14 +151,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 md:gap-5">
           <HeroVideo />
           <div className="flex flex-col gap-3 md:gap-4">
-            <StyleInsightCard insight={insight} items={items} recent={displayRecent} />
+            <StyleInsightCard insight={insight} items={items} recent={recent} />
             <UsageMeter />
-            {continueItem && <ContinueCard item={continueItem} />}
-            <div className="flex flex-col gap-2">
-              <ActionCard href="/wardrobe" icon={<Plus size={16} />} title="Add to closet" />
-              <ActionCard href="/studio" icon={<Sparkles size={16} />} title="Try on an outfit" />
-              <ActionCard href="/stylist" icon={<MessageCircle size={16} />} title="Ask your stylist" />
-            </div>
+            {continueItem && !atCap && <ContinueCard item={continueItem} />}
           </div>
         </div>
 
@@ -215,42 +215,3 @@ export default function DashboardPage() {
   );
 }
 
-
-function ActionCard({
-  href,
-  icon,
-  title,
-  desc,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  desc?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`surface surface-hover block ${desc ? "p-4" : "p-3"}`}
-      style={{ textDecoration: "none", color: "inherit" }}
-    >
-      <div className="flex items-start gap-2 sm:gap-3">
-        <div
-          className="flex items-center justify-center flex-shrink-0 mt-0.5"
-          style={{
-            width: desc ? 32 : 28,
-            height: desc ? 32 : 28,
-            background: "var(--surface2)",
-            color: "var(--ink)",
-            border: "1px solid var(--border-hover)",
-          }}
-        >
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className={`font-display leading-tight ${desc ? "text-base sm:text-lg" : "text-xs sm:text-sm"}`} style={{ color: "var(--text)" }}>{title}</div>
-          {desc && <p className="text-xs mt-1 leading-snug" style={{ color: "var(--text-muted)" }}>{desc}</p>}
-        </div>
-      </div>
-    </Link>
-  );
-}
