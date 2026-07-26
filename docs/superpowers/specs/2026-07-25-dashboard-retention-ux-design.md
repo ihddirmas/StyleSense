@@ -60,6 +60,16 @@ generations. Mitigation: the Dashboard's fetch is changed to pass `limit=100`. F
 users are capped at 5 try-ons/month, so 100 comfortably covers realistic history without
 needing a dedicated endpoint.
 
+**Known limitation, accepted (not fixed):** multi-item try-ons (Studio's
+multi-select flow, and every Stylist "Manifest this look" generation, which
+always calls `/api/tryon/generate-multi` even for a single item) save with
+`wardrobe_item_id = NULL` (see `backend/routers/tryon.py`'s `generate_multi`
+handler). This means the Continue card's "untried" derivation cannot learn
+that an item was tried on as part of a multi-item look, and may nudge the
+user back to an item they've already successfully tried on. Accepted for
+now: a real fix would require persisting multiple wardrobe-item associations
+per try-on (a schema change), which is out of scope for this feature.
+
 ## Design
 
 ### Backend — `GET /api/tryon/usage-status`
