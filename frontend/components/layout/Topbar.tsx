@@ -7,6 +7,7 @@ import { LogOut, Loader2, Sparkles, Menu, X, Home, MessageCircle, Mail, Shirt, L
 import { useAuth } from "@/components/AuthProvider";
 import { useTasks, selectRunningCount } from "@/store/tasks";
 import { useAppStore } from "@/store/app";
+import { apiGet } from "@/lib/api";
 
 const PRIMARY_NAV = [
   { href: "/dashboard", label: "HOME" },
@@ -36,6 +37,14 @@ export function Topbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const runningCount = useTasks(selectRunningCount);
+  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    apiGet<{ used: number; limit: number }>("/api/tryon/usage-status")
+      .then(setUsage)
+      .catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -120,6 +129,9 @@ export function Topbar() {
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
+          {/* Usage pill — desktop only */}
+          <UsagePill usage={usage} />
+
           <div ref={ref} className="relative ml-1 md:ml-2">
             <button
               onClick={() => setOpen((v) => !v)}
@@ -193,5 +205,27 @@ export function Topbar() {
         </nav>
       )}
     </>
+  );
+}
+
+function UsagePill({ usage }: { usage: { used: number; limit: number } | null }) {
+  if (!usage || usage.limit <= 0) return null;
+  const pct = usage.used / usage.limit;
+  const color = pct >= 0.8 ? "var(--error, #c0392b)" : pct >= 0.6 ? "#b87333" : "var(--text-muted)";
+  return (
+    <div
+      className="hidden md:flex items-center gap-1.5 px-2.5 py-1 mr-1"
+      style={{
+        border: "1px solid var(--border-hover)",
+        color,
+        fontSize: "0.7rem",
+        fontFamily: "var(--font-mono, monospace)",
+        letterSpacing: "0.04em",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>{usage.used}/{usage.limit}</span>
+      <span style={{ color: "var(--text-dim)" }}>try-ons</span>
+    </div>
   );
 }
