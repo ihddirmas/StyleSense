@@ -288,5 +288,7 @@ async def recent(limit: int = 12, all: bool = False, user = Depends(current_user
 
 @router.get("/usage-status")
 async def usage_status(user = Depends(current_user)):
+    if user["id"] in usage_limits.UNLIMITED_TESTER_USER_IDS:
+        return {"used": 0, "limit": 0}
     used = supabase_service.count_tryons_this_month(user["id"])
     return {"used": used, "limit": usage_limits.FREE_TRYON_MONTHLY_LIMIT}

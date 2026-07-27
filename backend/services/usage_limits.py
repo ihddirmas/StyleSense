@@ -14,6 +14,13 @@ FREE_TRYON_MONTHLY_LIMIT = int(os.getenv("FREE_TRYON_MONTHLY_LIMIT", "5"))
 FREE_EVENT_SCENE_MONTHLY_LIMIT = int(os.getenv("FREE_EVENT_SCENE_MONTHLY_LIMIT", "3"))
 FREE_ANIMATE_MONTHLY_LIMIT = int(os.getenv("FREE_ANIMATE_MONTHLY_LIMIT", "1"))  # 60cr/5s, keep low
 
+# Comma-separated Supabase auth user IDs exempt from every cap below -- for the
+# team's own live-account testing, not a general "unlimited tier" (no plan
+# column exists yet, see module docstring).
+UNLIMITED_TESTER_USER_IDS = {
+    uid.strip() for uid in os.getenv("UNLIMITED_TESTER_USER_IDS", "").split(",") if uid.strip()
+}
+
 
 def _notify_cap_hit(user_id: str, dedupe_key: str, subject: str, body: str) -> None:
     """Send a cap-hit email at most once per user per cap type per month.
@@ -28,6 +35,8 @@ def _notify_cap_hit(user_id: str, dedupe_key: str, subject: str, body: str) -> N
 
 
 def check_tryon_cap(user_id: str) -> None:
+    if user_id in UNLIMITED_TESTER_USER_IDS:
+        return
     used = supabase_service.count_tryons_this_month(user_id)
     if used >= FREE_TRYON_MONTHLY_LIMIT:
         analytics_service.capture(user_id, "tryon_cap_hit", {"limit": FREE_TRYON_MONTHLY_LIMIT})
@@ -45,6 +54,8 @@ def check_tryon_cap(user_id: str) -> None:
 
 
 def check_event_scene_cap(user_id: str) -> None:
+    if user_id in UNLIMITED_TESTER_USER_IDS:
+        return
     used = supabase_service.count_usage_events_this_month(user_id, "event_scene")
     if used >= FREE_EVENT_SCENE_MONTHLY_LIMIT:
         analytics_service.capture(user_id, "event_scene_cap_hit", {"limit": FREE_EVENT_SCENE_MONTHLY_LIMIT})
@@ -62,6 +73,8 @@ def check_event_scene_cap(user_id: str) -> None:
 
 
 def check_animate_cap(user_id: str) -> None:
+    if user_id in UNLIMITED_TESTER_USER_IDS:
+        return
     used = supabase_service.count_usage_events_this_month(user_id, "animate")
     if used >= FREE_ANIMATE_MONTHLY_LIMIT:
         analytics_service.capture(user_id, "animate_cap_hit", {"limit": FREE_ANIMATE_MONTHLY_LIMIT})
