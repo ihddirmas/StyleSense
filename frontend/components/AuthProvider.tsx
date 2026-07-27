@@ -80,7 +80,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
     // Merge both so the Profile context has everything.
     const [u, p] = await Promise.all([
       supabase.from("users").select(
-        "id, email, full_name, username, avatar_url, avatar_selfie_url, stylized_avatar_url, stylized_avatar_video_url, stylized_avatar_video_status"
+        "id, email, full_name, avatar_selfie_url, stylized_avatar_url, stylized_avatar_video_url, stylized_avatar_video_status"
       ).eq("id", uid).single(),
       supabase.from("profiles").select("share_code, username, full_name, avatar_url, email").eq("id", uid).single(),
     ]);
