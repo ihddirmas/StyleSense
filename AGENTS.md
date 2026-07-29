@@ -17,6 +17,45 @@ StyleSense is a monorepo: **FastAPI backend** (`backend/`, port 8000) + **Next.j
 
 **Backend will not import** without Aurora config (`AURORA_IAM_AUTH` + AWS vars, or `AURORA_DATABASE_URL`) and Supabase service role (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`). `services/db.py` and `services/supabase_service.py` raise at import time if missing.
 
+When Cursor Cloud injects secrets as env vars, write both files once per session (strip trailing whitespace — injected `ANTHROPIC_API_KEY` may include a `\n` that breaks HTTP headers):
+
+```bash
+python3 - <<'PY'
+import os
+from pathlib import Path
+
+def g(k, d=""): return os.environ.get(k, d).strip()
+
+backend = "\n".join([
+    f"RUNWAYML_API_SECRET={g('RUNWAYML_API_SECRET')}",
+    f"SUPABASE_URL={g('SUPABASE_URL')}",
+    f"SUPABASE_SERVICE_ROLE_KEY={g('SUPABASE_SERVICE_ROLE_KEY')}",
+    f"SUPABASE_ANON_KEY={g('SUPABASE_ANON_KEY')}",
+    f"AURORA_IAM_AUTH={g('AURORA_IAM_AUTH', 'true')}",
+    f"AURORA_HOST={g('AURORA_HOST')}",
+    f"AURORA_PORT={g('AURORA_PORT', '5432')}",
+    f"AURORA_DB={g('AURORA_DB')}",
+    f"AURORA_USER={g('AURORA_USER')}",
+    f"AWS_REGION={g('AWS_REGION')}",
+    f"AWS_ACCESS_KEY_ID={g('AWS_ACCESS_KEY_ID')}",
+    f"AWS_SECRET_ACCESS_KEY={g('AWS_SECRET_ACCESS_KEY')}",
+    f"ANTHROPIC_API_KEY={g('ANTHROPIC_API_KEY')}",
+    f"FRONTEND_URL={g('FRONTEND_URL', 'http://localhost:3000')}",
+]) + "\n"
+Path("backend/.env").write_text(backend)
+
+frontend = "\n".join([
+    "NEXT_PUBLIC_API_URL=http://localhost:8000",
+    "NEXT_PUBLIC_SITE_URL=http://localhost:3000",
+    f"NEXT_PUBLIC_SUPABASE_URL={g('SUPABASE_URL')}",
+    f"NEXT_PUBLIC_SUPABASE_ANON_KEY={g('SUPABASE_ANON_KEY')}",
+    f"RUNWAYML_API_SECRET={g('RUNWAYML_API_SECRET')}",
+]) + "\n"
+Path("frontend/.env.local").write_text(frontend)
+print("Wrote backend/.env and frontend/.env.local")
+PY
+```
+
 ### Start services (tmux recommended)
 
 ```bash
@@ -54,3 +93,5 @@ Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthro
 - Runway image URLs must be public HTTPS — localhost fails; use Supabase Storage.
 - `posthog-node` warns on Node 22.14; dev still works.
 - Python commands in docs use Windows paths; on Linux use `backend/venv/bin/python`.
+- First dashboard load may show "Couldn't load your wardrobe" until Aurora warms up; **Retry** usually succeeds.
+- `tests.test_anthropic_smoke` requires Anthropic API credits; low balance returns HTTP 400.
