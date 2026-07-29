@@ -128,8 +128,8 @@ export function HeroVideo() {
       >
         <Sparkles size={10} className="sm:w-3" style={{ color: "var(--gold)" }} />
         <span
-          className="text-[10px] sm:text-xs font-semibold"
-          style={{ color: "var(--gold)", letterSpacing: "0.1em", textTransform: "uppercase" }}
+          className="text-[10px] sm:text-xs font-semibold tracking-wide"
+          style={{ color: "var(--gold)", textTransform: "uppercase" }}
         >
           {showUser ? "You" : "Aria"}
         </span>
@@ -166,12 +166,11 @@ export function HeroVideo() {
             exit={{ opacity: 0 }}
             onClick={backfill}
             disabled={triggering}
-            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs"
+            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold"
             style={{
               background: "var(--gold)",
               color: "var(--on-gold)",
               border: "1px solid var(--border-hover)",
-              fontWeight: 600,
               cursor: triggering ? "not-allowed" : "pointer",
               boxShadow: "0 8px 24px -8px rgba(0,0,0,0.7)",
             }}

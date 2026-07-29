@@ -8,9 +8,19 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from models.schemas import StylistChatRequest, StylistChatResponse
-from services import supabase_service, anthropic_service, color_service
+from models.schemas import (
+    StylistChatRequest,
+    StylistChatResponse,
+    StylistWardrobeDetectRequest,
+    StylistWardrobeDetectResponse,
+    StylistWardrobeConfirmRequest,
+    StylistWardrobeConfirmResponse,
+    DetectedItem,
+    AddMultiFailure,
+)
+from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service
 from services.auth_service import current_user
+from services.garment_cleaner import runway_isolate_item
 from graphs import aria_graph
 
 router = APIRouter()
@@ -108,6 +118,35 @@ async def refresh_color_profile(user = Depends(current_user)):
         raise HTTPException(502, "Color analysis failed. Try again.")
     supabase_service.upsert_user(user["id"], color_profile=profile, color_profile_source_selfie=selfie)
     return {"color_profile": profile}
+
+
+@router.get("/kibbe-profile")
+async def get_kibbe_profile(user = Depends(current_user)):
+    """Return the user's cached Kibbe analysis (or null if not analyzed yet)."""
+    row = supabase_service.get_user(user["id"]) or {}
+    return {
+        "kibbe_analysis": row.get("kibbe_analysis"),
+        "kibbe_type": row.get("kibbe_type"),
+    }
+
+
+@router.post("/kibbe-profile")
+async def refresh_kibbe_profile(user = Depends(current_user)):
+    """Force a fresh Kibbe analysis from the user's full-body photo and cache it."""
+    row = supabase_service.get_user(user["id"]) or {}
+    full_body = (row.get("full_body_url") or "").strip()
+    if not full_body:
+        raise HTTPException(400, "No full-body photo on file. Upload one in Avatar Setup first.")
+    analysis = await _run_blocking(kibbe_service.analyze_kibbe_type, full_body)
+    if not analysis:
+        raise HTTPException(502, "Kibbe analysis failed. Try again.")
+    supabase_service.upsert_user(
+        user["id"],
+        kibbe_type=analysis.get("kibbe_type"),
+        kibbe_analysis=analysis,
+        kibbe_source_photo=full_body,
+    )
+    return {"kibbe_analysis": analysis, "kibbe_type": analysis.get("kibbe_type")}
 
 
 @router.get("/suggestions")
@@ -276,3 +315,115 @@ async def delete_stylist_session(session_id: str, user = Depends(current_user)):
         raise HTTPException(404, "Session not found")
     supabase_service.delete_stylist_session(session_id)
     return {"deleted": True}
+
+
+# ───────────────────────────── WARDROBE ADD FROM CHAT ───────────────────────────── #
+
+@router.post("/wardrobe-detect", response_model=StylistWardrobeDetectResponse)
+async def wardrobe_detect(req: StylistWardrobeDetectRequest, user = Depends(current_user)):
+    """
+    Detect items in a chat-uploaded photo (base64 data URI). Parses, uploads to
+    Supabase, runs Claude vision, returns detected items + the permanent image URL.
+    """
+    if not req.image_data.startswith("data:"):
+        raise HTTPException(400, "image_data must be a base64 data URI")
+    
+    try:
+        header, b64 = req.image_data.split(",", 1)
+        media = header.split(":")[1].split(";")[0]
+        import base64
+        image_bytes = base64.b64decode(b64)
+    except Exception as e:
+        raise HTTPException(400, f"Invalid data URI: {e}")
+    
+    # Upload to Supabase
+    try:
+        image_url = supabase_service.upload_to_storage(
+            bucket="wardrobe",
+            user_id=user["id"],
+            file_bytes=image_bytes,
+            filename="chat-upload.jpg",
+            content_type=media,
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Upload failed: {e}")
+    
+    # Detect items
+    detected_raw = wardrobe_vision_service.detect_items_from_bytes(image_bytes, media)
+    detected = [DetectedItem(**d) for d in detected_raw]
+    
+    return StylistWardrobeDetectResponse(detected=detected, image_url=image_url)
+
+
+@router.post("/wardrobe-confirm", response_model=StylistWardrobeConfirmResponse)
+async def wardrobe_confirm(req: StylistWardrobeConfirmRequest, user = Depends(current_user)):
+    """
+    Confirm and add detected items to wardrobe. Runs Runway isolation per item in
+    parallel (like /wardrobe/add-multi), then inserts to DB with tag "chat-added".
+    Returns created items + failures + summary string.
+    """
+    if not req.items:
+        raise HTTPException(400, "items list is empty")
+    
+    async def _process_one(item: DetectedItem):
+        loop = asyncio.get_running_loop()
+        try:
+            isolated_url = await loop.run_in_executor(
+                None,
+                runway_isolate_item,
+                req.source_image_url,
+                item.name,
+                item.category,
+                item.color,
+                item.position,
+            )
+        except Exception as e:
+            return None, AddMultiFailure(name=item.name, reason=f"Runway isolate raised: {e}")
+        
+        if not isolated_url:
+            return None, AddMultiFailure(name=item.name, reason="Runway isolate returned no output")
+        
+        # Re-host to Supabase (Runway URLs are short-lived JWTs)
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as c:
+                r = await c.get(isolated_url)
+                r.raise_for_status()
+            permanent_url = supabase_service.upload_to_storage(
+                bucket="wardrobe",
+                user_id=user["id"],
+                file_bytes=r.content,
+                filename=f"chat-{item.name[:20].replace('/', '_')}.jpg",
+                content_type="image/jpeg",
+            )
+        except Exception as e:
+            return None, AddMultiFailure(name=item.name, reason=f"Storage rehost failed: {e}")
+        
+        try:
+            row = supabase_service.insert_wardrobe_item(
+                user_id=user["id"],
+                name=item.name,
+                category=item.category,
+                image_url=permanent_url,
+                occasion=item.occasion or "casual",
+                color=item.color,
+                brand=item.brand,
+                source_url=req.source_image_url,
+                tags=["chat-added"],
+                cutout_url=None,
+            )
+            return row, None
+        except Exception as e:
+            return None, AddMultiFailure(name=item.name, reason=f"DB insert failed: {e}")
+    
+    results = await asyncio.gather(*[_process_one(it) for it in req.items])
+    created = [row for row, _ in results if row is not None]
+    failed = [fail for _, fail in results if fail is not None]
+    
+    count = len(created)
+    if count == 1:
+        summary = f"{created[0]['name']}"
+    else:
+        summary = f"{count} items"
+    
+    return StylistWardrobeConfirmResponse(created=created, failed=failed, summary=summary)

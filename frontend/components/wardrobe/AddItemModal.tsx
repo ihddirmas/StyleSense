@@ -87,26 +87,23 @@ function DetectedItemsChecklist({
                   value={r.name}
                   onChange={(e) => update(i, { name: e.target.value })}
                   placeholder="Item name"
-                  style={{ fontSize: "0.9rem" }}
                 />
               </div>
               <select
                 className="input"
                 value={r.category}
                 onChange={(e) => update(i, { category: e.target.value as DetectedItem["category"] })}
-                style={{ fontSize: "0.85rem" }}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
               </select>
-              <input
-                className="input"
-                placeholder="Color"
-                value={r.color || ""}
-                onChange={(e) => update(i, { color: e.target.value })}
-                style={{ fontSize: "0.85rem" }}
-              />
+                <input
+                  className="input"
+                  placeholder="Color"
+                  value={r.color || ""}
+                  onChange={(e) => update(i, { color: e.target.value })}
+                />
               {r.position && (
                 <div className="col-span-2 text-xs" style={{ color: "var(--text-dim)" }}>
                   In source: {r.position}

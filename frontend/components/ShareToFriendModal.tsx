@@ -144,7 +144,7 @@ export function ShareToFriendModal({
                     className="btn-primary"
                     onClick={() => send(f.other.id)}
                     disabled={!!sendingTo}
-                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}
+                    style={{ padding: "0.4rem 0.8rem" }}
                   >
                     {sendingTo === f.other.id ? <Loader2 size={12} className="spin" /> : <Send size={12} />}
                     Send

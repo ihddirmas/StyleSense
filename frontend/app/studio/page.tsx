@@ -556,14 +556,15 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                           style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}
                         >
                           <Loader2 size={11} className="spin" style={{ color: "var(--gold)" }} />
-                          <span style={{ color: "var(--gold)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                          <span className="text-xs tracking-wide" style={{ color: "var(--gold)", textTransform: "uppercase" }}>
                             Stylizing your avatar...
                           </span>
                         </div>
                       )}
                       <div
                         className="px-3 py-1 rounded-full mb-2"
-                        style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--gold)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase" }}
+                        className="text-xs tracking-wide"
+                        style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--gold)", textTransform: "uppercase" }}
                       >
                         {stylizedAvatarUrl ? "Your avatar" : "Your starting point"}
                       </div>
@@ -696,8 +697,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             )}
 
             <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Try-on model</div>
-            <select className="input mb-1" value={tryonModel} onChange={(e) => setTryonModel(e.target.value)}
-                    style={{ fontSize: "0.85rem" }}>
+            <select className="input mb-1" value={tryonModel} onChange={(e) => setTryonModel(e.target.value)}>
               {TRYON_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
               ))}
@@ -710,9 +710,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               Pose / setting (optional)
             </div>
             <input className="input mb-2" placeholder="e.g. golden hour, garden walk"
-                   value={settingInput} onChange={(e) => setSettingInput(e.target.value)}
-                   style={{ fontSize: "0.85rem" }} />
-            <label className="flex items-center gap-2 mb-3 cursor-pointer" style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                   value={settingInput} onChange={(e) => setSettingInput(e.target.value)} />
+            <label className="flex items-center gap-2 mb-3 cursor-pointer text-xs" style={{ color: "var(--text-muted)" }}>
               <input type="checkbox" checked={enhancePrompt} onChange={(e) => setEnhancePrompt(e.target.checked)} />
               <span>✦ AI-enhance my prompt (try-on + video)</span>
             </label>
@@ -759,7 +758,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               <div className="flex flex-wrap gap-1 mt-3">
                 {EVENT_PRESETS.map((p) => (
                   <button key={p} className="chip" onClick={() => { setEventInput(p); generateEventScene(p); }}
-                          disabled={!resultUrl || eventLoading} style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }}>
+                          disabled={!resultUrl || eventLoading} style={{ padding: "0.2rem 0.6rem" }}>
                     {p.split(",")[0]}
                   </button>
                 ))}
@@ -775,8 +774,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               )}
 
               <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Video model</div>
-              <select className="input mb-1" value={videoModel} onChange={(e) => setVideoModel(e.target.value)}
-                      style={{ fontSize: "0.85rem" }}>
+              <select className="input mb-1" value={videoModel} onChange={(e) => setVideoModel(e.target.value)}>
                 {VIDEO_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
                 ))}
@@ -790,14 +788,14 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 {MOTION_PRESETS.map((p) => (
                   <button key={p.label} className={`chip ${motionPrompt === p.prompt ? "chip-active" : ""}`}
                           onClick={() => setMotionPrompt(p.prompt)} disabled={animating}
-                          style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }}>
+                          style={{ padding: "0.2rem 0.6rem" }}>
                     {p.label}
                   </button>
                 ))}
               </div>
               <input className="input mb-3" placeholder="Describe the motion (optional)"
                      value={motionPrompt} onChange={(e) => setMotionPrompt(e.target.value)}
-                     style={{ fontSize: "0.8rem" }} disabled={animating} />
+                     disabled={animating} />
 
               <button className="btn-primary w-full" onClick={animate} disabled={animating}>
                 {animating ? <><Loader2 size={14} className="spin" /> Rendering (~60s)</> : <><Film size={14} /> Animate (6s video)</>}

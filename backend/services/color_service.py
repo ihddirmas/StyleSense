@@ -9,7 +9,9 @@ every chat turn without re-analyzing the image.
 import base64
 import json
 import logging
+import os
 import re
+from functools import lru_cache
 from typing import Optional
 
 import httpx
@@ -17,6 +19,23 @@ import httpx
 from services.anthropic_service import client, MODEL
 
 logger = logging.getLogger(__name__)
+
+_PALETTES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "color_palettes.json")
+
+@lru_cache(maxsize=1)
+def _load_palettes() -> dict:
+    try:
+        with open(_PALETTES_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load color palettes: {e}")
+        return {}
+
+_UNDERTONE_SEASON_MAP = {
+    "warm": ["spring", "autumn"],
+    "cool": ["summer", "winter"],
+    "neutral": ["spring", "summer", "autumn", "winter"]
+}
 
 COLOR_PROMPT = """Analyze the person in this photo for personal styling (color analysis + body-aware fashion advice).
 
@@ -55,6 +74,37 @@ def _strip_json(text: str) -> str:
     return text.strip()
 
 
+def _validate_coherence(undertone: str, season: str, contrast: str) -> tuple[str, str, bool]:
+    """
+    Check undertone-season consistency. Auto-correct if incoherent.
+    Returns (corrected_season, corrected_contrast, was_corrected)
+    """
+    if not undertone or not season or undertone not in VALID_UNDERTONE or season not in VALID_SEASON:
+        return season, contrast, False
+    
+    valid_seasons = _UNDERTONE_SEASON_MAP.get(undertone, [])
+    if season in valid_seasons:
+        return season, contrast, False
+    
+    palettes = _load_palettes()
+    season_data = palettes.get("season_reference_swatches", {})
+    
+    if contrast == "high":
+        corrected = "winter" if "winter" in valid_seasons else valid_seasons[0] if valid_seasons else season
+    elif contrast == "low":
+        if undertone == "warm":
+            corrected = "spring" if "spring" in valid_seasons else "autumn"
+        else:
+            corrected = "summer" if "summer" in valid_seasons else "winter"
+    else:
+        corrected = valid_seasons[0] if valid_seasons else season
+    
+    corrected_contrast = season_data.get(corrected, {}).get("contrast", [contrast])[0] if corrected in season_data else contrast
+    
+    logger.info(f"Color validation: {undertone} + {season} -> corrected to {corrected} (contrast={corrected_contrast})")
+    return corrected, corrected_contrast, True
+
+
 def _normalize(data: dict) -> dict:
     undertone = str(data.get("undertone", "")).strip().lower()
     season = str(data.get("season", "")).strip().lower()
@@ -62,10 +112,17 @@ def _normalize(data: dict) -> dict:
     body = str(data.get("body_type", "")).strip().lower().replace(" ", "_").replace("-", "_")
     face = str(data.get("face_shape", "")).strip().lower()
     scope = str(data.get("photo_scope", "")).strip().lower().replace(" ", "_").replace("-", "_")
+    
+    undertone = undertone if undertone in VALID_UNDERTONE else "neutral"
+    season = season if season in VALID_SEASON else ""
+    contrast = contrast if contrast in VALID_CONTRAST else "medium"
+    
+    corrected_season, corrected_contrast, was_corrected = _validate_coherence(undertone, season, contrast)
+    
     return {
-        "undertone": undertone if undertone in VALID_UNDERTONE else "neutral",
-        "season": season if season in VALID_SEASON else "",
-        "contrast": contrast if contrast in VALID_CONTRAST else "medium",
+        "undertone": undertone,
+        "season": corrected_season,
+        "contrast": corrected_contrast,
         "flattering_colors": [str(c).strip() for c in (data.get("flattering_colors") or [])][:10],
         "avoid_colors": [str(c).strip() for c in (data.get("avoid_colors") or [])][:6],
         "body_type": body if body in VALID_BODY else "unknown",
@@ -73,6 +130,7 @@ def _normalize(data: dict) -> dict:
         "hair": str(data.get("hair", "")).strip()[:80],
         "photo_scope": scope if scope in VALID_SCOPE else "face",
         "notes": str(data.get("notes", "")).strip()[:300],
+        "validation_corrected": was_corrected,
     }
 
 

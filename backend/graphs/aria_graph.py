@@ -19,7 +19,7 @@ from typing import Optional, TypedDict
 
 from langgraph.graph import StateGraph, START, END
 
-from services import supabase_service, anthropic_service, style_kb, color_service
+from services import supabase_service, anthropic_service, style_kb, color_service, kibbe_service
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ class AriaState(TypedDict, total=False):
     messages: list           # [{role, content}]
     wardrobe: list
     color_profile: Optional[dict]
+    kibbe_analysis: Optional[dict]
     occasion: Optional[str]
     scene: Optional[str]
     kb_snippets: list
@@ -107,6 +108,9 @@ SYSTEM_TEMPLATE = """You are Aria, StyleSense's personal stylist. Warm, specific
 # USER'S STYLE PROFILE
 {color_profile}
 
+# KIBBE BODY TYPE PROFILE
+{kibbe_profile}
+
 # STYLING KNOWLEDGE (research-grounded reference - apply, don't quote)
 {kb}
 
@@ -136,6 +140,26 @@ def _ensure_profile(state: AriaState) -> dict:
                         logger.warning(f"Could not cache color profile: {e}")
                     result["color_profile"] = profile
 
+    if not state.get("kibbe_analysis"):
+        cached = user.get("kibbe_analysis")
+        if cached:
+            result["kibbe_analysis"] = cached
+        else:
+            full_body = (user.get("full_body_url") or "").strip()
+            if full_body:
+                analysis = kibbe_service.analyze_kibbe_type(full_body)
+                if analysis:
+                    try:
+                        supabase_service.upsert_user(
+                            state["user_id"],
+                            kibbe_type=analysis.get("kibbe_type"),
+                            kibbe_analysis=analysis,
+                            kibbe_source_photo=full_body,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Could not cache Kibbe analysis: {e}")
+                    result["kibbe_analysis"] = analysis
+
     # Load this-or-that style preferences (last 10)
     prefs = user.get("style_preferences") or []
     if prefs:
@@ -161,10 +185,13 @@ def _detect_occasion(state: AriaState) -> dict:
 
 
 def _retrieve_kb(state: AriaState) -> dict:
+    kibbe_analysis = state.get("kibbe_analysis") or {}
+    kibbe_type = kibbe_analysis.get("kibbe_type") if isinstance(kibbe_analysis, dict) else None
     snippets = style_kb.retrieve(
         query=_last_user_text(state.get("messages", [])),
         color_profile=state.get("color_profile"),
         occasion=state.get("occasion"),
+        kibbe_type=kibbe_type,
     )
     return {"kb_snippets": snippets}
 
@@ -191,6 +218,7 @@ def _advise(state: AriaState) -> dict:
     system = SYSTEM_TEMPLATE.format(
         preferences=_format_preferences(state.get("style_preferences", []), state.get("wardrobe", [])),
         color_profile=color_service.format_color_profile(state.get("color_profile")),
+        kibbe_profile=kibbe_service.format_kibbe_profile(state.get("kibbe_analysis")),
         kb="\n".join(f"- {s}" for s in state.get("kb_snippets", [])) or "(none)",
         wardrobe=anthropic_service._format_wardrobe(state.get("wardrobe", [])),
     )
@@ -234,7 +262,7 @@ _graph = _build()
 
 
 def run_aria(user_id: str, messages: list, wardrobe: list) -> dict:
-    """Invoke the Aria graph. Returns {reply, item_ids, color_profile, occasion}."""
+    """Invoke the Aria graph. Returns {reply, item_ids, color_profile, occasion, kibbe_analysis}."""
     out = _graph.invoke({"user_id": user_id, "messages": messages, "wardrobe": wardrobe})
     return {
         "reply": out.get("reply", ""),
@@ -242,4 +270,5 @@ def run_aria(user_id: str, messages: list, wardrobe: list) -> dict:
         "color_profile": out.get("color_profile"),
         "occasion": out.get("occasion"),
         "scene": out.get("scene"),
+        "kibbe_analysis": out.get("kibbe_analysis"),
     }

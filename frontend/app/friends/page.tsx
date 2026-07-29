@@ -132,7 +132,7 @@ export default function FriendsPage() {
           <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
             Your share code
           </div>
-          <div className="font-mono text-2xl" style={{ color: "var(--text)", letterSpacing: "0.15em" }}>
+          <div className="font-mono text-2xl tracking-[0.15em]" style={{ color: "var(--text)" }}>
             {profile?.share_code || "..."}
           </div>
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
@@ -181,12 +181,12 @@ export default function FriendsPage() {
               <FriendRow key={f.friendship_id} friend={f}
                 actions={
                   <>
-                    <button className="btn-primary" onClick={() => respond(f.friendship_id, true)}
-                            style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
+                    <button className="btn-primary text-sm" onClick={() => respond(f.friendship_id, true)}
+                            style={{ padding: "0.4rem 0.8rem" }}>
                       <Check size={14} /> Accept
                     </button>
-                    <button className="btn-secondary" onClick={() => respond(f.friendship_id, false)}
-                            style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
+                    <button className="btn-secondary text-sm" onClick={() => respond(f.friendship_id, false)}
+                            style={{ padding: "0.4rem 0.8rem" }}>
                       <X size={14} /> Decline
                     </button>
                   </>
@@ -205,8 +205,8 @@ export default function FriendsPage() {
                 actions={
                   <>
                     <span className="chip">Awaiting reply</span>
-                    <button className="btn-secondary" onClick={() => setPendingRemove(f)}
-                            style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
+                    <button className="btn-secondary text-sm" onClick={() => setPendingRemove(f)}
+                            style={{ padding: "0.4rem 0.8rem" }}>
                       <X size={14} /> Cancel
                     </button>
                   </>
@@ -233,11 +233,11 @@ export default function FriendsPage() {
               <FriendRow key={f.friendship_id} friend={f}
                 actions={
                   <>
-                    <Link href={`/chat?with=${f.other.id}`} className="btn-primary" style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
+                    <Link href={`/chat?with=${f.other.id}`} className="btn-primary text-sm" style={{ padding: "0.4rem 0.8rem" }}>
                       <MessagesSquare size={14} /> Message
                     </Link>
-                    <button className="btn-secondary" onClick={() => setPendingRemove(f)}
-                            style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
+                    <button className="btn-secondary text-sm" onClick={() => setPendingRemove(f)}
+                            style={{ padding: "0.4rem 0.8rem" }}>
                       Remove
                     </button>
                   </>
@@ -308,7 +308,7 @@ function SearchResultRow({ r, onSend }: { r: SearchResult; onSend: () => void })
         ) : r.relationship === "request_received" ? (
           <span className="chip">In your inbox</span>
         ) : (
-          <button className="btn-primary" onClick={onSend} style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
+          <button className="btn-primary text-sm" onClick={onSend} style={{ padding: "0.4rem 0.8rem" }}>
             <UserPlus size={14} /> Add
           </button>
         )}
