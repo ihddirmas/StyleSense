@@ -390,15 +390,16 @@ function TypeToAvatar({ visible }: { visible: boolean }) {
           className="surface px-3 py-2 text-sm"
           style={{ background: "var(--surface2)", color: "var(--text)" }}
         >
-          <strong style={{ color: "var(--gold)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          <strong className="text-xs tracking-wide" style={{ color: "var(--gold)", textTransform: "uppercase" }}>
             Stylist
           </strong>
           <button
-            onClick={() => setReply(null)}
-            style={{
-              float: "right", background: "none", border: "none",
-              color: "var(--text-dim)", cursor: "pointer", fontSize: "1.2rem",
-              lineHeight: 1, padding: 0, marginLeft: 8,
+onClick={() => setReply(null)}
+              className="text-xl"
+              style={{
+                float: "right", background: "none", border: "none",
+                color: "var(--text-dim)", cursor: "pointer",
+                lineHeight: 1, padding: 0, marginLeft: 8,
             }}
             aria-label="Dismiss"
           >
@@ -415,7 +416,6 @@ function TypeToAvatar({ visible }: { visible: boolean }) {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           disabled={sending}
-          style={{ fontSize: "0.85rem" }}
         />
         <button className="btn-primary" onClick={send} disabled={!text.trim() || sending}>
           {sending ? <Loader2 size={14} className="spin" /> : <Send size={14} />}

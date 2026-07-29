@@ -15,6 +15,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 _KB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "style_knowledge.json")
+_KIBBE_KB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "kibbe_knowledge.json")
 
 
 @lru_cache(maxsize=1)
@@ -25,6 +26,37 @@ def _kb() -> dict:
     except Exception as e:
         logger.warning(f"Could not load style knowledge base: {e}")
         return {}
+
+@lru_cache(maxsize=1)
+def _kibbe_kb() -> dict:
+    try:
+        with open(_KIBBE_KB_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load Kibbe knowledge base: {e}")
+        return {}
+
+
+def _format_kibbe_snippet(kibbe_type: str) -> Optional[str]:
+    kb = _kibbe_kb()
+    types = kb.get("types", {})
+    t = kibbe_type.strip().lower().replace(" ", "_").replace("-", "_")
+    type_data = types.get(t)
+    if not type_data:
+        return None
+    display = t.replace("_", " ").title()
+    essence = type_data.get("style_essence", "")
+    best_lines = type_data.get("best_lines", "")
+    best_fabrics = type_data.get("best_fabrics", "")
+    best_silhouettes = type_data.get("best_silhouettes", "")
+    avoid = type_data.get("avoid", "")
+    return (
+        f"[Kibbe: {display}] {essence}. "
+        f"Best lines: {best_lines}. "
+        f"Best fabrics: {best_fabrics}. "
+        f"Best silhouettes: {best_silhouettes}. "
+        f"Avoid: {avoid}."
+    )
 
 
 def _matches(section: dict, text: str) -> bool:
@@ -45,6 +77,7 @@ def retrieve(
     query: str = "",
     color_profile: Optional[dict] = None,
     occasion: Optional[str] = None,
+    kibbe_type: Optional[str] = None,
     max_snippets: int = 6,
 ) -> list[str]:
     """
@@ -76,6 +109,12 @@ def retrieve(
         if body_block:
             src = body_block.get("source")
             snippets.append(body_block["text"] + (f" [source: {src}]" if src else ""))
+
+    # Kibbe type styling rules
+    if kibbe_type:
+        kibbe_snippet = _format_kibbe_snippet(kibbe_type)
+        if kibbe_snippet:
+            snippets.append(kibbe_snippet)
 
     # Occasion block: explicit match first, else keyword match against the query
     occasions = kb.get("occasions", {})

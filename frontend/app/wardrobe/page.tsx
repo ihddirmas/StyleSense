@@ -82,13 +82,13 @@ export default function WardrobePage() {
                 <button
                   onClick={() => setFilterCategory("all")}
                   className="hover:underline"
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0, fontSize: "inherit" }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
                 >
                   Wardrobe
                 </button>
               </li>
               <li aria-hidden="true" style={{ userSelect: "none" }}>/</li>
-              <li aria-current="page" style={{ color: "var(--ink)", fontWeight: 600, textTransform: "capitalize" }}>
+              <li aria-current="page" className="font-semibold" style={{ color: "var(--ink)", textTransform: "capitalize" }}>
                 {filterCategory}
               </li>
             </ol>

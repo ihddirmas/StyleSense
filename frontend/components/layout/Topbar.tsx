@@ -188,10 +188,9 @@ export function Topbar() {
                   key={href}
                   href={href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm tracking-wide transition-colors"
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm tracking-wide transition-colors ${active ? "font-bold" : "font-normal"}`}
                   style={{
                     textDecoration: "none",
-                    fontWeight: active ? 700 : 400,
                     color: active ? "#3C2415" : "#84634c",
                     background: active ? "var(--parchment)" : "transparent",
                   }}
@@ -214,13 +213,10 @@ function UsagePill({ usage }: { usage: { used: number; limit: number } | null })
   const color = pct >= 0.8 ? "var(--error, #c0392b)" : pct >= 0.6 ? "#b87333" : "var(--text-muted)";
   return (
     <div
-      className="hidden md:flex items-center gap-1.5 px-2.5 py-1 mr-1"
+      className="hidden md:flex items-center gap-1.5 px-2.5 py-1 mr-1 text-xs font-mono tracking-wide"
       style={{
         border: "1px solid var(--border-hover)",
         color,
-        fontSize: "0.7rem",
-        fontFamily: "var(--font-mono, monospace)",
-        letterSpacing: "0.04em",
         whiteSpace: "nowrap",
       }}
     >

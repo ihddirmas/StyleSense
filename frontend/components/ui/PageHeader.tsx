@@ -30,11 +30,7 @@ export function PageHeader({ eyebrow, title, subtitle, action, tutorialKey }: Pa
         {eyebrow && (
           <div
             className={title ? "text-xs mb-2" : "text-sm"}
-            style={{
-              color: "var(--text-muted)",
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-            }}
+            style={{ color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.18em" }}
           >
             {eyebrow}
           </div>

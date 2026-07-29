@@ -88,9 +88,10 @@ export const useAriaChat = create<AriaChatState>()(
     {
       name: "stylesense-aria-chat",
       skipHydration: true,
-      // Only persist UI state, not full sessions (those come from backend)
+      // Persist current session ID + messages for instant hydration
       partialize: (state) => ({
         currentSessionId: state.currentSessionId,
+        messages: state.messages,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.messages?.some((m) => m.manifesting)) {

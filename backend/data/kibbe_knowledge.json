@@ -1,0 +1,199 @@
+{
+  "analysis_guide": {
+    "bone_structure_questions": [
+      "Are the bones sharp, angular, and prominent (yang) or soft, rounded, and delicate (yin)?",
+      "Is the jawline strong and defined or soft and rounded?",
+      "Are the shoulders broad/sharp or sloped/rounded?",
+      "Are the hands and feet large/long or small/delicate?"
+    ],
+    "flesh_questions": [
+      "Does flesh appear taut and flat (yang) or soft and curved (yin)?",
+      "Are limbs straight and lean or curved with more roundness?",
+      "Is the waist definition minimal or pronounced?",
+      "Does weight distribute evenly or collect in specific areas?"
+    ],
+    "facial_features_questions": [
+      "Are facial features sharp and chiseled or soft and rounded?",
+      "Are eyes large and rounded or narrow and angular?",
+      "Are cheekbones prominent and angular or soft and fleshy?",
+      "Is the nose sharp or rounded?"
+    ],
+    "vertical_line": {
+      "long": "Appears tall regardless of actual height (5'6\"+), elongated vertical line",
+      "moderate": "Balanced, neither particularly tall nor petite (5'4\"-5'7\")",
+      "short": "Appears compact/petite regardless of height (under 5'6\")"
+    }
+  },
+  "types": {
+    "dramatic": {
+      "yin_yang": "pure yang",
+      "vertical_line": "long",
+      "bone_structure": "sharp, angular, narrow; long limbs and body; prominent facial bones",
+      "flesh": "taut, flat, and lean; minimal curves",
+      "facial_features": "sharp, chiseled, narrow; high cheekbones; straight nose",
+      "overall_impression": "strikingly angular, regal, powerful, commanding presence",
+      "best_lines": "long, straight, narrow, sculpted; sharp geometric shapes; severe clean lines; asymmetric or bold details",
+      "best_fabrics": "stiff, crisp fabrics that hold shape; leather, heavy silk, thick wool, structured knits",
+      "best_silhouettes": "sleek columns, sharp tailoring, dramatic capes, long straight coats, slim pants, sleek gowns",
+      "avoid": "overly ornate details, ruffles, small prints, delicate fabrics, short hems, fussy romantic styles",
+      "style_essence": "bold minimalism, architectural, avant-garde, high contrast, monochrome"
+    },
+    "soft_dramatic": {
+      "yin_yang": "yang with yin undercurrent",
+      "vertical_line": "long",
+      "bone_structure": "large, broad, angular but with some roundness; long limbs",
+      "flesh": "soft and fleshy, curvy through waist/hips; weight collects in hips/thighs",
+      "facial_features": "full lips, rounded eyes, prominent but soft cheekbones",
+      "overall_impression": "bold yet sensual, glamorous, commanding but approachable",
+      "best_lines": "bold but flowing; draped and clingy; waist emphasis; plunging necklines; long sweeping lines",
+      "best_fabrics": "luxe, draped fabrics; silk, jersey, soft knits, velvet, satin",
+      "best_silhouettes": "bias-cut gowns, wrap styles, body-conscious fit, long coats with waist definition",
+      "avoid": "stiff tailoring, boxy shapes, short/perky details, overly delicate or minimal styles",
+      "style_essence": "old Hollywood glamour, femme fatale, luxe drama, sensual elegance"
+    },
+    "flamboyant_natural": {
+      "yin_yang": "soft yang",
+      "vertical_line": "long",
+      "bone_structure": "broad, blunt, slightly wide; strong shoulders; large hands/feet",
+      "flesh": "straight, muscular; tendency toward muscularity rather than curves",
+      "facial_features": "broad, blunt, open; wide-set eyes; strong or irregular features",
+      "overall_impression": "free-spirited, athletic, relaxed, approachable strength",
+      "best_lines": "unconstructed, relaxed, elongated; asymmetric hems; oversized or slouchy fits",
+      "best_fabrics": "textured, natural fibers; rough linens, chunky knits, denim, suede, canvas",
+      "best_silhouettes": "elongated tops, wide-leg pants, long vests, oversized coats, boyfriend styles",
+      "avoid": "overly tailored or fitted pieces, delicate details, short/cropped styles, fussy ornaments",
+      "style_essence": "effortless chic, bohemian luxe, relaxed sophistication, natural ease"
+    },
+    "natural": {
+      "yin_yang": "balanced yang-neutral",
+      "vertical_line": "moderate",
+      "bone_structure": "moderate, slightly angular or blunt; symmetrical",
+      "flesh": "moderate, evenly distributed; some muscle definition",
+      "facial_features": "open, approachable, moderate features; natural symmetry",
+      "overall_impression": "fresh, approachable, natural, girl/boy-next-door appeal",
+      "best_lines": "relaxed, unconstructed, moderate proportions; casual ease",
+      "best_fabrics": "natural, breathable fabrics; cotton, linen, lightweight denim, soft knits",
+      "best_silhouettes": "casual separates, straight pants, soft shirts, relaxed blazers, sporty styles",
+      "avoid": "overly formal tailoring, ultra-feminine details, severe geometric lines",
+      "style_essence": "casual American classic, approachable chic, sporty elegance"
+    },
+    "soft_natural": {
+      "yin_yang": "soft yang with yin influence",
+      "vertical_line": "moderate",
+      "bone_structure": "slightly broad and blunt; soft shoulders; moderate frame",
+      "flesh": "soft, fleshy, tends toward curves; waist visible but soft",
+      "facial_features": "soft, full, slightly blunt; round or soft eyes; fleshy cheeks",
+      "overall_impression": "approachable warmth, soft strength, natural femininity",
+      "best_lines": "soft, flowing, unconstructed; relaxed waist emphasis; gentle draping",
+      "best_fabrics": "soft, flowing natural fabrics; soft knits, flowing cotton, draped linen",
+      "best_silhouettes": "flowing tops, soft pants, relaxed dresses, cozy knits, bohemian layers",
+      "avoid": "sharp tailoring, stiff fabrics, overly delicate/girly styles, severe minimalism",
+      "style_essence": "boho chic, earthy goddess, soft romance with ease"
+    },
+    "dramatic_classic": {
+      "yin_yang": "balanced with yang influence",
+      "vertical_line": "moderate to slightly long",
+      "bone_structure": "symmetrical, balanced, slight angularity; clean lines",
+      "flesh": "moderate, evenly distributed; minimal extremes",
+      "facial_features": "balanced, symmetrical, refined; no extreme yin or yang",
+      "overall_impression": "elegant restraint, refined sophistication, timeless grace",
+      "best_lines": "clean, symmetrical, tailored; moderate lengths; classic shapes with slight edge",
+      "best_fabrics": "high-quality classics; fine wool, silk, crisp cotton, structured knits",
+      "best_silhouettes": "tailored blazers, sheath dresses, straight pants, classic coats, refined separates",
+      "avoid": "overly trendy pieces, fussy details, extreme proportions, sloppy casual",
+      "style_essence": "polished classic, power elegance, refined investment pieces"
+    },
+    "classic": {
+      "yin_yang": "pure balanced",
+      "vertical_line": "moderate",
+      "bone_structure": "symmetrical, evenly proportioned, moderate in every way",
+      "flesh": "evenly distributed, balanced, moderate curves",
+      "facial_features": "symmetrical, regular, moderate in size and shape",
+      "overall_impression": "timeless, elegant, refined, harmonious, neither striking nor delicate",
+      "best_lines": "symmetrical, moderate, classic proportions; clean lines; balanced details",
+      "best_fabrics": "refined, high-quality classics; fine knits, smooth wools, polished cottons",
+      "best_silhouettes": "tailored sheaths, A-line skirts, button-down shirts, classic trench, pearls",
+      "avoid": "extremes in any direction, overly trendy pieces, very casual grunge, high drama",
+      "style_essence": "timeless elegance, Audrey Hepburn polish, investment wardrobe"
+    },
+    "soft_classic": {
+      "yin_yang": "balanced with yin influence",
+      "vertical_line": "moderate",
+      "bone_structure": "symmetrical with slight softness; gently rounded",
+      "flesh": "soft, slightly fleshy; gentle curves at waist/hips",
+      "facial_features": "soft, rounded, regular; large gentle eyes; full lips",
+      "overall_impression": "gentle elegance, approachable refinement, soft femininity",
+      "best_lines": "soft, rounded, symmetrical; gentle waist emphasis; flowing but controlled",
+      "best_fabrics": "soft, refined fabrics; lightweight wool, soft silk, cashmere, flowing knits",
+      "best_silhouettes": "soft A-lines, wrap styles, gentle draping, rounded collars, soft tailoring",
+      "avoid": "harsh geometric lines, stiff fabrics, overly sporty looks, severe minimalism",
+      "style_essence": "soft elegance, Grace Kelly refinement, feminine polish"
+    },
+    "flamboyant_gamine": {
+      "yin_yang": "yang with yin mix",
+      "vertical_line": "short",
+      "bone_structure": "sharp yang with delicate yin mix; angular with compact frame",
+      "flesh": "sinewy, lean, tends toward straight with slight softness",
+      "facial_features": "mix of sharp and delicate; large eyes, sharp cheekbones, petite nose",
+      "overall_impression": "sassy, spirited, youthful energy, bold pixie, playful edge",
+      "best_lines": "broken, staccato, animated; mixed prints; asymmetry; cropped lengths",
+      "best_fabrics": "crisp, animated textures; structured cottons, leather, denim, geometric knits",
+      "best_silhouettes": "cropped jackets, tapered pants, mini skirts, layered separates, playful prints",
+      "avoid": "long flowing lines, overly delicate/romantic styles, monochrome minimalism",
+      "style_essence": "quirky chic, animated style, bold playfulness, creative mix"
+    },
+    "gamine": {
+      "yin_yang": "balanced yin-yang in compact frame",
+      "vertical_line": "short",
+      "bone_structure": "delicate, symmetrical, compact; small hands/feet",
+      "flesh": "lean, evenly distributed, petite curves",
+      "facial_features": "delicate, symmetrical, youthful; large eyes, small features",
+      "overall_impression": "gamine charm, boyish yet feminine, playful elegance, pixie appeal",
+      "best_lines": "compact, fitted, cropped; crisp details; geometric or color-blocked",
+      "best_fabrics": "crisp, clean fabrics; structured cottons, clean knits, polished denim",
+      "best_silhouettes": "cropped pants, fitted tops, clean lines, Peter Pan collars, preppy separates",
+      "avoid": "overly flowing lines, long lengths, heavy drama, ultra-feminine ruffles",
+      "style_essence": "gamine chic, Parisian pixie, boyish charm with polish"
+    },
+    "soft_gamine": {
+      "yin_yang": "yin with yang mix",
+      "vertical_line": "short",
+      "bone_structure": "delicate with slight sharpness; small and compact",
+      "flesh": "soft, fleshy in compact frame; rounded curves despite petite size",
+      "facial_features": "large rounded eyes, full lips, soft cheeks, delicate but rounded",
+      "overall_impression": "cute, approachable, youthful femininity, soft spunk",
+      "best_lines": "compact, broken, rounded details; cropped with softness; playful asymmetry",
+      "best_fabrics": "soft, lightweight fabrics; soft cottons, jersey, delicate knits, chiffon accents",
+      "best_silhouettes": "fit-and-flare minis, cropped cardigans, rounded collars, playful prints, skater skirts",
+      "avoid": "long flowing lines, severe tailoring, heavy fabrics, overly mature styles",
+      "style_essence": "playful femininity, cute chic, youthful romance, approachable charm"
+    },
+    "theatrical_romantic": {
+      "yin_yang": "yin with slight yang undercurrent",
+      "vertical_line": "short to moderate",
+      "bone_structure": "delicate, small, narrow with slight sharpness in shoulders or jaw",
+      "flesh": "very soft, fleshy, extremely curved; pronounced waist; lush",
+      "facial_features": "very full and lush; large eyes, full lips, rounded cheeks, soft but defined",
+      "overall_impression": "ultra-feminine, sultry, glamorous, ornate beauty",
+      "best_lines": "ornate, intricate, ultra-feminine; extreme waist emphasis; flowing with detail",
+      "best_fabrics": "luxurious, delicate, ornate; lace, silk, velvet, soft draping, embellishments",
+      "best_silhouettes": "corset details, hourglass emphasis, ruffles, draping, bardot necklines, cinched waists",
+      "avoid": "simple minimalism, boxy shapes, casual sportswear, stiff tailoring",
+      "style_essence": "baroque glamour, ultra-feminine, ornate romance, showgirl elegance"
+    },
+    "romantic": {
+      "yin_yang": "pure yin",
+      "vertical_line": "short to moderate",
+      "bone_structure": "small, delicate, rounded; soft shoulders; small hands/feet",
+      "flesh": "very soft, extremely fleshy and curved; lush roundness throughout",
+      "facial_features": "extremely soft, rounded, full; large round eyes, full cheeks, small delicate features",
+      "overall_impression": "pure feminine softness, lush curves, doll-like, ethereal femininity",
+      "best_lines": "round, flowing, ornate; extreme softness; lavish curves and draping",
+      "best_fabrics": "soft, luxe, flowing; silk, chiffon, velvet, soft lace, delicate knits",
+      "best_silhouettes": "flowing gowns, soft draping, rounded necklines, full skirts, soft details everywhere",
+      "avoid": "sharp lines, geometric shapes, stiff fabrics, minimalism, severe tailoring",
+      "style_essence": "ultra-feminine romance, soft goddess, ethereal beauty, vintage glamour"
+    }
+  },
+  "kibbe_prompt_template": "Analyze this full-body photo for Kibbe body typing. Provide a detailed assessment:\n\n1. **Bone Structure**: Evaluate if the skeletal frame appears sharp/angular (yang), soft/rounded (yin), or balanced. Note shoulder width, jawline, hand/foot size.\n\n2. **Flesh Pattern**: Assess if flesh appears taut/lean (yang) or soft/fleshy (yin). Note where weight tends to collect.\n\n3. **Vertical Line**: Does the person appear tall/elongated (long vertical), moderate/balanced, or compact/petite (short vertical)?\n\n4. **Facial Features**: Are features sharp and chiseled or soft and rounded? Note eyes, cheekbones, lips, nose.\n\n5. **Overall Yin-Yang Balance**: What is the dominant impression - yang (sharp/angular), yin (soft/rounded), or balanced?\n\nBased on ALL observations above, determine the most likely Kibbe type from: Dramatic, Soft Dramatic, Flamboyant Natural, Natural, Soft Natural, Dramatic Classic, Classic, Soft Classic, Flamboyant Gamine, Gamine, Soft Gamine, Theatrical Romantic, Romantic.\n\nReturn ONLY a JSON object:\n{\n  \"kibbe_type\": \"[one of the 13 types]\",\n  \"yin_yang_balance\": \"pure yang\" | \"yang with yin\" | \"soft yang\" | \"balanced\" | \"balanced with yin\" | \"yin with yang\" | \"pure yin\",\n  \"vertical_line\": \"long\" | \"moderate\" | \"short\",\n  \"bone_structure\": \"[brief description]\",\n  \"flesh\": \"[brief description]\",\n  \"facial_features\": \"[brief description]\",\n  \"confidence\": 0.0-1.0,\n  \"notes\": \"[one sentence reasoning for this type]\"\n}"
+}

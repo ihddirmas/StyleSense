@@ -88,8 +88,8 @@ export default function OutfitsPage() {
           </p>
           <Link
             href="/studio"
-            className="btn-primary inline-flex mt-5"
-            style={{ fontSize: "0.85rem", padding: "0.55rem 1.2rem" }}
+            className="btn-primary inline-flex mt-5 text-sm"
+            style={{ padding: "0.55rem 1.2rem" }}
           >
             <Sparkles size={14} /> Open Studio
           </Link>

@@ -23,16 +23,13 @@ function SignupInner() {
       <FashionBackground />
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5"
+        className="inline-flex items-center gap-1.5 text-sm font-medium tracking-wide"
         style={{
           position: "fixed",
           top: 28,
           left: 28,
-          fontSize: 13,
-          fontWeight: 500,
           color: "var(--text-muted)",
           textDecoration: "none",
-          letterSpacing: "0.04em",
           zIndex: 3,
           transition: "color 0.15s",
         }}

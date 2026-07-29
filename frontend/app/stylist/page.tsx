@@ -4,17 +4,26 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Loader2, Sparkles, MessageCircle, Mic, ChevronRight,
-  Camera, X, Shuffle, Wand2, Plus, Bookmark, Check,
+  Camera, X, Shuffle, Wand2, Plus, Bookmark, Check, ChevronDown, Trash2,
+  ShoppingBag,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAppStore } from "@/store/app";
+import { useStore } from "zustand";
 import { useAriaChat } from "@/store/ariaChat";
 import { useAuth } from "@/components/AuthProvider";
 import { apiGet, apiPost } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
-import type { ChatMessage, WardrobeItem } from "@/types";
+import type {
+  ChatMessage,
+  WardrobeItem,
+  DetectedItem,
+  StylistWardrobeDetectResponse,
+  StylistWardrobeConfirmResponse,
+} from "@/types";
 import { AvatarWidget } from "@/components/stylist/AvatarWidget";
+import { AddToWardrobeModal } from "@/components/stylist/AddToWardrobeModal";
 
 const SUGGESTION_PROMPTS = [
   "Dinner date that says 'I have taste'",
@@ -28,7 +37,19 @@ export default function StylistPage() {
   const { user, profile } = useAuth();
   const firstName = profile?.full_name?.split(" ")[0];
   const [tab, setTab] = useState<"chat" | "this-or-that" | "voice">("chat");
-  const { messages, setMessages, reset } = useAriaChat();
+  const {
+    messages,
+    setMessages,
+    reset,
+    sessions,
+    currentSessionId,
+    loadSessions,
+    createSession,
+    setCurrentSession,
+    deleteSession,
+    updateSession,
+    newChat,
+  } = useStore(useAriaChat);
   const greeting = (): ChatMessage => ({
     role: "assistant",
     content: firstName
@@ -42,15 +63,49 @@ export default function StylistPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
+  
+  // Wardrobe add from chat
+  const [wardrobeModal, setWardrobeModal] = useState<{
+    detected: DetectedItem[];
+    sourceImageUrl: string;
+  } | null>(null);
+  const [detecting, setDetecting] = useState(false);
 
+  // Load sessions on mount + hydrate currentSessionId
+  useEffect(() => {
+    if (!user) return;
+    const hydrate = useAriaChat.persist?.rehydrate;
+    if (hydrate) hydrate();
+    loadSessions().catch(() => toast.error("Failed to load chat history"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Set greeting if messages are empty
   useEffect(() => {
     if (messages.length === 0) setMessages([greeting()]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length, firstName]);
 
-  function startNewChat() {
-    reset();
-    setMessages([greeting()]);
+  // Close session picker on outside click
+  useEffect(() => {
+    if (!showSessionPicker) return;
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-session-picker]")) setShowSessionPicker(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showSessionPicker]);
+
+  async function startNewChat() {
+    try {
+      await newChat();
+      setMessages([greeting()]);
+      toast.success("Started new chat");
+    } catch (e) {
+      toast.error(`Failed to start new chat: ${e instanceof Error ? e.message : "unknown"}`);
+    }
   }
 
   useEffect(() => {
@@ -118,6 +173,47 @@ export default function StylistPage() {
     e.target.value = "";
   }
 
+  async function handleAddToWardrobe() {
+    if (!photoPreview) return;
+    setDetecting(true);
+    try {
+      const res = await apiPost<StylistWardrobeDetectResponse>("/api/stylist/wardrobe-detect", {
+        image_data: photoPreview,
+      });
+      if (res.detected.length === 0) {
+        toast.error("No clothing items detected in this photo.");
+        return;
+      }
+      setWardrobeModal({ detected: res.detected, sourceImageUrl: res.image_url });
+    } catch (e) {
+      toast.error(`Detection failed: ${e instanceof Error ? e.message : "unknown"}`);
+    } finally {
+      setDetecting(false);
+    }
+  }
+
+  async function confirmWardrobeAdd(items: DetectedItem[]) {
+    if (!wardrobeModal) throw new Error("No modal data");
+    const res = await apiPost<StylistWardrobeConfirmResponse>("/api/stylist/wardrobe-confirm", {
+      source_image_url: wardrobeModal.sourceImageUrl,
+      items,
+    });
+    // Inject a synthetic Aria message
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: `Done! I added ${res.summary} to your wardrobe.`,
+      },
+    ]);
+    // Refresh wardrobe list
+    apiGet<WardrobeItem[]>("/api/wardrobe").then(setItems).catch(() => {});
+    // Clear photo preview and close modal
+    setPhotoPreview(null);
+    setWardrobeModal(null);
+    return res;
+  }
+
   async function send(text: string) {
     const hasContent = text.trim() || photoPreview;
     if (!hasContent || loading) return;
@@ -137,6 +233,17 @@ export default function StylistPage() {
     setPhotoPreview(null);
     setLoading(true);
 
+    // Create session on first user message
+    const isFirstMessage = !currentSessionId && messages.length <= 1;
+    if (isFirstMessage) {
+      try {
+        const title = content.slice(0, 60) || "New chat";
+        await createSession(next, title);
+      } catch (e) {
+        toast.error(`Session creation failed: ${e instanceof Error ? e.message : "unknown"}`);
+      }
+    }
+
     try {
       const payload: Record<string, unknown> = {
         messages: next.map((m) => ({
@@ -150,12 +257,23 @@ export default function StylistPage() {
         "/api/stylist/chat",
         payload
       );
-      setMessages((prev) => [...prev, {
+      const assistantMsg: ChatMessage = {
         role: "assistant",
         content: res.reply,
         suggestedItemIds: res.suggested_item_ids,
         scene: res.scene,
-      }]);
+      };
+      const updatedMessages = [...next, assistantMsg];
+      setMessages(updatedMessages);
+
+      // Update session after assistant reply
+      if (currentSessionId) {
+        try {
+          await updateSession(updatedMessages);
+        } catch (e) {
+          toast.error(`Session save failed: ${e instanceof Error ? e.message : "unknown"}`);
+        }
+      }
     } catch (e) {
       toast.error(`Stylist failed: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
@@ -204,18 +322,111 @@ export default function StylistPage() {
                    style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}>
                 <Sparkles size={14} style={{ color: "var(--gold)" }} />
               </div>
-              <div>
+              <div className="flex-1">
                 <div className="font-display text-base leading-none" style={{ color: "var(--text)" }}>Aria</div>
                 <div className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>
                   AI Stylist · {items.length} items in context
                 </div>
               </div>
+              
+              {/* Session picker dropdown */}
+              <div className="relative" data-session-picker>
+                <button
+                  onClick={() => setShowSessionPicker(!showSessionPicker)}
+                  className="text-xs flex items-center gap-1"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                  title="Chat history"
+                >
+                  <MessageCircle size={14} />
+                  <ChevronDown size={12} />
+                </button>
+                {showSessionPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute right-0 top-full mt-2 surface"
+                    style={{
+                      minWidth: 240,
+                      maxWidth: 320,
+                      maxHeight: 400,
+                      overflowY: "auto",
+                      border: "1px solid var(--border)",
+                      zIndex: 10,
+                    }}
+                  >
+                    <div className="p-2 space-y-1">
+                      {sessions.length === 0 ? (
+                        <div className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
+                          No chat history yet
+                        </div>
+                      ) : (
+                        sessions.map((session) => (
+                          <div
+                            key={session.id}
+                            className="flex items-center gap-2"
+                            style={{
+                              background: currentSessionId === session.id ? "var(--gold-dim)" : "transparent",
+                              borderRadius: 4,
+                            }}
+                          >
+                            <button
+                              onClick={() => {
+                                setCurrentSession(session.id).catch((e) =>
+                                  toast.error(`Load failed: ${e instanceof Error ? e.message : "unknown"}`)
+                                );
+                                setShowSessionPicker(false);
+                              }}
+                              className="flex-1 text-left px-3 py-2 text-xs"
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--text)",
+                              }}
+                            >
+                              <div className="font-medium truncate">
+                                {session.title || "Untitled chat"}
+                              </div>
+                              <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                                {new Date(session.updated_at).toLocaleDateString()} ·{" "}
+                                {session.messages.length} msg{session.messages.length !== 1 ? "s" : ""}
+                              </div>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Delete this chat?")) {
+                                  deleteSession(session.id).catch((e) =>
+                                    toast.error(`Delete failed: ${e instanceof Error ? e.message : "unknown"}`)
+                                  );
+                                }
+                              }}
+                              className="px-2"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--text-dim)",
+                              }}
+                              title="Delete chat"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
               <button
                 onClick={startNewChat}
-                className="ml-auto text-xs"
+                className="text-xs"
                 style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                title="Start new chat"
               >
-                New chat
+                <Plus size={14} />
               </button>
               <Link href="/wardrobe" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 <ChevronRight size={14} />
@@ -233,12 +444,11 @@ export default function StylistPage() {
                     className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className="max-w-[82%] px-4 py-3"
+                      className="max-w-[82%] px-4 py-3 text-sm"
                       style={m.role === "user" ? {
                         background: "var(--gold-dim)",
                         border: "1px solid var(--border-gold)",
                         color: "var(--ink)",
-                        fontSize: "0.9rem",
                       } : {
                         background: "var(--surface)",
                         borderLeft: "3px solid #3C2415",
@@ -246,7 +456,6 @@ export default function StylistPage() {
                         borderRight: "1px solid var(--border)",
                         borderBottom: "1px solid var(--border)",
                         color: "var(--ink)",
-                        fontSize: "0.9rem",
                       }}
                     >
                       {/* Photo bubble */}
@@ -293,7 +502,6 @@ export default function StylistPage() {
                   onClick={() => send(p)}
                   disabled={loading}
                   className="chip whitespace-nowrap flex-shrink-0"
-                  style={{ fontSize: "0.7rem" }}
                 >
                   {p}
                 </button>
@@ -366,6 +574,16 @@ export default function StylistPage() {
                   onKeyDown={(e) => e.key === "Enter" && send(input)}
                   disabled={loading}
                 />
+                {photoPreview && (
+                  <button
+                    className="btn-secondary"
+                    onClick={handleAddToWardrobe}
+                    disabled={detecting}
+                    style={{ padding: "0.72rem 1rem", flexShrink: 0 }}
+                  >
+                    {detecting ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}
+                  </button>
+                )}
                 <button
                   className="btn-primary"
                   onClick={() => send(input)}
@@ -432,6 +650,17 @@ export default function StylistPage() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {wardrobeModal && (
+          <AddToWardrobeModal
+            detected={wardrobeModal.detected}
+            sourceImageUrl={wardrobeModal.sourceImageUrl}
+            onClose={() => setWardrobeModal(null)}
+            onConfirm={confirmWardrobeAdd}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -600,10 +829,10 @@ function ThisOrThat({ items }: { items: WardrobeItem[] }) {
         )}
 
         {choices >= 3 && (
-          <button
-            className="btn-secondary"
-            style={{ fontSize: "0.8rem", padding: "0.45rem 1rem" }}
-            onClick={() => { if (mode === "items") { setPairIdx(0); setLastPick(null); } else fetchStylePair(); }}
+            <button
+              className="btn-secondary"
+              style={{ padding: "0.45rem 1rem" }}
+              onClick={() => { if (mode === "items") { setPairIdx(0); setLastPick(null); } else fetchStylePair(); }}
           >
             <Shuffle size={13} /> Next pair
           </button>
@@ -668,7 +897,7 @@ function StyleArchetypePair({ a, b, onPick }: { a: StyleCard; b: StyleCard; onPi
             className="w-full flex items-center justify-center flex-1 p-4"
             style={{ background: "var(--surface2)", aspectRatio: "1/1" }}
           >
-            <span className="font-display text-center leading-tight" style={{ fontSize: "1rem", color: "var(--text)" }}>
+            <span className="font-display text-center leading-tight text-base" style={{ color: "var(--text)" }}>
               {card.name}
             </span>
           </div>
@@ -776,7 +1005,7 @@ function FormattedReply({
           href="/studio"
           onClick={() => useAppStore.getState().setSelected(itemIds)}
           className="btn-secondary"
-          style={{ fontSize: "0.78rem", padding: "0.4rem 0.8rem", marginTop: 10, display: "inline-flex", gap: 6 }}
+          style={{ padding: "0.4rem 0.8rem", marginTop: 10, display: "inline-flex", gap: 6 }}
         >
           <Wand2 size={13} /> Try look in Studio
         </Link>
@@ -798,7 +1027,7 @@ function FormattedReply({
                   className="btn-secondary mt-2"
                   onClick={onSaveOutfit}
                   disabled={savedOutfit}
-                  style={{ padding: "0.4rem 0.8rem", fontSize: "0.78rem" }}
+                  style={{ padding: "0.4rem 0.8rem" }}
                 >
                   {savedOutfit ? (<><Check size={13} /> Saved to Outfits</>) : (<><Bookmark size={13} /> Save to Outfits</>)}
                 </button>
@@ -809,7 +1038,7 @@ function FormattedReply({
               className="btn-primary"
               onClick={onManifest}
               disabled={manifesting}
-              style={{ padding: "0.5rem 0.9rem", fontSize: "0.8rem" }}
+              style={{ padding: "0.5rem 0.9rem" }}
             >
               {manifesting ? (
                 <><Loader2 size={14} className="spin" /> Manifesting your look…</>

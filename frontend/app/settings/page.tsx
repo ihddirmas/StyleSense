@@ -186,7 +186,7 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-5">
           {/* Face photos */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="surface p-6">
-            <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink)", fontWeight: 600 }}>
+            <div className="text-xs uppercase tracking-widest mb-3 font-semibold" style={{ color: "var(--ink)" }}>
               Face photos
             </div>
             <div className="flex gap-3 mb-2 flex-wrap">
@@ -239,7 +239,7 @@ export default function SettingsPage() {
 
           {/* Body silhouette */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="surface p-6">
-            <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink)", fontWeight: 600 }}>
+            <div className="text-xs uppercase tracking-widest mb-3 font-semibold" style={{ color: "var(--ink)" }}>
               Body silhouette
             </div>
             <div className="flex gap-3 mb-3">
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                     border: bodyType === type ? "2px solid #3C2415" : "1.5px solid var(--border)",
                     color: "var(--ink)", cursor: "pointer",
                   }}>
-                  <span style={{ fontSize: 18 }}>{type === "female" ? "♀" : "♂"}</span>
+                  <span className="text-lg">{type === "female" ? "♀" : "♂"}</span>
                   <span>{type === "female" ? "Female" : "Male"}</span>
                 </button>
               ))}
@@ -273,10 +273,10 @@ export default function SettingsPage() {
 
           {/* Body analysis */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="surface p-6">
-            <div className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--ink)", fontWeight: 600 }}>
+            <div className="text-xs uppercase tracking-widest mb-1 font-semibold" style={{ color: "var(--ink)" }}>
               Body analysis
-              <span className="ml-2 px-1.5 py-0.5"
-                style={{ background: "var(--gold-dim)", color: "var(--text-muted)", fontSize: "0.65rem", letterSpacing: "0.05em" }}>
+              <span className="ml-2 px-1.5 py-0.5 text-xs tracking-wide"
+                style={{ background: "var(--gold-dim)", color: "var(--text-muted)" }}>
                 Optional
               </span>
             </div>
@@ -364,7 +364,7 @@ function ModelPicker({
   const groupId = `model-picker-${label.replace(/\s+/g, "-").toLowerCase()}`;
   return (
     <div role="group" aria-labelledby={groupId}>
-      <div id={groupId} className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink)", fontWeight: 600 }}>
+      <div id={groupId} className="text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: "var(--ink)" }}>
         {label}
       </div>
       <div className="flex gap-2 flex-wrap">
