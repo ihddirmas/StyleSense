@@ -1,7 +1,9 @@
 """StyleAI FastAPI app entry point."""
-import os
+import base64
+import json
 import logging
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -12,7 +14,28 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-# Error monitoring. No-op until SENTRY_DSN is set (see backend/.env.example).
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# PostHog product analytics + error tracking
+# ---------------------------------------------------------------------------
+POSTHOG_API_KEY = os.getenv("POSTHOG_API_KEY", "")
+POSTHOG_HOST = os.getenv("POSTHOG_HOST", "https://us.i.posthog.com")
+posthog = None
+
+if POSTHOG_API_KEY:
+    from posthog import Posthog
+
+    posthog = Posthog(
+        project_api_key=POSTHOG_API_KEY,
+        host=POSTHOG_HOST,
+        enable_exception_autocapture=True,
+    )
+    logger.info("PostHog initialized (exception autocapture on)")
+
+# ---------------------------------------------------------------------------
+# Sentry error monitoring (legacy — no-op until SENTRY_DSN is set)
+# ---------------------------------------------------------------------------
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 if SENTRY_DSN:
     import sentry_sdk
@@ -43,6 +66,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# PostHog middleware — captures exceptions with request context
+# ---------------------------------------------------------------------------
+
+def _extract_user_id_from_request(request: Request) -> str | None:
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    try:
+        payload_b64 = auth.split(".")[1]
+        payload_b64 += "=" * (4 - len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+        return payload.get("sub") or payload.get("id")
+    except Exception:
+        return None
+
+
+@app.middleware("http")
+async def posthog_exception_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        if posthog:
+            distinct_id = _extract_user_id_from_request(request)
+            posthog.capture_exception(
+                e,
+                distinct_id=distinct_id or "anonymous",
+                properties={"path": str(request.url.path)},
+            )
+        raise
+
 
 app.include_router(avatar.router,    prefix="/api/avatar",    tags=["Avatar"])
 app.include_router(tryon.router,     prefix="/api/tryon",     tags=["Try-On"])
