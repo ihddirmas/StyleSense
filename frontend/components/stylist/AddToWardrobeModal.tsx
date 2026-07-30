@@ -71,7 +71,7 @@ export function AddToWardrobeModal({ detected, sourceImageUrl, onClose, onConfir
           <div>
             <div className="font-display text-xl leading-none">Add to Wardrobe</div>
             <div
-              className="text-[10px] uppercase tracking-widest mt-1"
+              className="text-2xs uppercase tracking-widest mt-1"
               style={{ color: "var(--text-muted)" }}
             >
               {result

@@ -29,6 +29,9 @@ const config: Config = {
         sans: ["Public Sans", "sans-serif"],
         display: ["Cormorant Garamond", "serif"],
       },
+      fontSize: {
+        "2xs": ["0.625rem", { lineHeight: "0.875rem" }], // 10px
+      },
       borderRadius: {
         sm: "var(--radius-sm)",
         DEFAULT: "var(--radius)",

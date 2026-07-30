@@ -157,16 +157,15 @@ export default function PricingPage() {
           alignItems: "start",
         }}
       >
-        {tiers.map((tier) => (
+         {tiers.map((tier) => (
           <div
             key={tier.name}
-            className="surface"
+            className="surface rounded-sm"
             style={{
               background: tier.popular ? "var(--surface2)" : "var(--surface)",
               border: tier.popular
                 ? "1px solid var(--border-hover)"
                 : "1px solid var(--border)",
-              borderRadius: 4,
               padding: "32px 28px 28px",
               display: "flex",
               flexDirection: "column",

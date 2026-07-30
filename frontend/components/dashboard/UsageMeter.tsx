@@ -22,7 +22,7 @@ export function UsageMeter() {
     <div className="surface p-4 md:p-5" style={{ borderColor: "var(--border-hover)" }}>
       <div className="flex items-center gap-2 mb-3">
         <Gauge size={13} style={{ color: "var(--on-gold)" }} />
-        <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--on-gold)" }}>
+        <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--on-gold)" }}>
           Monthly Try-Ons
         </span>
       </div>
@@ -49,7 +49,7 @@ export function UsageMeter() {
             />
           </div>
           {status!.used >= status!.limit && (
-            <div className="flex items-center gap-1.5 mt-2.5 text-[10px] sm:text-xs" style={{ color: "var(--on-gold)" }}>
+            <div className="flex items-center gap-1.5 mt-2.5 text-2xs sm:text-xs" style={{ color: "var(--on-gold)" }}>
               <Zap size={11} />
               <span>Upgrade to Studio for unlimited try-ons</span>
             </div>

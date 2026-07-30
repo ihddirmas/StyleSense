@@ -78,7 +78,7 @@ export function GeneratingState({
 
       {/* Progress bar — width derived from elapsed so it survives remounts */}
       <div className="w-full max-w-md mb-3">
-        <div style={{ height: 4, background: "rgba(60,36,21,0.15)", borderRadius: 999, overflow: "hidden" }}>
+         <div className="rounded-full" style={{ height: 4, background: "rgba(60,36,21,0.15)", overflow: "hidden" }}>
           <div
             style={{
               height: "100%",

@@ -53,7 +53,7 @@ function DetectedItemsChecklist({
       </p>
 
       <div className="surface p-3 mb-5 flex items-center gap-3">
-        <img src={sourceUrl} alt="Source" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 6 }} />
+        <img src={sourceUrl} alt="Source" className="rounded-sm" style={{ width: 60, height: 60, objectFit: "cover" }} />
         <div className="text-xs" style={{ color: "var(--text-muted)" }}>
           Your source photo. Each item below will be extracted from it on a clean white background.
         </div>
