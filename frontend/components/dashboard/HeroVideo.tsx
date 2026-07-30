@@ -19,6 +19,7 @@ export function HeroVideo() {
     ariaImageUrl,
     ariaName,
     setAria,
+    hydrated,
   } = useAppStore();
   const [triggering, setTriggering] = useState(false);
 
@@ -43,10 +44,10 @@ export function HeroVideo() {
   // Delegate polling to the shared tasks store (dedupes with any watch
   // already running, and surfaces progress/completion in Activity too).
   useEffect(() => {
-    if (!user) return;
+    if (!user || !hydrated) return;
     if (stylizedVideoStatus === "ready") return;
     useTasks.getState().watchAvatarVideo();
-  }, [user, stylizedVideoStatus]);
+  }, [user, hydrated, stylizedVideoStatus]);
 
   const showUser = !!stylizedVideoUrl && stylizedVideoStatus === "ready";
   const generating = !!avatarSelfieUrl && stylizedVideoStatus === "generating";

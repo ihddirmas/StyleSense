@@ -9,8 +9,12 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
+    const unsub = useAppStore.persist.onFinishHydration(() => {
+      useAppStore.setState({ hydrated: true });
+    });
     useAppStore.persist.rehydrate();
     useAriaChat.persist.rehydrate();
+    return unsub;
   }, []);
 
   return (
