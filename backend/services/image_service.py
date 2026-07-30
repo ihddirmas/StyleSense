@@ -99,3 +99,49 @@ def pad_to_ratio_range(data: bytes, min_ratio: float = 0.5, max_ratio: float = 2
         return out.getvalue()
     except Exception:
         return data
+
+
+def pad_to_16_9(data: bytes, bg_color: tuple = (220, 217, 206)) -> bytes:
+    """
+    Pad an image to 16:9 landscape aspect ratio with warm grey background.
+    This ensures Runway video generation consistently produces landscape output.
+    
+    Args:
+        data: Image bytes (JPEG/PNG/WebP)
+        bg_color: RGB tuple for padding background (default: --bg color #DDD9CE)
+    
+    Returns:
+        Padded image bytes in JPEG format, or original on error
+    """
+    try:
+        img = Image.open(io.BytesIO(data)).convert("RGB")
+        w, h = img.size
+        target_ratio = 16 / 9
+        current_ratio = w / h
+        
+        # Already 16:9 (within 1% tolerance)
+        if abs(current_ratio - target_ratio) < 0.01:
+            return data
+        
+        # Determine target dimensions
+        if current_ratio < target_ratio:
+            # Portrait or square -> pad width
+            new_w = int(h * target_ratio)
+            new_h = h
+        else:
+            # Wide but not 16:9 -> pad height
+            new_h = int(w / target_ratio)
+            new_w = w
+        
+        # Create canvas and center the original
+        canvas = Image.new("RGB", (new_w, new_h), bg_color)
+        paste_x = (new_w - w) // 2
+        paste_y = (new_h - h) // 2
+        canvas.paste(img, (paste_x, paste_y))
+        
+        # Save as JPEG
+        out = io.BytesIO()
+        canvas.save(out, format="JPEG", quality=95)
+        return out.getvalue()
+    except Exception:
+        return data

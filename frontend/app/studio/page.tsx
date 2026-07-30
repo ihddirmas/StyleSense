@@ -359,10 +359,10 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
         )}
 
         <div className="flex items-center gap-2 mb-3 relative" data-filter-menu>
-          <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Wardrobe</span>
+          <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Wardrobe</span>
           <button
             onClick={() => setShowFilterMenu((v) => !v)}
-            className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded"
+            className="text-2xs flex items-center gap-1 px-2 py-0.5 rounded"
             style={{ background: "var(--surface2)", border: "1px solid var(--border-hover)", color: "var(--text-muted)", cursor: "pointer" }}
           >
             {filterCategory === "all" ? "All" : filterCategory} <ChevronDown size={10} />
@@ -435,7 +435,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             {sortedCategories.map((cat) => (
               <div key={cat}>
                 <div
-                  className="text-[9px] font-mono uppercase tracking-widest mb-1.5 px-0.5 font-semibold"
+                  className="text-2xs font-mono uppercase tracking-widest mb-1.5 px-0.5 font-semibold"
                   style={{ color: "var(--text-muted)" }}
                 >
                   {cat}
@@ -472,7 +472,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                           </button>
                         </div>
                         <div className="px-1.5 py-1" style={{ background: "var(--surface)" }}>
-                          <div className="truncate text-[10px] font-medium" style={{ color: "var(--text)" }}>{it.name}</div>
+                          <div className="truncate text-2xs font-medium" style={{ color: "var(--text)" }}>{it.name}</div>
                         </div>
                       </div>
                     );
@@ -562,8 +562,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                         </div>
                       )}
                       <div
-                        className="px-3 py-1 rounded-full mb-2"
-                        className="text-xs tracking-wide"
+                        className="px-3 py-1 rounded-full mb-2 text-xs tracking-wide"
                         style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--gold)", textTransform: "uppercase" }}
                       >
                         {stylizedAvatarUrl ? "Your avatar" : "Your starting point"}
@@ -572,8 +571,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                         <button
                           onClick={refreshAvatar}
                           disabled={refreshingAvatar}
-                          className="mt-2 text-xs flex items-center gap-1"
-                          style={{ background: "rgba(20,14,10,0.55)", border: "1px solid var(--border-gold)", color: "#f3e8d4", borderRadius: 999, padding: "0.3rem 0.7rem", cursor: "pointer" }}
+                          className="mt-2 text-xs flex items-center gap-1 rounded-full"
+                          style={{ background: "rgba(20,14,10,0.55)", border: "1px solid var(--border-gold)", color: "#f3e8d4", padding: "0.3rem 0.7rem", cursor: "pointer" }}
                           title="Regenerate a realistic photo of you in your latest outfit (~5 credits)"
                         >
                           <RefreshCw size={11} /> {refreshingAvatar ? "Refreshing…" : "Refresh my avatar"}
@@ -608,7 +607,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           {/* N2 — Previous try-ons strip (idle only — hidden when result is showing) */}
           {recentTryOns.length > 0 && !generating && !resultUrl && (
             <div className="surface p-3 mt-3">
-              <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-dim)" }}>
+              <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-dim)" }}>
                 Previous try-ons · click to view
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
@@ -633,7 +632,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
 
           {resultUrl && !generating && (activeTryOn?.itemImageUrls?.length ?? 0) > 0 && (
             <div className="surface p-3 mt-3">
-              <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
+              <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
                 Items in this look — click one to try it alone
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
@@ -653,8 +652,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                       }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={u} alt="" className="object-cover" style={{ width: 56, height: 56, borderRadius: 8, border: "1px solid var(--border)" }} />
-                      <div className="truncate text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>
+                      <img src={u} alt="" className="object-cover rounded-sm" style={{ width: 56, height: 56, border: "1px solid var(--border)" }} />
+                      <div className="truncate text-2xs mt-1" style={{ color: "var(--text-dim)" }}>
                         {activeTryOn!.itemNames?.[i] || ""}
                       </div>
                     </button>
@@ -677,10 +676,10 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 {selectedItems.map((it) => (
                   <div
                     key={it.id}
-                    className="flex items-center gap-2 text-xs px-2 py-1.5"
-                    style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", borderRadius: 8 }}
+                    className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-sm"
+                    style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}
                   >
-                    <div className="relative flex-shrink-0" style={{ width: 32, height: 32, borderRadius: 6, overflow: "hidden" }}>
+                    <div className="relative flex-shrink-0 rounded-sm overflow-hidden" style={{ width: 32, height: 32 }}>
                       <Image src={it.image_url} alt={it.name} fill className="object-cover" sizes="32px" />
                     </div>
                     <span className="truncate flex-1">{it.name}</span>
@@ -696,17 +695,17 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               </div>
             )}
 
-            <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Try-on model</div>
+            <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Try-on model</div>
             <select className="input mb-1" value={tryonModel} onChange={(e) => setTryonModel(e.target.value)}>
               {TRYON_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
               ))}
             </select>
-            <div className="text-[10px] mb-3" style={{ color: "var(--text-dim)" }}>
+            <div className="text-2xs mb-3" style={{ color: "var(--text-dim)" }}>
               {TRYON_MODELS.find((m) => m.id === tryonModel)?.blurb}
             </div>
 
-            <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
+            <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
               Pose / setting (optional)
             </div>
             <input className="input mb-2" placeholder="e.g. golden hour, garden walk"
@@ -757,7 +756,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               )}
               <div className="flex flex-wrap gap-1 mt-3">
                 {EVENT_PRESETS.map((p) => (
-                  <button key={p} className="chip" onClick={() => { setEventInput(p); generateEventScene(p); }}
+                  <button key={p} className="chip rounded-full" onClick={() => { setEventInput(p); generateEventScene(p); }}
                           disabled={!resultUrl || eventLoading} style={{ padding: "0.2rem 0.6rem" }}>
                     {p.split(",")[0]}
                   </button>
@@ -768,22 +767,22 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Animate your current scene</div>
               {eventUrl && (
-                <div className="text-[11px] mb-2" style={{ color: "var(--gold)" }}>
+                <div className="text-xs mb-2" style={{ color: "var(--gold)" }}>
                   Using placed scene: {eventInput || "current scene"}
                 </div>
               )}
 
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Video model</div>
+              <div className="text-2xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Video model</div>
               <select className="input mb-1" value={videoModel} onChange={(e) => setVideoModel(e.target.value)}>
                 {VIDEO_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
                 ))}
               </select>
-              <div className="text-[10px] mb-3" style={{ color: "var(--text-dim)" }}>
+              <div className="text-2xs mb-3" style={{ color: "var(--text-dim)" }}>
                 {VIDEO_MODELS.find((m) => m.id === videoModel)?.blurb}
               </div>
 
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Motion</div>
+              <div className="text-2xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Motion</div>
               <div className="flex flex-wrap gap-1 mb-2">
                 {MOTION_PRESETS.map((p) => (
                   <button key={p.label} className={`chip ${motionPrompt === p.prompt ? "chip-active" : ""}`}

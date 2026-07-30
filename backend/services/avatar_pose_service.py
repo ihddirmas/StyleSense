@@ -332,6 +332,30 @@ async def generate_stylized_video(
     except Exception as e:
         logger.warning(f"Could not mark stylized_avatar_video_status (column missing?): {e}")
 
+    # Pre-process: pad stylized portrait to 16:9 landscape BEFORE animating.
+    # This ensures Runway consistently produces landscape output instead of
+    # sometimes following the source portrait aspect ratio.
+    from services import image_service
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as c:
+            img_resp = await c.get(stylized_image_url)
+            img_resp.raise_for_status()
+        
+        padded_bytes = image_service.pad_to_16_9(img_resp.content)
+        
+        # Rehost the padded version
+        padded_url = supabase_service.upload_to_storage(
+            bucket="selfies",
+            user_id=user_id,
+            file_bytes=padded_bytes,
+            filename="stylized-16x9.jpg",
+            content_type="image/jpeg",
+        )
+        logger.info(f"Padded stylized image to 16:9 for user {user_id}")
+    except Exception as e:
+        logger.warning(f"Failed to pad image, using original: {e}")
+        padded_url = stylized_image_url
+
     # runway_animate is synchronous - run in executor so the bg task doesn't
     # block other async work in the worker.
     loop = asyncio.get_running_loop()
@@ -342,7 +366,7 @@ async def generate_stylized_video(
         result = await loop.run_in_executor(
             None,
             lambda: runway_animate(
-                stylized_image_url,
+                padded_url,  # Use padded 16:9 image
                 motion_prompt=RAMP_WALK_PROMPT,
                 ratio="1280:720",
             ),

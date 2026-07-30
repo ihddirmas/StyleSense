@@ -324,7 +324,7 @@ export default function StylistPage() {
               </div>
               <div className="flex-1">
                 <div className="font-display text-base leading-none" style={{ color: "var(--text)" }}>Aria</div>
-                <div className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>
+                <div className="text-2xs uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>
                   AI Stylist · {items.length} items in context
                 </div>
               </div>
@@ -361,14 +361,13 @@ export default function StylistPage() {
                         </div>
                       ) : (
                         sessions.map((session) => (
-                          <div
-                            key={session.id}
-                            className="flex items-center gap-2"
-                            style={{
-                              background: currentSessionId === session.id ? "var(--gold-dim)" : "transparent",
-                              borderRadius: 4,
-                            }}
-                          >
+                            <div
+                              key={session.id}
+                              className="flex items-center gap-2 rounded-sm"
+                              style={{
+                                background: currentSessionId === session.id ? "var(--gold-dim)" : "transparent",
+                              }}
+                            >
                             <button
                               onClick={() => {
                                 setCurrentSession(session.id).catch((e) =>
@@ -387,7 +386,7 @@ export default function StylistPage() {
                               <div className="font-medium truncate">
                                 {session.title || "Untitled chat"}
                               </div>
-                              <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                              <div className="text-2xs mt-0.5" style={{ color: "var(--text-muted)" }}>
                                 {new Date(session.updated_at).toLocaleDateString()} ·{" "}
                                 {session.messages.length} msg{session.messages.length !== 1 ? "s" : ""}
                               </div>
@@ -608,7 +607,7 @@ export default function StylistPage() {
               </div>
               <div>
                 <div className="font-display text-base leading-none" style={{ color: "var(--text)" }}>Aria — Voice</div>
-                <div className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>Live voice session</div>
+                <div className="text-2xs uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>Live voice session</div>
               </div>
             </div>
 
@@ -617,7 +616,7 @@ export default function StylistPage() {
             </div>
 
             <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
-              <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Or type to switch to chat</div>
+              <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Or type to switch to chat</div>
               <div className="flex gap-2">
                 <input
                   className="input"
@@ -773,7 +772,7 @@ function ThisOrThat({ items }: { items: WardrobeItem[] }) {
       <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
         <div>
           <div className="font-display text-xl leading-none">This or That</div>
-          <div className="text-[10px] uppercase tracking-widest mt-1" style={{ color: "var(--text-muted)" }}>
+          <div className="text-2xs uppercase tracking-widest mt-1" style={{ color: "var(--text-muted)" }}>
             Training Aria&apos;s style read of you
           </div>
         </div>
@@ -840,7 +839,7 @@ function ThisOrThat({ items }: { items: WardrobeItem[] }) {
 
         {choices >= 3 && (
           <div
-            className="text-[10px] text-center max-w-xs"
+            className="text-2xs text-center max-w-xs"
             style={{ color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: 12 }}
           >
             Switch to Text Chat and ask Aria for an outfit — she now knows your aesthetic from these choices.
@@ -872,7 +871,7 @@ function ItemPair({ a, b, onPick }: { a: WardrobeItem; b: WardrobeItem; onPick: 
           />
           <div className="p-2">
             <div className="text-xs font-mono truncate" style={{ color: "var(--text)" }}>{item.name}</div>
-            <div className="text-[10px] capitalize mt-0.5" style={{ color: "var(--text-dim)" }}>{item.category}</div>
+            <div className="text-2xs capitalize mt-0.5" style={{ color: "var(--text-dim)" }}>{item.category}</div>
           </div>
         </motion.button>
       ))}
@@ -903,7 +902,7 @@ function StyleArchetypePair({ a, b, onPick }: { a: StyleCard; b: StyleCard; onPi
           </div>
           {card.description && (
             <div className="p-2">
-              <div className="text-[9px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
+              <div className="text-2xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
                 {card.description}
               </div>
             </div>
@@ -1020,7 +1019,8 @@ function FormattedReply({
               <img
                 src={manifestUrl}
                 alt="Your look"
-                style={{ width: "100%", maxWidth: 280, borderRadius: 10, display: "block" }}
+                className="rounded-sm"
+                style={{ width: "100%", maxWidth: 280, display: "block" }}
               />
               {onSaveOutfit && (
                 <button

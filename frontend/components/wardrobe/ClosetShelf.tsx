@@ -91,10 +91,9 @@ export function ClosetShelf({
                 >
                   {item.name}
                 </div>
-                {selected && (
+                 {selected && (
                   <div
-                    className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center font-bold"
-                    className="text-xs"
+                    className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center font-bold text-xs"
                     style={{ background: "var(--gold)", color: "var(--on-gold)" }}
                   >
                     {order}

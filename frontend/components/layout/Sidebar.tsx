@@ -114,7 +114,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
               <Icon className="w-5 h-5 shrink-0" />
               {badge > 0 && (
                 <span
-                  className="absolute top-1 right-1 text-[10px] font-semibold px-1 rounded-full"
+                  className="absolute top-1 right-1 text-2xs font-semibold px-1 rounded-full"
                   style={{ background: "var(--ink)", color: "var(--parchment)", minWidth: 16, textAlign: "center" }}
                 >
                   {badge}

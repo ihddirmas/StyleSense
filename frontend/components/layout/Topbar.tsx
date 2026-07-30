@@ -166,8 +166,8 @@ export function Topbar() {
               >
                 <button
                   onClick={signOut}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm"
-                  style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", borderRadius: 8 }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-sm"
+                  style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer" }}
                 >
                   <LogOut size={14} /> Sign out
                 </button>
@@ -210,18 +210,19 @@ export function Topbar() {
 function UsagePill({ usage }: { usage: { used: number; limit: number } | null }) {
   if (!usage || usage.limit <= 0) return null;
   const pct = usage.used / usage.limit;
-  const color = pct >= 0.8 ? "var(--error, #c0392b)" : pct >= 0.6 ? "#b87333" : "var(--text-muted)";
+  const color = pct >= 0.8 ? "var(--red)" : pct >= 0.6 ? "#b87333" : "var(--text-muted)";
   return (
     <div
-      className="hidden md:flex items-center gap-1.5 px-2.5 py-1 mr-1 text-xs font-mono tracking-wide"
+      className="flex items-center gap-1.5 px-2 md:px-2.5 py-1 mr-1 text-2xs md:text-xs font-mono tracking-wide rounded-full"
       style={{
-        border: "1px solid var(--border-hover)",
+        background: "rgba(20,14,10,0.06)",
+        border: "1px solid var(--border)",
         color,
         whiteSpace: "nowrap",
       }}
     >
       <span>{usage.used}/{usage.limit}</span>
-      <span style={{ color: "var(--text-dim)" }}>try-ons</span>
+      <span className="hidden sm:inline" style={{ color: "var(--text-dim)" }}>try-ons</span>
     </div>
   );
 }

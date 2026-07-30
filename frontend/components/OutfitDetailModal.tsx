@@ -159,11 +159,12 @@ export function OutfitDetailModal({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={it.image_url} alt={it.name}
-                      style={{ width: 44, height: 56, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
+                      className="rounded-sm"
+                      style={{ width: 44, height: 56, objectFit: "cover", flexShrink: 0 }}
                     />
                     <div className="min-w-0">
                       <div className="text-xs font-medium truncate">{it.name}</div>
-                      <div className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                      <div className="text-2xs" style={{ color: "var(--text-dim)" }}>
                         {it.category}{it.color ? ` - ${it.color}` : ""}
                       </div>
                     </div>
