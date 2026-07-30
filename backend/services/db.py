@@ -87,14 +87,31 @@ def query(sql: str, params: Optional[dict] = None, fetch: str = "all") -> Any:
     INSERT/UPDATE/DELETE statements should add `RETURNING *` and use fetch="one"
     or "all" to get the affected rows back (mirrors Supabase's .execute().data).
     """
-    with engine.begin() as conn:  # begin() = transaction that auto-commits on success
-        result = conn.execute(text(sql), params or {})
-        if fetch == "none":
-            return None
-        if fetch == "one":
-            row = result.first()
-            return _row_to_dict(row) if row else None
-        return [_row_to_dict(r) for r in result.fetchall()]
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(text(sql), params or {})
+            if fetch == "none":
+                return None
+            if fetch == "one":
+                row = result.first()
+                return _row_to_dict(row) if row else None
+            return [_row_to_dict(r) for r in result.fetchall()]
+    except Exception as e:
+        # IAM tokens expire after ~15 min; if a pooled connection is stale, dispose
+        # the pool and retry once so the do_connect hook generates a fresh token.
+        msg = str(e).lower()
+        if "password authentication failed" in msg or "pg_hba" in msg or "expired" in msg:
+            logger.warning("Stale IAM token detected, disposing pool and retrying: %s", e)
+            engine.dispose()
+            with engine.begin() as conn:
+                result = conn.execute(text(sql), params or {})
+                if fetch == "none":
+                    return None
+                if fetch == "one":
+                    row = result.first()
+                    return _row_to_dict(row) if row else None
+                return [_row_to_dict(r) for r in result.fetchall()]
+        raise
 
 
 def _coerce(v: Any) -> Any:
