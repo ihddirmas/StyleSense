@@ -95,3 +95,4 @@ Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthro
 - Python commands in docs use Windows paths; on Linux use `backend/venv/bin/python`.
 - First dashboard load may show "Couldn't load your wardrobe" until Aurora warms up; **Retry** usually succeeds.
 - `tests.test_anthropic_smoke` requires Anthropic API credits; low balance returns HTTP 400.
+- Cloud test login secrets: `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` (if the password secret was saved as `TEST_USER_PASSWOR`, use that env name instead).
