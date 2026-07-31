@@ -28,10 +28,10 @@ export function ClosetShelf({
     <div className="mb-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-baseline gap-2">
-          <h3 className="font-display capitalize" style={{ fontSize: "1.1rem", color: "var(--text)", letterSpacing: "0.02em" }}>
+          <h3 className="font-display capitalize text-lg" style={{ color: "var(--text)" }}>
             {label}
           </h3>
-          <span style={{ color: "var(--text-dim)", fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          <span className="text-xs tracking-widest" style={{ color: "var(--text-dim)", textTransform: "uppercase" }}>
             {items.length}
           </span>
         </div>
@@ -91,10 +91,10 @@ export function ClosetShelf({
                 >
                   {item.name}
                 </div>
-                {selected && (
+                 {selected && (
                   <div
-                    className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center font-bold"
-                    style={{ background: "var(--gold)", color: "var(--on-gold)", fontSize: "0.65rem" }}
+                    className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center font-bold text-xs"
+                    style={{ background: "var(--gold)", color: "var(--on-gold)" }}
                   >
                     {order}
                   </div>

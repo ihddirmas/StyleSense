@@ -20,7 +20,7 @@ function ScreenShot({ src, alt }: { src: string; alt: string }) {
 
 function BrowserFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(60,36,21,0.15)", background: "var(--surface)", boxShadow: "0 32px 72px -12px rgba(60,36,21,0.28), 0 0 0 1px rgba(60,36,21,0.06)" }}>
+     <div className="rounded-sm" style={{ overflow: "hidden", border: "1px solid rgba(60,36,21,0.15)", background: "var(--surface)", boxShadow: "0 32px 72px -12px rgba(60,36,21,0.28), 0 0 0 1px rgba(60,36,21,0.06)" }}>
       {/* Chrome bar */}
       <div style={{ height: 36, background: "#ede9d9", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 12px", gap: 8, flexShrink: 0 }}>
         <div style={{ display: "flex", gap: 5 }}>
@@ -28,9 +28,9 @@ function BrowserFrame({ children }: { children: React.ReactNode }) {
             <div key={c} style={{ width: 9, height: 9, borderRadius: "50%", background: c, opacity: 0.8 }} />
           ))}
         </div>
-        <div style={{ flex: 1, background: "rgba(60,36,21,0.06)", borderRadius: 4, height: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>app.stylesense.ai</span>
-        </div>
+         <div className="rounded-sm" style={{ flex: 1, background: "rgba(60,36,21,0.06)", height: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+           <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>app.stylesense.ai</span>
+         </div>
       </div>
       {children}
     </div>

@@ -63,8 +63,8 @@ export default function OnboardingPage() {
           background: "var(--surface)",
           border: "1px solid var(--border)",
           padding: 24,
-          borderRadius: 12,
         }}
+        className="rounded-sm"
       >
         {/* Progress dots */}
         <ProgressDots current={step} total={3} />
@@ -165,14 +165,14 @@ function StepSelfie({
         }}
       />
 
-      <button
+       <button
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
+        className="rounded-sm"
         style={{
           width: "100%",
           height: 200,
           border: "1.5px dashed var(--border)",
-          borderRadius: 8,
           background: "var(--surface2)",
           cursor: uploading ? "default" : "pointer",
           display: "flex",

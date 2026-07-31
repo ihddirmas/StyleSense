@@ -17,7 +17,8 @@ Subsequent calls are fast (~2-3s on CPU).
 import io
 import logging
 from typing import Literal, Optional
-from PIL import Image
+from PIL import Image, ImageFilter
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +58,61 @@ def _opaque_ratio(rgba: Image.Image) -> float:
 _MIN_OPAQUE = 0.003  # below this the cutout is essentially blank
 
 
-def _cutout_with_model(image_bytes: bytes, model: str):
-    """Run one rembg model; return (cropped RGBA, opaque_ratio) or (None, 0.0)."""
+def _apply_alpha_matting(rgba: Image.Image, feather_radius: int = 2, category: Optional[str] = None) -> Image.Image:
+    """
+    Apply alpha channel matting to smooth edges and remove background color bleed.
+    
+    WHY: rembg often leaves semi-transparent halos with background color contamination
+    around garment edges. This function:
+    1. Erodes then dilates the alpha mask to remove weak-alpha fringe pixels (color decontamination)
+    2. Applies Gaussian blur to the alpha channel for smooth anti-aliased edges (feathering)
+    3. Preserves the RGB channels from the original, preventing color shift
+    
+    Args:
+        rgba: Input RGBA image from rembg
+        feather_radius: Gaussian blur radius for edge softening (default 2px)
+        category: Optional garment category for category-aware thresholds
+                  (e.g., accessories may need less aggressive erosion)
+    
+    Returns:
+        RGBA image with matted alpha channel
+    
+    Future enhancement: Category-aware thresholds
+        - Accessories (jewelry, bags) have fine details that are lost by aggressive erosion
+        - Could use MinFilter(1) for accessories vs MinFilter(3) for tops/dresses
+        - Would require passing category through the call chain
+    """
+    # Split channels
+    r, g, b, a = rgba.split()
+    
+    # Color decontamination: erode to remove weak fringe, then dilate to restore edge position
+    # This removes semi-transparent pixels that carry background color
+    # TODO: category-aware erosion strength (accessories need gentler treatment)
+    erode_size = 3  # Could be 1 for accessories, 3 for clothing
+    eroded = a.filter(ImageFilter.MinFilter(erode_size))  # shrink mask
+    dilated = eroded.filter(ImageFilter.MaxFilter(erode_size))  # expand back
+    
+    # Edge feathering: Gaussian blur for smooth anti-aliasing
+    # WHY: hard segmentation edges look artificial; 2-3px blur creates natural falloff
+    feathered = dilated.filter(ImageFilter.GaussianBlur(radius=feather_radius))
+    
+    # Reconstruct RGBA with the matted alpha channel
+    # RGB channels are unchanged - only alpha is refined
+    return Image.merge("RGBA", (r, g, b, feathered))
+
+
+def _cutout_with_model(image_bytes: bytes, model: str, category: Optional[str] = None):
+    """
+    Run one rembg model with alpha matting and edge refinement.
+    Returns (processed RGBA, opaque_ratio) or (None, 0.0).
+    """
     from rembg import remove
     session = _get_rembg_session(model)
     rgba = Image.open(io.BytesIO(remove(image_bytes, session=session))).convert("RGBA")
+    
+    # Apply alpha matting before cropping (works better on full canvas)
+    rgba = _apply_alpha_matting(rgba, feather_radius=2, category=category)
+    
     bbox = rgba.getbbox()
     if bbox:
         rgba = rgba.crop(bbox)
@@ -75,20 +126,52 @@ def make_cutout(image_bytes: bytes, category: Optional[str] = None) -> bytes | N
     general object segmenter for accessories/shoes; if the primary model returns a
     near-empty result, retries with the other model. Returns PNG bytes, or None on
     failure / empty cutout (so the UI falls back to the white-bg image).
+    
+    WHY the critical fixes:
+    1. Occluded-photo detection: rejects photos of people wearing clothes (rembg can't
+       remove what's underneath). Prevents transparent cutouts showing body parts.
+    2. Alpha matting + feathering: removes background color bleed and smooths edges
+       for professional cutout quality.
+    3. 768×1024 normalization: consistent aspect ratio across all wardrobe items for
+       uniform grid display.
+    4. PNG compression level 9: smaller file size without quality loss.
     """
+    # CRITICAL FIX #1: Detect occluded photos (person wearing clothes) BEFORE cutout
+    # WHY: rembg removes backgrounds, not occlusions. If the source shows a person
+    # wearing the garment, the cutout will show transparent body parts underneath,
+    # which looks broken. Reject these upfront and let the UI fall back to white-bg.
+    try:
+        is_clean, problems = verify_clean_garment(image_bytes, content_type="image/jpeg")
+        if not is_clean:
+            logger.info(f"make_cutout: rejecting occluded photo (category={category}, problems={problems})")
+            return None
+    except Exception as e:
+        # Don't block cutout pipeline on vision check errors
+        logger.warning(f"make_cutout: occluded-photo check failed ({e}); proceeding anyway")
+    
     primary = _model_for_category(category)
     fallback = _GENERAL_MODEL if primary == _CLOTH_MODEL else _CLOTH_MODEL
     try:
-        rgba, ratio = _cutout_with_model(image_bytes, primary)
+        rgba, ratio = _cutout_with_model(image_bytes, primary, category=category)
         if ratio < _MIN_OPAQUE:
-            alt, alt_ratio = _cutout_with_model(image_bytes, fallback)
+            alt, alt_ratio = _cutout_with_model(image_bytes, fallback, category=category)
             if alt_ratio > ratio:
                 rgba, ratio = alt, alt_ratio
         if ratio < _MIN_OPAQUE:
             logger.warning(f"make_cutout: near-empty cutout (category={category}); skipping")
             return None
+        
+        # CRITICAL FIX #2: Normalize to 768×1024 for consistent wardrobe grid display
+        # WHY: cutouts cropped to bounding box have wildly different aspect ratios.
+        # The wardrobe grid looks chaotic with some items 3:1 and others 1:3.
+        # Standardizing on portrait 3:4 (768×1024) creates uniform tiles.
+        rgba = _fit_portrait_3x4_rgba(rgba)
+        
+        # CRITICAL FIX #3: PNG compression level 9 for smaller file size
+        # WHY: cutouts are displayed as <img> tags, not processed further. High
+        # compression reduces bandwidth and Supabase storage without visible quality loss.
         out = io.BytesIO()
-        rgba.save(out, format="PNG")
+        rgba.save(out, format="PNG", compress_level=9, optimize=True)
         return out.getvalue()
     except Exception as e:  # noqa: BLE001
         logger.warning(f"make_cutout failed: {type(e).__name__}: {e}")

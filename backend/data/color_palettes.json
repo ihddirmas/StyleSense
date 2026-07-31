@@ -1,0 +1,103 @@
+{
+  "undertone_season_map": {
+    "warm": ["spring", "autumn"],
+    "cool": ["summer", "winter"],
+    "neutral": ["spring", "summer", "autumn", "winter"]
+  },
+  "season_reference_swatches": {
+    "spring": {
+      "description": "Light, warm, bright colors with yellow undertones",
+      "palette": [
+        {"name": "coral", "hex": "#FF7F50"},
+        {"name": "peach", "hex": "#FFE5B4"},
+        {"name": "golden yellow", "hex": "#FFD700"},
+        {"name": "warm green", "hex": "#8FBC8F"},
+        {"name": "camel", "hex": "#C19A6B"},
+        {"name": "ivory", "hex": "#FFFFF0"},
+        {"name": "bright aqua", "hex": "#00CED1"},
+        {"name": "warm pink", "hex": "#FFB6C1"}
+      ],
+      "contrast": ["low", "medium"]
+    },
+    "summer": {
+      "description": "Soft, cool, muted colors with blue/pink undertones",
+      "palette": [
+        {"name": "powder blue", "hex": "#B0E0E6"},
+        {"name": "dusty rose", "hex": "#C4A4A4"},
+        {"name": "lavender", "hex": "#E6E6FA"},
+        {"name": "soft navy", "hex": "#4A5F7F"},
+        {"name": "mauve", "hex": "#E0B0FF"},
+        {"name": "cool grey", "hex": "#B8B8B8"},
+        {"name": "soft white", "hex": "#F5F5F5"},
+        {"name": "periwinkle", "hex": "#CCCCFF"}
+      ],
+      "contrast": ["low", "medium"]
+    },
+    "autumn": {
+      "description": "Rich, warm, earthy colors with golden undertones",
+      "palette": [
+        {"name": "rust", "hex": "#B7410E"},
+        {"name": "olive", "hex": "#808000"},
+        {"name": "mustard", "hex": "#FFDB58"},
+        {"name": "terracotta", "hex": "#E2725B"},
+        {"name": "forest green", "hex": "#228B22"},
+        {"name": "camel", "hex": "#C19A6B"},
+        {"name": "cream", "hex": "#FFFDD0"},
+        {"name": "bronze", "hex": "#CD7F32"},
+        {"name": "deep teal", "hex": "#367588"}
+      ],
+      "contrast": ["low", "medium"]
+    },
+    "winter": {
+      "description": "Bold, cool, high-contrast colors with blue undertones",
+      "palette": [
+        {"name": "true black", "hex": "#000000"},
+        {"name": "pure white", "hex": "#FFFFFF"},
+        {"name": "royal blue", "hex": "#4169E1"},
+        {"name": "emerald", "hex": "#50C878"},
+        {"name": "ruby", "hex": "#E0115F"},
+        {"name": "magenta", "hex": "#FF00FF"},
+        {"name": "icy blue", "hex": "#DFFAFF"},
+        {"name": "charcoal", "hex": "#36454F"}
+      ],
+      "contrast": ["medium", "high"]
+    }
+  },
+  "undertone_characteristics": {
+    "warm": {
+      "vein_color": "green",
+      "jewelry": "gold",
+      "whites": ["ivory", "cream"],
+      "avoid": ["icy pastels", "stark white", "silver undertones"]
+    },
+    "cool": {
+      "vein_color": "blue/purple",
+      "jewelry": "silver",
+      "whites": ["pure white", "bright white"],
+      "avoid": ["muddy oranges", "warm yellows", "brass tones"]
+    },
+    "neutral": {
+      "vein_color": "blue-green",
+      "jewelry": "both gold and silver",
+      "whites": ["soft white", "off-white"],
+      "avoid": ["extreme neons", "very harsh contrasts"]
+    }
+  },
+  "contrast_levels": {
+    "low": {
+      "description": "Gentle, tonal color differences between hair/skin/eyes",
+      "best_combinations": "monochrome, tonal, soft transitions",
+      "avoid": "stark black/white, very bold contrasts"
+    },
+    "medium": {
+      "description": "Moderate differences between hair/skin/eyes",
+      "best_combinations": "most color combinations work well",
+      "avoid": "extremes in either direction"
+    },
+    "high": {
+      "description": "Strong differences between hair/skin/eyes (dark hair + light skin, or vice versa)",
+      "best_combinations": "bold contrasts, jewel tones, black/white",
+      "avoid": "muddy mid-tones, overly soft pastels"
+    }
+  }
+}

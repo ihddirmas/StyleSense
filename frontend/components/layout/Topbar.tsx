@@ -7,6 +7,7 @@ import { LogOut, Loader2, Sparkles, Menu, X, Home, MessageCircle, Mail, Shirt, L
 import { useAuth } from "@/components/AuthProvider";
 import { useTasks, selectRunningCount } from "@/store/tasks";
 import { useAppStore } from "@/store/app";
+import { apiGet } from "@/lib/api";
 
 const PRIMARY_NAV = [
   { href: "/dashboard", label: "HOME" },
@@ -36,6 +37,14 @@ export function Topbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const runningCount = useTasks(selectRunningCount);
+  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    apiGet<{ used: number; limit: number }>("/api/tryon/usage-status")
+      .then(setUsage)
+      .catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -120,6 +129,9 @@ export function Topbar() {
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
+          {/* Usage pill — desktop only */}
+          <UsagePill usage={usage} />
+
           <div ref={ref} className="relative ml-1 md:ml-2">
             <button
               onClick={() => setOpen((v) => !v)}
@@ -154,8 +166,8 @@ export function Topbar() {
               >
                 <button
                   onClick={signOut}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm"
-                  style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", borderRadius: 8 }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-sm"
+                  style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer" }}
                 >
                   <LogOut size={14} /> Sign out
                 </button>
@@ -176,10 +188,9 @@ export function Topbar() {
                   key={href}
                   href={href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm tracking-wide transition-colors"
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm tracking-wide transition-colors ${active ? "font-bold" : "font-normal"}`}
                   style={{
                     textDecoration: "none",
-                    fontWeight: active ? 700 : 400,
                     color: active ? "#3C2415" : "#84634c",
                     background: active ? "var(--parchment)" : "transparent",
                   }}
@@ -193,5 +204,25 @@ export function Topbar() {
         </nav>
       )}
     </>
+  );
+}
+
+function UsagePill({ usage }: { usage: { used: number; limit: number } | null }) {
+  if (!usage || usage.limit <= 0) return null;
+  const pct = usage.used / usage.limit;
+  const color = pct >= 0.8 ? "var(--red)" : pct >= 0.6 ? "#b87333" : "var(--text-muted)";
+  return (
+    <div
+      className="flex items-center gap-1.5 px-2 md:px-2.5 py-1 mr-1 text-2xs md:text-xs font-mono tracking-wide rounded-full"
+      style={{
+        background: "rgba(20,14,10,0.06)",
+        border: "1px solid var(--border)",
+        color,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>{usage.used}/{usage.limit}</span>
+      <span className="hidden sm:inline" style={{ color: "var(--text-dim)" }}>try-ons</span>
+    </div>
   );
 }

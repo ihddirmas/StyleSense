@@ -1,6 +1,8 @@
 import * as Sentry from "@sentry/nextjs";
 
-// No-op until SENTRY_DSN is set (see frontend/.env.example).
+// No-op until SENTRY_DSN is set. DSN can point at Sentry.io or a self-hosted/
+// hosted GlitchTip project — GlitchTip implements the same ingestion protocol,
+// so the SDK doesn't need to know which one it's talking to.
 const dsn = process.env.SENTRY_DSN;
 
 if (dsn) {

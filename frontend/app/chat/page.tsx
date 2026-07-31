@@ -183,12 +183,12 @@ function ThreadCard({ thread, active, onClick }: { thread: ThreadRow; active: bo
         </div>
       </div>
       <div className="flex flex-col items-end gap-1" style={{ flexShrink: 0 }}>
-        <div className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+        <div className="text-2xs" style={{ color: "var(--text-dim)" }}>
           {timeShort(thread.last_message.created_at)}
         </div>
         {thread.unread > 0 && (
           <span
-            className="text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center"
+            className="text-2xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center"
             style={{ background: "var(--gold)", color: "var(--on-gold)" }}
           >
             {thread.unread}
@@ -407,7 +407,7 @@ function Bubble({ m, mine, onOpenTryOn, onOpenOutfit, onOpenImage }: {
         )}
         {m.shared_caption && <div className="text-xs italic mb-1" style={{ color: "var(--text-muted)" }}>{m.shared_caption}</div>}
         {m.content && <div className="text-sm whitespace-pre-wrap">{m.content}</div>}
-        <div className="text-[10px] mt-1 text-right" style={{ color: "var(--text-dim)" }}>
+        <div className="text-2xs mt-1 text-right" style={{ color: "var(--text-dim)" }}>
           {timeShort(m.created_at)}
         </div>
       </div>
@@ -490,7 +490,7 @@ function ShareTray({ otherId, onShared }: { otherId: string; onShared: () => voi
                     <Layers size={20} style={{ color: "var(--text-dim)" }} />
                   </div>
                 )}
-                <div className="text-[10px] truncate px-1 py-1" style={{ color: "var(--text)" }}>{o.name}</div>
+                <div className="text-2xs truncate px-1 py-1" style={{ color: "var(--text)" }}>{o.name}</div>
               </button>
             ))}
           </div>

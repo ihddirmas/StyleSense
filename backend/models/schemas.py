@@ -107,6 +107,26 @@ class AddMultiResponse(BaseModel):
     failed: List[AddMultiFailure]
 
 
+class StylistWardrobeDetectRequest(BaseModel):
+    image_data: str  # base64 data URI
+
+
+class StylistWardrobeDetectResponse(BaseModel):
+    detected: List[DetectedItem]
+    image_url: str
+
+
+class StylistWardrobeConfirmRequest(BaseModel):
+    source_image_url: str
+    items: List[DetectedItem]
+
+
+class StylistWardrobeConfirmResponse(BaseModel):
+    created: List[dict]
+    failed: List[AddMultiFailure]
+    summary: str
+
+
 class ScrapeRequest(BaseModel):
     url: str
 

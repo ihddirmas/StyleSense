@@ -109,7 +109,8 @@ def test_tryon():
 # ============================================================
 # 3. EVENT SCENE
 # ============================================================
-def test_event_scene(tryon_url):
+def test_event_scene():
+    tryon_url = results.get('tryon')
     if not tryon_url:
         print("  [SKIP] No try-on URL to use as reference")
         return None
@@ -132,7 +133,8 @@ def test_event_scene(tryon_url):
 # ============================================================
 # 4. ANIMATE (expensive - ~60 credits)
 # ============================================================
-def test_animate(image_url):
+def test_animate():
+    image_url = results.get('tryon')
     if not image_url:
         print("  [SKIP] No image URL to animate")
         return None
@@ -156,8 +158,8 @@ def main():
 
     results['cleaner']   = step("[1/4] Cleaner via Runway re-synthesis (~3 credits)",  test_cleaner)
     results['tryon']     = step("[2/4] Try-on (gen4_image_turbo, ~3 credits)",         test_tryon)
-    results['event']     = step("[3/4] Event scene (gen4_image, ~5 credits)",          lambda: test_event_scene(results['tryon']))
-    results['video']     = step("[4/4] Animate (gen4.5, ~60 credits)",                 lambda: test_animate(results['tryon']))
+    results['event']     = step("[3/4] Event scene (gen4_image, ~5 credits)",          test_event_scene)
+    results['video']     = step("[4/4] Animate (gen4.5, ~60 credits)",                 test_animate)
 
     print("\n" + "="*72)
     print("RESULTS - open these URLs to verify quality:")
