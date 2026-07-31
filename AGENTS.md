@@ -96,3 +96,47 @@ Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthro
 - First dashboard load may show "Couldn't load your wardrobe" until Aurora warms up; **Retry** usually succeeds.
 - `tests.test_anthropic_smoke` requires Anthropic API credits; low balance returns HTTP 400.
 - Cloud test login secrets: `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` (if the password secret was saved as `TEST_USER_PASSWOR`, use that env name instead).
+
+### QA vs real users (Supabase Auth)
+
+**Canonical QA account** (reuse forever): `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` in Cursor secrets / `backend/.env`. Agents and Playwright log in at `/login` — **do not sign up new users in the UI**.
+
+| Account type | How to identify | Cleanup |
+|--------------|-----------------|---------|
+| **Canonical QA** | `TEST_USER_EMAIL` | Protected — never deleted |
+| **Disposable** | `@example.com`, `@stylesense-test.local`, `@styleai.test`, test prefixes, or `user_metadata.is_test=true` | `cleanup_test_users --apply` |
+| **Real users** | Gmail, real domains, `judge@stylesense.demo` | Never delete |
+
+#### Scripts (service role in `backend/.env`)
+
+```bash
+cd backend && ./venv/bin/python -m scripts.ensure_test_user
+cd backend && ./venv/bin/python -m scripts.cleanup_test_users          # dry-run
+cd backend && ./venv/bin/python -m scripts.cleanup_test_users --apply  # delete junk
+```
+
+Optional: `TEST_USER_PROTECTED_EMAILS=admin@stylesense.com` — extra emails cleanup must never touch.
+
+#### Supabase MCP (audit without scripts)
+
+Project ref: `zlgzpgqqodfrwnlephrc` (StylSense). Useful tools:
+
+- `list_projects` — confirm connected project
+- `list_tables` — row counts for `profiles`, `users`, etc.
+- `execute_sql` — audit auth users (read-only checks):
+
+```sql
+-- Junk vs real breakdown
+select case when email like '%@example.com' then 'example.com' else 'real' end as bucket, count(*)
+from auth.users group by 1;
+
+-- Recent signups
+select email, created_at, raw_user_meta_data->>'test_kind' as test_kind
+from auth.users order by created_at desc limit 20;
+```
+
+- `get_advisors` (`security` / `performance`) — RLS and config issues
+
+MCP can **query** `auth.users` but **cannot** replace `cleanup_test_users` for deletes — use the script (Auth Admin API handles cascades safely).
+
+**Agent rule:** log in with `TEST_USER_*`. Do not use Sign up unless testing signup itself.
