@@ -28,12 +28,31 @@ function syncUserScope(uid: string | null) {
   }
 }
 
+// Google OAuth has no client-side "signup vs login" branch point (unlike the
+// password form) — the redirect through /auth/callback happens server-side.
+// A first-ever sign-in has created_at == last_sign_in_at (within Supabase's
+// own clock skew); use that as the "brand-new account" signal, guarded by a
+// per-user localStorage flag so it only fires once per account on this browser.
+function isFreshOAuthSignup(user: User): boolean {
+  if (typeof window === "undefined") return false;
+  const key = `stylesense-signup-tracked-${user.id}`;
+  if (window.localStorage.getItem(key)) return false;
+  const created = new Date(user.created_at).getTime();
+  const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : created;
+  const isFresh = Math.abs(lastSignIn - created) < 10_000;
+  window.localStorage.setItem(key, "1");
+  return isFresh;
+}
+
 // Ties PostHog events to the real user id instead of an anonymous device id.
 // No-op if NEXT_PUBLIC_POSTHOG_KEY isn't set (PostHogProvider never calls posthog.init()).
 function identifyForAnalytics(user: User | null) {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
   if (user) {
     posthog.identify(user.id, { email: user.email });
+    if (user.app_metadata?.provider === "google" && isFreshOAuthSignup(user)) {
+      posthog.capture("signup_completed", { method: "google" });
+    }
   } else {
     posthog.reset();
   }
