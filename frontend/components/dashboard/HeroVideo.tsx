@@ -7,6 +7,7 @@ import { useAppStore } from "@/store/app";
 import { useTasks } from "@/store/tasks";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "@/components/ui/Toast";
+import { OnboardingHero } from "./OnboardingHero";
 
 export function HeroVideo() {
   const { user, profile } = useAuth();
@@ -19,8 +20,10 @@ export function HeroVideo() {
     ariaImageUrl,
     ariaName,
     setAria,
+    hydrated,
   } = useAppStore();
   const [triggering, setTriggering] = useState(false);
+  const [videoAspectRatio, setVideoAspectRatio] = useState<string>("16/9");
 
   // Initialize stylized video from profile on auth load (avoid polling if already ready)
   useEffect(() => {
@@ -43,14 +46,15 @@ export function HeroVideo() {
   // Delegate polling to the shared tasks store (dedupes with any watch
   // already running, and surfaces progress/completion in Activity too).
   useEffect(() => {
-    if (!user) return;
+    if (!user || !hydrated) return;
     if (stylizedVideoStatus === "ready") return;
     useTasks.getState().watchAvatarVideo();
-  }, [user, stylizedVideoStatus]);
+  }, [user, hydrated, stylizedVideoStatus]);
 
   const showUser = !!stylizedVideoUrl && stylizedVideoStatus === "ready";
   const generating = !!avatarSelfieUrl && stylizedVideoStatus === "generating";
   const canBackfill = !!avatarSelfieUrl && !stylizedVideoUrl && !generating && !triggering;
+  const showOnboarding = !avatarSelfieUrl && !ariaVideoUrl && !ariaImageUrl;
 
   async function backfill() {
     setTriggering(true);
@@ -71,12 +75,30 @@ export function HeroVideo() {
     }
   }
 
+  const handleVideoLoad = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    if (video.videoWidth && video.videoHeight) {
+      const ratio = video.videoWidth / video.videoHeight;
+      // Detect if portrait (9:16) vs landscape (16:9)
+      if (ratio < 1) {
+        setVideoAspectRatio("9/16");
+      } else {
+        setVideoAspectRatio("16/9");
+      }
+    }
+  };
+
+  // If no selfie AND no Aria fallback, show onboarding CTA instead of empty video container
+  if (showOnboarding) {
+    return <OnboardingHero />;
+  }
+
   return (
     <div
       className="surface overflow-hidden relative"
       style={{
         width: "100%",
-        aspectRatio: "16/9",
+        aspectRatio: videoAspectRatio,
         background: "linear-gradient(180deg, var(--surface2) 0%, var(--bg) 100%)",
       }}
     >
@@ -86,6 +108,7 @@ export function HeroVideo() {
             key="user-video"
             src={stylizedVideoUrl!}
             autoPlay loop muted playsInline
+            onLoadedMetadata={handleVideoLoad}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -97,6 +120,7 @@ export function HeroVideo() {
             key="aria-video"
             src={ariaVideoUrl}
             autoPlay loop muted playsInline
+            onLoadedMetadata={handleVideoLoad}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -128,8 +152,8 @@ export function HeroVideo() {
       >
         <Sparkles size={10} className="sm:w-3" style={{ color: "var(--gold)" }} />
         <span
-          className="text-[10px] sm:text-xs font-semibold"
-          style={{ color: "var(--gold)", letterSpacing: "0.1em", textTransform: "uppercase" }}
+          className="text-2xs sm:text-xs font-semibold tracking-wide"
+          style={{ color: "var(--gold)", textTransform: "uppercase" }}
         >
           {showUser ? "You" : "Aria"}
         </span>
@@ -150,7 +174,7 @@ export function HeroVideo() {
             }}
           >
             <Loader2 size={11} className="sm:w-3 spin" style={{ color: "var(--gold)" }} />
-            <span className="text-[10px] sm:text-xs font-medium" style={{ color: "var(--gold)" }}>
+            <span className="text-2xs sm:text-xs font-medium" style={{ color: "var(--gold)" }}>
               Generating... 60s
             </span>
           </motion.div>
@@ -166,12 +190,11 @@ export function HeroVideo() {
             exit={{ opacity: 0 }}
             onClick={backfill}
             disabled={triggering}
-            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs"
+            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 text-2xs sm:text-xs font-semibold"
             style={{
               background: "var(--gold)",
               color: "var(--on-gold)",
               border: "1px solid var(--border-hover)",
-              fontWeight: 600,
               cursor: triggering ? "not-allowed" : "pointer",
               boxShadow: "0 8px 24px -8px rgba(0,0,0,0.7)",
             }}

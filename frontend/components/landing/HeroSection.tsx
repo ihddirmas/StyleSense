@@ -271,7 +271,7 @@ export default function HeroSection() {
                 <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c, opacity: 0.85 }} />
               ))}
             </div>
-            <div style={{ flex: 1, background: "rgba(60,36,21,0.06)", borderRadius: 4, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div className="rounded-sm" style={{ flex: 1, background: "rgba(60,36,21,0.06)", height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
                 app.stylesense.ai/wardrobe
               </span>

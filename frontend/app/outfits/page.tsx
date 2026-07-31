@@ -89,8 +89,8 @@ export default function OutfitsPage() {
           </p>
           <Link
             href="/studio"
-            className="btn-primary inline-flex mt-5"
-            style={{ fontSize: "0.85rem", padding: "0.55rem 1.2rem" }}
+            className="btn-primary inline-flex mt-5 text-sm"
+            style={{ padding: "0.55rem 1.2rem" }}
           >
             <Sparkles size={14} /> Open Studio
           </Link>
@@ -246,20 +246,20 @@ function OutfitCard({
         <div className="font-display text-sm leading-tight truncate">{outfit.name}</div>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <span
-            className="font-mono text-[9px] px-1.5 py-0.5"
+            className="font-mono text-2xs px-1.5 py-0.5"
             style={{ background: "var(--ink)", color: "var(--bg)" }}
           >
             {outfit.item_ids.length} items
           </span>
           {outfit.occasion && (
             <span
-              className="font-mono text-[9px] px-1.5 py-0.5 flex items-center gap-0.5 truncate max-w-[80px]"
+              className="font-mono text-2xs px-1.5 py-0.5 flex items-center gap-0.5 truncate max-w-[80px]"
               style={{ background: "var(--surface3)", color: "var(--text-muted)" }}
             >
               <Tag size={7} /> {outfit.occasion}
             </span>
           )}
-          <span className="font-mono text-[9px] flex items-center gap-0.5" style={{ color: "var(--text-dim)" }}>
+          <span className="font-mono text-2xs flex items-center gap-0.5" style={{ color: "var(--text-dim)" }}>
             <Calendar size={7} />
             {new Date(outfit.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
           </span>

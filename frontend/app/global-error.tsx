@@ -35,11 +35,11 @@ export default function GlobalError({
           <p style={{ color: "#666", marginBottom: 20 }}>
             The app hit an unexpected error. Please try again.
           </p>
-          <button
+           <button
             onClick={reset}
+            className="rounded-sm"
             style={{
               padding: "10px 20px",
-              borderRadius: 10,
               background: "#c9a84c",
               color: "#1a1a1a",
               border: "none",

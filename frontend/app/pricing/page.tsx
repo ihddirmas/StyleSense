@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import posthog from "posthog-js";
+import { useFeatureFlagVariantKey } from "posthog-js/react";
 import { useAuth } from "@/components/AuthProvider";
 
 const tiers = [
@@ -9,7 +11,6 @@ const tiers = [
     price: null,
     priceLabel: "Free",
     description: "Everything you need to start exploring your style.",
-    cta: "Get started free",
     popular: false,
     features: [
       { label: "5 try-ons / month",         included: true  },
@@ -27,7 +28,6 @@ const tiers = [
     price: 9,
     priceLabel: "$9",
     description: "For the outfit-planner who wants room to experiment.",
-    cta: "Start Studio",
     popular: true,
     features: [
       { label: "40 try-ons / month",         included: true  },
@@ -45,7 +45,6 @@ const tiers = [
     price: 19,
     priceLabel: "$19",
     description: "Full creative power — animate, prioritise, and share freely.",
-    cta: "Go Pro",
     popular: false,
     features: [
       { label: "100 try-ons / month",        included: true  },
@@ -60,8 +59,17 @@ const tiers = [
   },
 ] as const;
 
+type TierName = (typeof tiers)[number]["name"];
+
+const ctaCopy: Record<"control" | "benefit-framed", Record<TierName, string>> = {
+  control: { Free: "Get started free", Studio: "Start Studio", Pro: "Go Pro" },
+  "benefit-framed": { Free: "Try it free", Studio: "Start building outfits", Pro: "Unlock everything" },
+};
+
 export default function PricingPage() {
   const { user } = useAuth();
+  const rawCtaVariant = useFeatureFlagVariantKey("pricing-cta-copy");
+  const ctaVariant = rawCtaVariant === "benefit-framed" ? "benefit-framed" : "control";
 
   return (
     <main
@@ -149,16 +157,15 @@ export default function PricingPage() {
           alignItems: "start",
         }}
       >
-        {tiers.map((tier) => (
+         {tiers.map((tier) => (
           <div
             key={tier.name}
-            className="surface"
+            className="surface rounded-sm"
             style={{
               background: tier.popular ? "var(--surface2)" : "var(--surface)",
               border: tier.popular
                 ? "1px solid var(--border-hover)"
                 : "1px solid var(--border)",
-              borderRadius: 4,
               padding: "32px 28px 28px",
               display: "flex",
               flexDirection: "column",
@@ -237,6 +244,9 @@ export default function PricingPage() {
             {/* CTA */}
             <Link
               href="/signup"
+              onClick={() => {
+                if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("upgrade_cta_clicked", { tier: tier.name, variant: ctaVariant });
+              }}
               className={tier.popular ? "btn-primary" : undefined}
               style={
                 tier.popular
@@ -275,7 +285,7 @@ export default function PricingPage() {
                 e.currentTarget.style.borderColor = "var(--border-hover)";
               }}
             >
-              {tier.cta}
+              {ctaCopy[ctaVariant][tier.name]}
             </Link>
 
             {/* Divider */}

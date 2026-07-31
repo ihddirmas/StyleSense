@@ -38,6 +38,7 @@ interface AppState {
   videoModel: string;
   setTryonModel: (id: string) => void;
   setVideoModel: (id: string) => void;
+  hydrated: boolean;
   // Body silhouette preference (frontend-only, used in Studio try-on context)
   bodyType: "female" | "male" | null;
   bodyPhotoUrl: string | null;
@@ -91,7 +92,8 @@ export const useAppStore = create<AppState>()(
         stylizedAvatarStatus: null,
         stylizedVideoUrl: null,
         stylizedVideoStatus: null,
-        bodyType: null,
+      hydrated: false,
+      bodyType: null,
         bodyPhotoUrl: null,
         cachedWardrobe: [],
         cachedRecent: [],
@@ -99,6 +101,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "styleai-app-state",
+      skipHydration: true,
       partialize: (s) => ({
         avatarSelfieUrl: s.avatarSelfieUrl,
         stylizedAvatarUrl: s.stylizedAvatarUrl,

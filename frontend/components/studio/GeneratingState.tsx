@@ -10,7 +10,7 @@ const STEPS = [
   "Finishing details...",
 ];
 
-const TOTAL = 32; // nominal seconds for the progress estimate
+const TOTAL = 50; // nominal seconds for the progress estimate
 
 // `startedAt` (task start timestamp) makes the progress continuous across page
 // navigation: on remount we recompute elapsed from it instead of restarting at 0.
@@ -78,7 +78,7 @@ export function GeneratingState({
 
       {/* Progress bar — width derived from elapsed so it survives remounts */}
       <div className="w-full max-w-md mb-3">
-        <div style={{ height: 4, background: "rgba(60,36,21,0.15)", borderRadius: 999, overflow: "hidden" }}>
+         <div className="rounded-full" style={{ height: 4, background: "rgba(60,36,21,0.15)", overflow: "hidden" }}>
           <div
             style={{
               height: "100%",
@@ -92,6 +92,12 @@ export function GeneratingState({
           ~{Math.max(0, TOTAL - secs)}s remaining · {secs}s elapsed
         </div>
       </div>
+
+      {secs > 45 && (
+        <div className="text-xs mb-4 px-3 py-2 rounded" style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--gold)" }}>
+          Taking longer than usual — Runway queue may be busy. Hang tight.
+        </div>
+      )}
 
       {/* Step list */}
       <div className="w-full max-w-md text-left mt-4">

@@ -112,12 +112,10 @@ export function AuthCard({ initialMode, next }: AuthCardProps) {
           <button
             key={m}
             onClick={() => switchMode(m)}
+            className="text-xs font-semibold tracking-wide"
             style={{
               flex: 1,
               padding: "0.45rem 0",
-              fontSize: "0.8rem",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
               textTransform: "uppercase",
               border: "none",
               borderRadius: "var(--radius-sm)",

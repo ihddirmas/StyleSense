@@ -117,7 +117,7 @@ export function TryOnDetailModal({
                 <summary className="text-xs cursor-pointer" style={{ color: "var(--text-muted)" }}>
                   View generation prompt
                 </summary>
-                <p className="text-xs mt-2 p-3" style={{ background: "var(--bg)", borderRadius: 8, color: "var(--text-muted)", whiteSpace: "pre-wrap" }}>
+                <p className="text-xs mt-2 p-3 rounded-sm" style={{ background: "var(--bg)", color: "var(--text-muted)", whiteSpace: "pre-wrap" }}>
                   {result.prompt_used}
                 </p>
               </details>

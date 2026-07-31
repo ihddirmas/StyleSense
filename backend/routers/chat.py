@@ -89,18 +89,10 @@ async def get_thread(other_id: str, limit: int = 100, user = Depends(current_use
     # Hydrate shared attachments. outfits + try_on_results now live in Aurora, so
     # fetch them via the supabase_service helpers (not the Supabase client, which
     # still owns messages/profiles/friendships).
-    outfit_ids = [m["shared_outfit_id"] for m in rows if m.get("shared_outfit_id")]
-    tryon_ids = [m["shared_tryon_id"] for m in rows if m.get("shared_tryon_id")]
-    outfits_map = {}
-    tryons_map = {}
-    for oid in set(outfit_ids):
-        o = supabase_service.get_outfit(oid)
-        if o:
-            outfits_map[o["id"]] = o
-    for tid in set(tryon_ids):
-        t = supabase_service.get_tryon(tid)
-        if t:
-            tryons_map[t["id"]] = t
+    outfit_ids = {m["shared_outfit_id"] for m in rows if m.get("shared_outfit_id")}
+    tryon_ids = {m["shared_tryon_id"] for m in rows if m.get("shared_tryon_id")}
+    outfits_map = {o["id"]: o for o in supabase_service.get_outfits_by_ids(outfit_ids)}
+    tryons_map = {t["id"]: t for t in supabase_service.get_tryons_by_ids(tryon_ids)}
 
     enriched = []
     for m in rows:
@@ -122,6 +114,17 @@ async def send_message(req: SendMessageRequest, user = Depends(current_user)):
     # Only allow outfit/try-on sharing — no plain text messages
     if not (req.shared_outfit_id or req.shared_tryon_id or req.shared_image_url):
         raise HTTPException(400, "Messages must include a shared outfit, try-on, or image.")
+
+    # outfits/try_on_results live in Aurora now, so Postgres can no longer enforce
+    # this via FK - check existence + ownership here instead.
+    if req.shared_outfit_id:
+        outfit = supabase_service.get_outfit(req.shared_outfit_id)
+        if not outfit or outfit["user_id"] != user["id"]:
+            raise HTTPException(404, "Outfit not found.")
+    if req.shared_tryon_id:
+        tryon = supabase_service.get_tryon(req.shared_tryon_id)
+        if not tryon or tryon["user_id"] != user["id"]:
+            raise HTTPException(404, "Try-on not found.")
 
     payload = {
         "sender_id": user["id"],

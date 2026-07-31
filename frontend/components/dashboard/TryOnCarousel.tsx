@@ -74,7 +74,7 @@ export function TryOnCarousel({
                   className="absolute inset-x-0 bottom-0 px-3 py-2"
                   style={{ background: "linear-gradient(to top, rgba(8,8,13,0.78) 0%, rgba(8,8,13,0) 100%)" }}
                 >
-                  <div className="text-[11px] truncate" style={{ color: "#fff" }}>✦ {current.event_context}</div>
+                  <div className="text-xs truncate" style={{ color: "#fff" }}>✦ {current.event_context}</div>
                 </div>
               )}
             </Tag>

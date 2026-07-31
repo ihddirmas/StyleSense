@@ -58,3 +58,14 @@ export interface DetectedItem {
   occasion?: WardrobeItem["occasion"];
   position?: string | null;
 }
+
+export interface StylistWardrobeDetectResponse {
+  detected: DetectedItem[];
+  image_url: string;
+}
+
+export interface StylistWardrobeConfirmResponse {
+  created: WardrobeItem[];
+  failed: Array<{ name: string; reason: string }>;
+  summary: string;
+}

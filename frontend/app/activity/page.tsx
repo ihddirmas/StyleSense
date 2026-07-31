@@ -113,8 +113,8 @@ export default function ActivityPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span
-                        className="shrink-0 flex items-center gap-1 font-mono text-[9px] px-1.5 py-0.5"
-                        style={{ background: "var(--surface3)", color: "var(--text-muted)", letterSpacing: "0.08em" }}
+                        className="shrink-0 flex items-center gap-1 font-mono text-2xs px-1.5 py-0.5 tracking-wide"
+                        style={{ background: "var(--surface3)", color: "var(--text-muted)" }}
                       >
                         {KIND_ICONS[task.kind]}
                         {KIND_LABELS[task.kind]}

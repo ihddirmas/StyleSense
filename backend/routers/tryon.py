@@ -11,9 +11,10 @@ from PIL import Image
 
 from pydantic import BaseModel
 from models.schemas import TryOnRequest, MultiItemTryOnRequest, EventSceneRequest, AnimateRequest
-from services import runway_service, supabase_service
+from services import runway_service, supabase_service, analytics_service, usage_limits
 from services.auth_service import current_user
 from services.rate_limit import check_cooldown
+from services.usage_limits import check_tryon_cap, check_event_scene_cap, check_animate_cap
 from graphs import prompt_graph
 
 
@@ -108,6 +109,7 @@ async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
     if "localhost" in req.avatar_selfie_url or "localhost" in req.item_image_url:
         raise HTTPException(400, "URLs must be public HTTPS, not localhost. Upload to Supabase first.")
     check_cooldown(user["id"], "generate", 5)
+    check_tryon_cap(user["id"])
 
     setting = req.setting
     if req.enhance_prompt and setting:
@@ -147,6 +149,9 @@ async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
         prompt_used=result["prompt_used"],
         runway_task_id=result["task_id"],
     )
+    analytics_service.capture(user["id"], "tryon_generated", {
+        "model_used": result["model_used"], "endpoint": "generate",
+    })
 
     return {
         "result_image_url": image_url,
@@ -164,6 +169,7 @@ async def generate_multi_tryon(req: MultiItemTryOnRequest, user = Depends(curren
     if len(req.items) > 6:
         raise HTTPException(400, "Max 6 items at once (composite layout limit).")
     check_cooldown(user["id"], "generate-multi", 5)
+    check_tryon_cap(user["id"])
 
     setting = req.setting
     if req.enhance_prompt and setting:
@@ -201,6 +207,9 @@ async def generate_multi_tryon(req: MultiItemTryOnRequest, user = Depends(curren
         prompt_used=result["prompt_used"],
         runway_task_id=result["task_id"],
     )
+    analytics_service.capture(user["id"], "tryon_generated", {
+        "model_used": result["model_used"], "endpoint": "generate-multi", "item_count": len(req.items),
+    })
 
     return {
         "result_image_url": image_url,
@@ -212,6 +221,7 @@ async def generate_multi_tryon(req: MultiItemTryOnRequest, user = Depends(curren
 @router.post("/event-scene")
 async def event_scene(req: EventSceneRequest, user = Depends(current_user)):
     check_cooldown(user["id"], "event-scene", 10)
+    check_event_scene_cap(user["id"])
     try:
         result = await _run_blocking(
             runway_service.runway_event_scene,
@@ -220,6 +230,8 @@ async def event_scene(req: EventSceneRequest, user = Depends(current_user)):
         )
     except RuntimeError as e:
         raise HTTPException(500, str(e))
+    supabase_service.record_usage_event(user["id"], "event_scene")
+    analytics_service.capture(user["id"], "event_scene_generated")
 
     event_image_url = await _rehost(user["id"], result["image_url"])
 
@@ -234,6 +246,7 @@ async def event_scene(req: EventSceneRequest, user = Depends(current_user)):
 @router.post("/animate")
 async def animate(req: AnimateRequest, user = Depends(current_user)):
     check_cooldown(user["id"], "animate", 30)
+    check_animate_cap(user["id"])
     motion = req.motion_prompt
     scene = req.scene
     if req.enhance_prompt and (req.motion_prompt or req.scene):
@@ -251,6 +264,8 @@ async def animate(req: AnimateRequest, user = Depends(current_user)):
         )
     except RuntimeError as e:
         raise HTTPException(500, str(e))
+    supabase_service.record_usage_event(user["id"], "animate")
+    analytics_service.capture(user["id"], "video_animated", {"model_used": result.get("model_used")})
 
     if req.tryon_result_id:
         supabase_service.update_tryon_video(req.tryon_result_id, result["video_url"], result["task_id"])
@@ -269,3 +284,11 @@ async def save_tryon(req: SaveTryOnRequest, user = Depends(current_user)):
 @router.get("/recent")
 async def recent(limit: int = 12, all: bool = False, user = Depends(current_user)):
     return supabase_service.get_recent_tryons(user["id"], limit, saved_only=not all)
+
+
+@router.get("/usage-status")
+async def usage_status(user = Depends(current_user)):
+    if user["id"] in usage_limits.UNLIMITED_TESTER_USER_IDS:
+        return {"used": 0, "limit": 0}
+    used = supabase_service.count_tryons_this_month(user["id"])
+    return {"used": used, "limit": usage_limits.FREE_TRYON_MONTHLY_LIMIT}
