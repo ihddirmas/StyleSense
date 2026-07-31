@@ -105,9 +105,11 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
       identifyForAnalytics(sess?.user ?? null);
       if (sess?.user) {
         fetchProfile(sess.user.id);
-        posthog.identify(sess.user.id, {
-          name: sess.user.user_metadata?.full_name ?? undefined,
-        });
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+          posthog.identify(sess.user.id, {
+            name: sess.user.user_metadata?.full_name ?? undefined,
+          });
+        }
       } else {
         setProfile(null);
       }

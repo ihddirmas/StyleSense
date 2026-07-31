@@ -16,18 +16,19 @@ interface SidebarProps {
 export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const supabase = getSupabaseBrowser();
   const [pendingFriends, setPendingFriends] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const finishedTaskCount = useTasks((s) => s.tasks.filter((t) => t.status !== "running").length);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
+    const uid = user.id;
     let mounted = true;
+    const client = getSupabaseBrowser();
 
     async function load() {
-      const friendsRes = await supabase.from("friendships").select("id", { count: "exact", head: true })
-        .eq("addressee_id", user!.id).eq("status", "pending");
+      const friendsRes = await client.from("friendships").select("id", { count: "exact", head: true })
+        .eq("addressee_id", uid).eq("status", "pending");
       if (!mounted) return;
       setPendingFriends(friendsRes.count ?? 0);
     }
@@ -37,18 +38,28 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
       .then((threads) => { if (mounted) setUnreadMessages(threads.reduce((sum, t) => sum + (t.unread || 0), 0)); })
       .catch(() => {});
 
-    const channel = supabase
-      .channel(`sidebar:${user.id}`)
+    // React Strict Mode / HMR can remount before cleanup finishes; Supabase reuses
+    // an already-subscribed channel for the same topic, and .on() then throws.
+    const topic = `sidebar:${uid}`;
+    client.getChannels()
+      .filter((ch) => ch.topic === `realtime:${topic}`)
+      .forEach((ch) => client.removeChannel(ch));
+
+    const channel = client
+      .channel(topic)
       .on("postgres_changes",
-        { event: "INSERT", schema: "public", table: "friendships", filter: `addressee_id=eq.${user.id}` },
+        { event: "INSERT", schema: "public", table: "friendships", filter: `addressee_id=eq.${uid}` },
         () => setPendingFriends((n) => n + 1))
       .on("postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `recipient_id=eq.${user.id}` },
+        { event: "INSERT", schema: "public", table: "messages", filter: `recipient_id=eq.${uid}` },
         () => setUnreadMessages((n) => n + 1))
       .subscribe();
 
-    return () => { mounted = false; supabase.removeChannel(channel); };
-  }, [user, supabase]);
+    return () => {
+      mounted = false;
+      client.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const navItems = [
     { href: "/wardrobe", icon: Shirt,         label: "Wardrobe", badge: 0                },
