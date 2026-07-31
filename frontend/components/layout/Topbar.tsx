@@ -37,11 +37,11 @@ export function Topbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const runningCount = useTasks(selectRunningCount);
-  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+  const [usage, setUsage] = useState<{ tryon: { used: number; limit: number }; animate: { used: number; limit: number } } | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    apiGet<{ used: number; limit: number }>("/api/tryon/usage-status")
+    apiGet<{ tryon: { used: number; limit: number }; animate: { used: number; limit: number } }>("/api/tryon/usage-status")
       .then(setUsage)
       .catch(() => {});
   }, [user]);
@@ -129,7 +129,6 @@ export function Topbar() {
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          {/* Usage pill — desktop only */}
           <UsagePill usage={usage} />
 
           <div ref={ref} className="relative ml-1 md:ml-2">
@@ -207,9 +206,9 @@ export function Topbar() {
   );
 }
 
-function UsagePill({ usage }: { usage: { used: number; limit: number } | null }) {
-  if (!usage || usage.limit <= 0) return null;
-  const pct = usage.used / usage.limit;
+function UsagePill({ usage }: { usage: { tryon: { used: number; limit: number }; animate: { used: number; limit: number } } | null }) {
+  if (!usage || usage.tryon.limit <= 0) return null;
+  const pct = usage.tryon.used / usage.tryon.limit;
   const color = pct >= 0.8 ? "var(--red)" : pct >= 0.6 ? "#b87333" : "var(--text-muted)";
   return (
     <div
@@ -221,7 +220,7 @@ function UsagePill({ usage }: { usage: { used: number; limit: number } | null })
         whiteSpace: "nowrap",
       }}
     >
-      <span>{usage.used}/{usage.limit}</span>
+      <span>{usage.tryon.used}/{usage.tryon.limit}</span>
       <span className="hidden sm:inline" style={{ color: "var(--text-dim)" }}>try-ons</span>
     </div>
   );

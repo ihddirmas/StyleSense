@@ -81,6 +81,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [filterCategory, setFilterCategory] = useState("all");
   const [pendingDelete, setPendingDelete] = useState<WardrobeItem | null>(null);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [usage, setUsage] = useState<{ animate: { used: number; limit: number } } | null>(null);
   const CATEGORIES = ["all", "tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"];
 
   // Close filter dropdown on outside click
@@ -154,6 +155,14 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
   const animating = useTasks((s) =>
     s.tasks.some((t) => t.kind === "animate" && t.status === "running")
   );
+
+  // Fetch usage for tier gating
+  useEffect(() => {
+    if (!user) return;
+    apiGet<{ animate: { used: number; limit: number } }>("/api/tryon/usage-status")
+      .then(setUsage)
+      .catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -811,9 +820,21 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                      value={motionPrompt} onChange={(e) => setMotionPrompt(e.target.value)}
                      disabled={animating} />
 
-              <button className="btn-primary w-full" onClick={animate} disabled={animating}>
-                {animating ? <><Loader2 size={14} className="spin" /> Rendering (~60s)</> : <><Film size={14} /> Animate (6s video)</>}
-              </button>
+              {usage && usage.animate.limit > 0 && usage.animate.used >= usage.animate.limit ? (
+                <div className="relative group">
+                  <button className="btn-primary w-full" disabled style={{ opacity: 0.45, cursor: "not-allowed" }}>
+                    <Film size={14} /> Animate (6s video)
+                  </button>
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap text-2xs px-2 py-1 rounded"
+                       style={{ background: "var(--ink)", color: "var(--parchment)" }}>
+                    Used {usage.animate.used}/{usage.animate.limit} — <Link href="/pricing" className="underline">Upgrade</Link>
+                  </div>
+                </div>
+              ) : (
+                <button className="btn-primary w-full" onClick={animate} disabled={animating}>
+                  {animating ? <><Loader2 size={14} className="spin" /> Rendering (~60s)</> : <><Film size={14} /> Animate (6s video)</>}
+                </button>
+              )}
             </div>
           </>
 

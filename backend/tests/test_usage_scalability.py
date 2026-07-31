@@ -173,8 +173,9 @@ def main():
             resp = client.get("/api/tryon/usage-status")
             check("usage-status returns 200", resp.status_code == 200)
             body = resp.json()
-            check(f"usage-status used == 5 (got {body.get('used')})", body.get("used") == 5)
-            check(f"usage-status limit == 5 (got {body.get('limit')})", body.get("limit") == 5)
+            tryon_status = body.get("tryon") or {}
+            check(f"usage-status tryon.used == 5 (got {tryon_status.get('used')})", tryon_status.get("used") == 5)
+            check(f"usage-status tryon.limit == 5 (got {tryon_status.get('limit')})", tryon_status.get("limit") == 5)
         finally:
             app.dependency_overrides.pop(current_user, None)
 

@@ -184,12 +184,10 @@ export default function FriendsPage() {
               <FriendRow key={f.friendship_id} friend={f}
                 actions={
                   <>
-                    <button className="btn-primary text-sm" onClick={() => respond(f.friendship_id, true)}
-                            style={{ padding: "0.4rem 0.8rem" }}>
+                    <button className="btn-primary text-sm px-3 py-1.5" onClick={() => respond(f.friendship_id, true)}>
                       <Check size={14} /> Accept
                     </button>
-                    <button className="btn-secondary text-sm" onClick={() => respond(f.friendship_id, false)}
-                            style={{ padding: "0.4rem 0.8rem" }}>
+                    <button className="btn-secondary text-sm px-3 py-1.5" onClick={() => respond(f.friendship_id, false)}>
                       <X size={14} /> Decline
                     </button>
                   </>
@@ -208,8 +206,7 @@ export default function FriendsPage() {
                 actions={
                   <>
                     <span className="chip">Awaiting reply</span>
-                    <button className="btn-secondary text-sm" onClick={() => setPendingRemove(f)}
-                            style={{ padding: "0.4rem 0.8rem" }}>
+                    <button className="btn-secondary text-sm px-3 py-1.5" onClick={() => setPendingRemove(f)}>
                       <X size={14} /> Cancel
                     </button>
                   </>
@@ -236,11 +233,10 @@ export default function FriendsPage() {
               <FriendRow key={f.friendship_id} friend={f}
                 actions={
                   <>
-                    <Link href={`/chat?with=${f.other.id}`} className="btn-primary text-sm" style={{ padding: "0.4rem 0.8rem" }}>
+                    <Link href={`/chat?with=${f.other.id}`} className="btn-primary text-sm px-3 py-1.5">
                       <MessagesSquare size={14} /> Message
                     </Link>
-                    <button className="btn-secondary text-sm" onClick={() => setPendingRemove(f)}
-                            style={{ padding: "0.4rem 0.8rem" }}>
+                    <button className="btn-secondary text-sm px-3 py-1.5" onClick={() => setPendingRemove(f)}>
                       Remove
                     </button>
                   </>
@@ -299,7 +295,7 @@ function SearchResultRow({ r, onSend }: { r: SearchResult; onSend: () => void })
           <div className="text-sm font-medium truncate">{r.full_name || r.email}</div>
           <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
             {r.email && <span>{r.email}</span>}
-            {r.share_code && <span style={{ marginLeft: 8 }}>· code <span className="font-mono" style={{ color: "var(--text)" }}>{r.share_code}</span></span>}
+            {r.share_code && <span className="ml-2">· code <span className="font-mono" style={{ color: "var(--text)" }}>{r.share_code}</span></span>}
           </div>
         </div>
       </div>
@@ -311,7 +307,7 @@ function SearchResultRow({ r, onSend }: { r: SearchResult; onSend: () => void })
         ) : r.relationship === "request_received" ? (
           <span className="chip">In your inbox</span>
         ) : (
-          <button className="btn-primary text-sm" onClick={onSend} style={{ padding: "0.4rem 0.8rem" }}>
+          <button className="btn-primary text-sm px-3 py-1.5" onClick={onSend}>
             <UserPlus size={14} /> Add
           </button>
         )}
@@ -335,7 +331,7 @@ function FriendRow({ friend, actions }: { friend: FriendRow; actions: React.Reac
           <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
             {friend.other.email}
             {friend.other.share_code && (
-              <span style={{ marginLeft: 8 }}>· code <span className="font-mono" style={{ color: "var(--text)" }}>{friend.other.share_code}</span></span>
+              <span className="ml-2">· code <span className="font-mono" style={{ color: "var(--text)" }}>{friend.other.share_code}</span></span>
             )}
           </div>
         </div>
@@ -349,13 +345,12 @@ function Avatar({ name }: { name: string }) {
   const initial = name[0]?.toUpperCase() || "?";
   return (
     <div
-      className="rounded-full flex items-center justify-center font-semibold text-sm"
+      className="rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0"
       style={{
         width: 38, height: 38,
         background: "var(--surface3)",
         color: "var(--text-muted)",
         border: "1px solid var(--border)",
-        flexShrink: 0,
       }}
     >
       {initial}

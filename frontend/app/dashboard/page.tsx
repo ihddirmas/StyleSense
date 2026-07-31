@@ -63,8 +63,8 @@ export default function DashboardPage() {
     });
 
     // Cap check for the Continue card nudge: fire-and-forget, fails soft
-    apiGet<{ used: number; limit: number }>(`/api/tryon/usage-status`)
-      .then(d => setAtCap(d.used >= d.limit))
+    apiGet<{ tryon: { used: number; limit: number } }>(`/api/tryon/usage-status`)
+      .then(d => setAtCap(d.tryon.used >= d.tryon.limit))
       .catch(() => {});
 
     // Insight: fire in parallel, never blocks loading state
@@ -140,7 +140,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setHintDismissed(true)}
               aria-label="Dismiss hint"
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px", flexShrink: 0, lineHeight: 1 }}
+              className="p-0.5 flex-shrink-0 leading-none"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
             >
               <X size={14} />
             </button>
@@ -163,7 +164,8 @@ export default function DashboardPage() {
             Couldn&apos;t load your wardrobe.{" "}
             <button
               onClick={() => setRetryKey(k => k + 1)}
-              style={{ textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
+              className="underline p-0"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}
             >
               Retry
             </button>
@@ -196,7 +198,8 @@ export default function DashboardPage() {
             >
               <button
                 onClick={() => setLightboxUrl(null)}
-                style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#fff", cursor: "pointer" }}
+                className="absolute top-4 right-4"
+                style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}
               >
                 <X size={22} />
               </button>
@@ -204,7 +207,8 @@ export default function DashboardPage() {
               <img
                 src={lightboxUrl}
                 alt="Try-on"
-                style={{ maxHeight: "88vh", maxWidth: "90vw", objectFit: "contain" }}
+                className="object-contain"
+                style={{ maxHeight: "88vh", maxWidth: "90vw" }}
                 onClick={(e) => e.stopPropagation()}
               />
             </motion.div>

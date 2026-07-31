@@ -80,18 +80,18 @@ export default function WardrobePage() {
 
         {filterCategory !== "all" && (
           <nav aria-label="Breadcrumb" className="mb-3">
-            <ol className="flex items-center gap-1 text-xs" style={{ listStyle: "none", padding: 0, margin: 0, color: "var(--text-muted)" }}>
+            <ol className="flex items-center gap-1 text-xs list-none p-0 m-0" style={{ color: "var(--text-muted)" }}>
               <li>
                 <button
                   onClick={() => setFilterCategory("all")}
-                  className="hover:underline"
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}
+                  className="hover:underline p-0"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}
                 >
                   Wardrobe
                 </button>
               </li>
-              <li aria-hidden="true" style={{ userSelect: "none" }}>/</li>
-              <li aria-current="page" className="font-semibold" style={{ color: "var(--ink)", textTransform: "capitalize" }}>
+              <li aria-hidden="true" className="select-none">/</li>
+              <li aria-current="page" className="font-semibold capitalize" style={{ color: "var(--ink)" }}>
                 {filterCategory}
               </li>
             </ol>
@@ -185,17 +185,17 @@ export default function WardrobePage() {
 
       {selectedItemIds.length > 0 && (
         <div
-          className="fixed bottom-6 left-1/2 surface px-5 py-3 flex items-center gap-3"
-          style={{ transform: "translateX(-50%)", zIndex: 50, boxShadow: "0 12px 40px -12px rgba(0,0,0,0.7)" }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 surface px-5 py-3 flex items-center gap-3"
+          style={{ boxShadow: "0 12px 40px -12px rgba(0,0,0,0.7)" }}
         >
           <span className="text-sm">
             <strong style={{ color: "var(--text)" }}>{selectedItemIds.length}</strong> selected
             {selectedItemIds.length >= 6 && <span style={{ color: "var(--text-muted)" }}> (max)</span>}
           </span>
-          <button className="btn-secondary" onClick={clearSelected} style={{ padding: "0.4rem 0.9rem" }}>
+          <button className="btn-secondary px-3.5 py-1.5" onClick={clearSelected}>
             Clear
           </button>
-          <Link href="/studio" className="btn-primary" style={{ padding: "0.5rem 1rem" }}>
+          <Link href="/studio" className="btn-primary px-4 py-2">
             <Sparkles size={14} /> Try on
           </Link>
         </div>
