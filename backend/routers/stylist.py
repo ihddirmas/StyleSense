@@ -1,5 +1,7 @@
 """Anthropic-powered stylist chat (Aria LangGraph agent)."""
 import asyncio
+import base64
+import logging
 import random
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -15,14 +17,16 @@ from models.schemas import (
     StylistWardrobeDetectResponse,
     StylistWardrobeConfirmRequest,
     StylistWardrobeConfirmResponse,
+    ToolConfirmRequest,
+    ToolConfirmResponse,
     DetectedItem,
-    AddMultiFailure,
 )
-from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service
+from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools
 from services.auth_service import current_user
-from services.garment_cleaner import runway_isolate_item
+from services.wardrobe_add_service import confirm_and_add_items
 from graphs import aria_graph
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 _executor = ThreadPoolExecutor(max_workers=4)
 
@@ -40,12 +44,24 @@ async def chat(req: StylistChatRequest, user = Depends(current_user)):
     wardrobe = supabase_service.get_wardrobe_items(user["id"])
     messages = [m.model_dump() for m in req.messages]
 
+    photo_url = None
     if req.image_url:
         if req.image_url.startswith("data:"):
             # Embed directly as a vision block — Aria (Sonnet) sees the raw image.
             header, b64 = req.image_url.split(",", 1)
             media = header.split(":")[1].split(";")[0]
-            print(f"[stylist] image received: {media}, {len(b64)} b64 chars")
+            # Also rehost to a permanent URL -- needed if Aria proposes adding this
+            # photo's items to the wardrobe (add_wardrobe_items tool).
+            try:
+                photo_url = supabase_service.upload_to_storage(
+                    bucket="wardrobe",
+                    user_id=user["id"],
+                    file_bytes=base64.b64decode(b64),
+                    filename="chat-upload.jpg",
+                    content_type=media,
+                )
+            except Exception as e:
+                logger.warning(f"Could not upload chat photo to storage: {e}")
             # Find the user message that contains the photo (marked with "[Photo shared]")
             for i in range(len(messages) - 1, -1, -1):
                 if messages[i]["role"] == "user" and isinstance(messages[i]["content"], str) and messages[i]["content"].startswith("[Photo shared]"):
@@ -74,16 +90,61 @@ async def chat(req: StylistChatRequest, user = Depends(current_user)):
             user_id=user["id"],
             messages=messages,
             wardrobe=wardrobe,
+            pending_photo_url=photo_url,
         )
     except Exception as e:
         raise HTTPException(500, f"Stylist failed: {e}")
+
+    pending_action = result.get("pending_action")
+    if pending_action:
+        # Persist exactly what Aria proposed (server-validated by build_pending_action)
+        # so /tool-confirm executes this, never whatever tool_input a client sends back.
+        supabase_service.create_stylist_tool_call_proposal(
+            tool_use_id=pending_action["tool_use_id"],
+            user_id=user["id"],
+            tool_name=pending_action["tool_name"],
+            tool_input=pending_action["tool_input"],
+        )
 
     return StylistChatResponse(
         reply=result["reply"],
         suggested_item_ids=result["item_ids"],
         occasion=result.get("occasion"),
         scene=result.get("scene"),
+        pending_action=pending_action,
+        product_preview=result.get("product_preview"),
     )
+
+
+@router.post("/tool-confirm", response_model=ToolConfirmResponse)
+async def tool_confirm(req: ToolConfirmRequest, user = Depends(current_user)):
+    """Execute (or cancel) a tool call Aria proposed in the last chat turn. Always
+    executes the server-persisted tool_input from propose time -- the request body
+    is only a lookup key (tool_use_id) plus a decision, never executable input."""
+    row = supabase_service.get_stylist_tool_call(req.tool_use_id)
+    if not row or row["user_id"] != user["id"] or row["tool_name"] != req.tool_name:
+        raise HTTPException(404, "Action not found.")
+
+    if req.decision != "confirm":
+        supabase_service.update_stylist_tool_call(req.tool_use_id, status="cancelled")
+        return ToolConfirmResponse(executed=False, summary="Cancelled.")
+
+    if row["status"] == "done":
+        return ToolConfirmResponse(executed=True, summary=row.get("result_summary") or "Already done.")
+    if row["status"] != "proposed":
+        raise HTTPException(409, "This action can no longer be confirmed.")
+
+    if not supabase_service.claim_stylist_tool_call(req.tool_use_id):
+        raise HTTPException(409, "This action was already confirmed.")
+
+    try:
+        result = await aria_tools.execute_confirmed_tool(row["tool_name"], row["tool_input"], user["id"])
+    except Exception as e:
+        supabase_service.update_stylist_tool_call(req.tool_use_id, status="failed")
+        raise HTTPException(500, f"Action failed: {e}")
+
+    supabase_service.update_stylist_tool_call(req.tool_use_id, status="done", result_summary=result["summary"])
+    return ToolConfirmResponse(executed=True, **result)
 
 
 @router.get("/insight")
@@ -364,66 +425,8 @@ async def wardrobe_confirm(req: StylistWardrobeConfirmRequest, user = Depends(cu
     """
     if not req.items:
         raise HTTPException(400, "items list is empty")
-    
-    async def _process_one(item: DetectedItem):
-        loop = asyncio.get_running_loop()
-        try:
-            isolated_url = await loop.run_in_executor(
-                None,
-                runway_isolate_item,
-                req.source_image_url,
-                item.name,
-                item.category,
-                item.color,
-                item.position,
-            )
-        except Exception as e:
-            return None, AddMultiFailure(name=item.name, reason=f"Runway isolate raised: {e}")
-        
-        if not isolated_url:
-            return None, AddMultiFailure(name=item.name, reason="Runway isolate returned no output")
-        
-        # Re-host to Supabase (Runway URLs are short-lived JWTs)
-        try:
-            import httpx
-            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as c:
-                r = await c.get(isolated_url)
-                r.raise_for_status()
-            permanent_url = supabase_service.upload_to_storage(
-                bucket="wardrobe",
-                user_id=user["id"],
-                file_bytes=r.content,
-                filename=f"chat-{item.name[:20].replace('/', '_')}.jpg",
-                content_type="image/jpeg",
-            )
-        except Exception as e:
-            return None, AddMultiFailure(name=item.name, reason=f"Storage rehost failed: {e}")
-        
-        try:
-            row = supabase_service.insert_wardrobe_item(
-                user_id=user["id"],
-                name=item.name,
-                category=item.category,
-                image_url=permanent_url,
-                occasion=item.occasion or "casual",
-                color=item.color,
-                brand=item.brand,
-                source_url=req.source_image_url,
-                tags=["chat-added"],
-                cutout_url=None,
-            )
-            return row, None
-        except Exception as e:
-            return None, AddMultiFailure(name=item.name, reason=f"DB insert failed: {e}")
-    
-    results = await asyncio.gather(*[_process_one(it) for it in req.items])
-    created = [row for row, _ in results if row is not None]
-    failed = [fail for _, fail in results if fail is not None]
-    
-    count = len(created)
-    if count == 1:
-        summary = f"{created[0]['name']}"
-    else:
-        summary = f"{count} items"
-    
+
+    created, failed, summary = await confirm_and_add_items(
+        user_id=user["id"], source_image_url=req.source_image_url, items=req.items,
+    )
     return StylistWardrobeConfirmResponse(created=created, failed=failed, summary=summary)

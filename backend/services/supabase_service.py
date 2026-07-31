@@ -465,6 +465,56 @@ def update_stylist_session(session_id: str, messages: list, title: Optional[str]
     ) or {}
 
 
+def create_stylist_tool_call_proposal(tool_use_id: str, user_id: str, tool_name: str, tool_input: dict) -> None:
+    """Persist what Aria actually proposed (already server-validated by
+    aria_tools.build_pending_action) so /tool-confirm always executes this exact
+    input, never whatever a client echoes back in the confirm request."""
+    db.query(
+        """
+        INSERT INTO stylist_tool_calls (tool_use_id, user_id, tool_name, tool_input, status)
+        VALUES (:tool_use_id, :user_id, :tool_name, CAST(:tool_input AS JSONB), 'proposed')
+        ON CONFLICT (tool_use_id) DO NOTHING
+        """,
+        {
+            "tool_use_id": tool_use_id, "user_id": user_id, "tool_name": tool_name,
+            "tool_input": json.dumps(tool_input),
+        },
+        fetch="none",
+    )
+
+
+def get_stylist_tool_call(tool_use_id: str) -> Optional[dict]:
+    return db.query(
+        "SELECT * FROM stylist_tool_calls WHERE tool_use_id = :id",
+        {"id": tool_use_id},
+        fetch="one",
+    )
+
+
+def claim_stylist_tool_call(tool_use_id: str) -> bool:
+    """Atomically transition proposed -> executing. Returns False if it was already
+    claimed/resolved (or never proposed) -- the caller must not execute in that case,
+    which is what prevents a double-click or retry from double-spending credits."""
+    row = db.query(
+        """
+        UPDATE stylist_tool_calls SET status = 'executing'
+        WHERE tool_use_id = :id AND status = 'proposed'
+        RETURNING tool_use_id
+        """,
+        {"id": tool_use_id},
+        fetch="one",
+    )
+    return row is not None
+
+
+def update_stylist_tool_call(tool_use_id: str, status: str, result_summary: Optional[str] = None) -> None:
+    db.query(
+        "UPDATE stylist_tool_calls SET status = :status, result_summary = :summary WHERE tool_use_id = :id",
+        {"status": status, "summary": result_summary, "id": tool_use_id},
+        fetch="none",
+    )
+
+
 def delete_stylist_session(session_id: str) -> None:
     """Delete a stylist session."""
     db.query("DELETE FROM stylist_sessions WHERE id = :id", {"id": session_id}, fetch="none")

@@ -13,13 +13,15 @@ A small stateful graph that makes the stylist reason like a real one:
 
 Nodes call the existing anthropic client directly (no langchain-anthropic).
 """
+import asyncio
+import json
 import os
 import logging
 from typing import Optional, TypedDict
 
 from langgraph.graph import StateGraph, START, END
 
-from services import supabase_service, anthropic_service, style_kb, color_service, kibbe_service
+from services import supabase_service, anthropic_service, style_kb, color_service, kibbe_service, aria_tools, usage_limits
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,10 @@ class AriaState(TypedDict, total=False):
     style_preferences: list  # from this-or-that choices
     reply: str
     item_ids: list
+    pending_photo_url: Optional[str]  # permanent URL of a photo shared this turn, if any
+    avatar_selfie_url: Optional[str]  # best face photo for a try-on generation, if any
+    pending_action: Optional[dict]    # tool call Aria proposed but hasn't executed
+    product_preview: Optional[dict]   # result of an auto-executed lookup_product_from_url call
 
 
 # Maps a detected occasion to a rich try-on background, used when the user clicks
@@ -165,6 +171,8 @@ def _ensure_profile(state: AriaState) -> dict:
     if prefs:
         result["style_preferences"] = prefs[-10:]
 
+    result["avatar_selfie_url"] = color_service.best_face_source(user)
+
     return result
 
 
@@ -214,6 +222,11 @@ def _format_preferences(prefs: list, wardrobe: list) -> str:
     return "\n".join(lines) if lines else "(no interpretable preferences yet)"
 
 
+# Bounds the read-only tool loop below (lookup_product_from_url) so a confused
+# model can't loop indefinitely -- each round is one more Anthropic call.
+MAX_TOOL_ROUNDS = 3
+
+
 def _advise(state: AriaState) -> dict:
     system = SYSTEM_TEMPLATE.format(
         preferences=_format_preferences(state.get("style_preferences", []), state.get("wardrobe", [])),
@@ -230,18 +243,64 @@ def _advise(state: AriaState) -> dict:
     if not msgs or msgs[-1]["role"] != "user":
         raise ValueError("Last message must be from the user.")
 
-    # Stronger reasoning model for outfit decisions (falls back to Haiku if unavailable).
-    try:
-        resp = anthropic_service.client.messages.create(
-            model=ADVISE_MODEL, max_tokens=600, temperature=0.7, system=system, messages=msgs,
+    def _call(messages: list):
+        # Stronger reasoning model for outfit decisions (falls back to Haiku if unavailable).
+        kwargs = dict(
+            max_tokens=600, temperature=0.7, system=system, messages=messages,
+            tools=aria_tools.ANTHROPIC_TOOLS, tool_choice={"type": "auto"},
         )
-    except Exception as e:
-        logger.warning(f"advise model {ADVISE_MODEL} failed ({e}); falling back to {anthropic_service.MODEL}")
-        resp = anthropic_service.client.messages.create(
-            model=anthropic_service.MODEL, max_tokens=600, temperature=0.7, system=system, messages=msgs,
-        )
+        try:
+            return anthropic_service.client.messages.create(model=ADVISE_MODEL, **kwargs)
+        except Exception as e:
+            logger.warning(f"advise model {ADVISE_MODEL} failed ({e}); falling back to {anthropic_service.MODEL}")
+            return anthropic_service.client.messages.create(model=anthropic_service.MODEL, **kwargs)
+
+    product_preview = None
+    resp = _call(msgs)
+    rounds = 1
+    while resp.stop_reason == "tool_use" and rounds < MAX_TOOL_ROUNDS:
+        tool_use = next((b for b in resp.content if getattr(b, "type", None) == "tool_use"), None)
+        if tool_use is None or tool_use.name not in aria_tools.READONLY_TOOLS:
+            break
+        validated = aria_tools.validate_tool_input(tool_use.name, tool_use.input, state.get("wardrobe", []))
+        if validated is None:
+            break
+        tool_result = asyncio.run(aria_tools.execute_readonly_tool(tool_use.name, validated))
+        if "error" not in tool_result:
+            product_preview = tool_result
+        msgs = msgs + [
+            {"role": "assistant", "content": resp.content},
+            {"role": "user", "content": [
+                {"type": "tool_result", "tool_use_id": tool_use.id, "content": json.dumps(tool_result)},
+            ]},
+        ]
+        resp = _call(msgs)
+        rounds += 1
+
     reply = "".join(b.text for b in resp.content if hasattr(b, "text")).strip()
-    return {"reply": reply, "item_ids": anthropic_service.extract_item_ids(reply)}
+    result: dict = {
+        "reply": reply,
+        "item_ids": anthropic_service.extract_item_ids(reply),
+        "product_preview": product_preview,
+    }
+
+    if resp.stop_reason == "tool_use":
+        tool_use = next((b for b in resp.content if getattr(b, "type", None) == "tool_use"), None)
+        capped = tool_use is not None and tool_use.name == "generate_tryon" and usage_limits.tryon_capped(state["user_id"])
+        if tool_use is not None and not capped and tool_use.name in aria_tools.CONFIRM_REQUIRED_TOOLS:
+            validated = aria_tools.validate_tool_input(tool_use.name, tool_use.input, state.get("wardrobe", []))
+            pending = validated and aria_tools.build_pending_action(
+                tool_use.name, validated,
+                {
+                    "pending_photo_url": state.get("pending_photo_url"),
+                    "avatar_selfie_url": state.get("avatar_selfie_url"),
+                    "wardrobe": state.get("wardrobe", []),
+                },
+            )
+            if pending:
+                result["pending_action"] = {**pending, "tool_use_id": tool_use.id}
+
+    return result
 
 
 def _build():
@@ -261,9 +320,17 @@ def _build():
 _graph = _build()
 
 
-def run_aria(user_id: str, messages: list, wardrobe: list) -> dict:
-    """Invoke the Aria graph. Returns {reply, item_ids, color_profile, occasion, kibbe_analysis}."""
-    out = _graph.invoke({"user_id": user_id, "messages": messages, "wardrobe": wardrobe})
+def run_aria(
+    user_id: str, messages: list, wardrobe: list, pending_photo_url: Optional[str] = None
+) -> dict:
+    """Invoke the Aria graph. Returns {reply, item_ids, color_profile, occasion,
+    kibbe_analysis, pending_action, product_preview}."""
+    out = _graph.invoke({
+        "user_id": user_id,
+        "messages": messages,
+        "wardrobe": wardrobe,
+        "pending_photo_url": pending_photo_url,
+    })
     return {
         "reply": out.get("reply", ""),
         "item_ids": out.get("item_ids", []),
@@ -271,4 +338,6 @@ def run_aria(user_id: str, messages: list, wardrobe: list) -> dict:
         "occasion": out.get("occasion"),
         "scene": out.get("scene"),
         "kibbe_analysis": out.get("kibbe_analysis"),
+        "pending_action": out.get("pending_action"),
+        "product_preview": out.get("product_preview"),
     }

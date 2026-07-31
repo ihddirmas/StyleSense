@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send, Loader2, Sparkles, MessageCircle, Mic, ChevronRight,
+  Send, Loader2, Sparkles, MessageCircle, ChevronRight,
   Camera, X, Shuffle, Wand2, Plus, Bookmark, Check, ChevronDown, Trash2,
   ShoppingBag,
 } from "lucide-react";
@@ -22,9 +22,9 @@ import type {
   StylistWardrobeDetectResponse,
   StylistWardrobeConfirmResponse,
 } from "@/types";
-import { AvatarWidget } from "@/components/stylist/AvatarWidget";
 import { AddToWardrobeModal } from "@/components/stylist/AddToWardrobeModal";
 import posthog from "posthog-js";
+import { PendingActionCard, type PendingActionResult } from "@/components/stylist/PendingActionCard";
 
 const SUGGESTION_PROMPTS = [
   "Dinner date that says 'I have taste'",
@@ -37,7 +37,7 @@ const SUGGESTION_PROMPTS = [
 export default function StylistPage() {
   const { user, profile } = useAuth();
   const firstName = profile?.full_name?.split(" ")[0];
-  const [tab, setTab] = useState<"chat" | "this-or-that" | "voice">("chat");
+  const [tab, setTab] = useState<"chat" | "this-or-that">("chat");
   const {
     messages,
     setMessages,
@@ -162,6 +162,23 @@ export default function StylistPage() {
     }
   }
 
+  function resolvePendingAction(idx: number, result: PendingActionResult) {
+    setMessages((prev) => {
+      const updated = prev.map((m, i) => {
+        if (i !== idx || !m.pendingAction) return m;
+        return {
+          ...m,
+          pendingAction: { ...m.pendingAction, status: result.status },
+          ...(result.resultImageUrl ? { manifestUrl: result.resultImageUrl, manifestId: result.resultId } : {}),
+        };
+      });
+      return result.resultImageUrl ? updated : [...updated, { role: "assistant" as const, content: result.summary }];
+    });
+    if (result.status === "confirmed" && !result.resultImageUrl) {
+      apiGet<WardrobeItem[]>("/api/wardrobe").then(setItems).catch(() => {});
+    }
+  }
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
@@ -257,15 +274,45 @@ export default function StylistPage() {
       };
       if (photoPreview) payload.image_url = photoPreview;
 
-      const res = await apiPost<{ reply: string; suggested_item_ids: string[]; scene?: string | null }>(
-        "/api/stylist/chat",
-        payload
-      );
+      const res = await apiPost<{
+        reply: string;
+        suggested_item_ids: string[];
+        scene?: string | null;
+        pending_action?: {
+          tool_name: string;
+          tool_use_id: string;
+          summary: string;
+          cost_credits?: number | null;
+        } | null;
+        product_preview?: {
+          image_url: string;
+          name: string;
+          source_url: string;
+          suggested_category?: string | null;
+        } | null;
+      }>("/api/stylist/chat", payload);
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: res.reply,
         suggestedItemIds: res.suggested_item_ids,
         scene: res.scene,
+        pendingAction: res.pending_action
+          ? {
+              toolName: res.pending_action.tool_name,
+              toolUseId: res.pending_action.tool_use_id,
+              summary: res.pending_action.summary,
+              costCredits: res.pending_action.cost_credits,
+              status: "pending",
+            }
+          : undefined,
+        productPreview: res.product_preview
+          ? {
+              imageUrl: res.product_preview.image_url,
+              name: res.product_preview.name,
+              sourceUrl: res.product_preview.source_url,
+              suggestedCategory: res.product_preview.suggested_category,
+            }
+          : undefined,
       };
       const updatedMessages = [...next, assistantMsg];
       setMessages(updatedMessages);
@@ -307,12 +354,6 @@ export default function StylistPage() {
             onClick={() => setTab("this-or-that")}
           >
             <Shuffle size={12} style={{ marginRight: 6 }} /> This or That
-          </button>
-          <button
-            className={`chip ${tab === "voice" ? "chip-active" : ""}`}
-            onClick={() => setTab("voice")}
-          >
-            <Mic size={12} style={{ marginRight: 6 }} /> Voice avatar
           </button>
         </div>
       </div>
@@ -470,6 +511,25 @@ export default function StylistPage() {
                           style={{ maxWidth: 180, maxHeight: 220, objectFit: "cover", display: "block", marginBottom: 8 }}
                         />
                       )}
+                      {m.productPreview && (
+                        <a
+                          href={m.productPreview.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 mb-2"
+                          style={{ border: "1px solid var(--border)", padding: 6, textDecoration: "none" }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={m.productPreview.imageUrl}
+                            alt={m.productPreview.name}
+                            style={{ width: 44, height: 44, objectFit: "cover", flexShrink: 0 }}
+                          />
+                          <span className="text-xs truncate" style={{ color: "var(--ink)" }}>
+                            {m.productPreview.name}
+                          </span>
+                        </a>
+                      )}
                       <FormattedReply
                         content={m.content}
                         itemIds={m.suggestedItemIds || []}
@@ -480,6 +540,12 @@ export default function StylistPage() {
                         onManifest={m.role === "assistant" && (m.suggestedItemIds?.length ?? 0) > 0 ? () => manifestLook(i) : undefined}
                         onSaveOutfit={() => saveManifestOutfit(i)}
                       />
+                      {m.pendingAction && (
+                        <PendingActionCard
+                          action={m.pendingAction}
+                          onResolve={(result) => resolvePendingAction(i, result)}
+                        />
+                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -602,56 +668,7 @@ export default function StylistPage() {
         ) : tab === "this-or-that" ? (
           <ThisOrThat items={items} />
 
-        ) : (
-          <div className="surface flex flex-col flex-1 min-h-0">
-            <div className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                   style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}>
-                <Mic size={14} style={{ color: "var(--gold)" }} />
-              </div>
-              <div>
-                <div className="font-display text-base leading-none" style={{ color: "var(--text)" }}>Aria — Voice</div>
-                <div className="text-2xs uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>Live voice session</div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-hidden">
-              <AvatarWidget />
-            </div>
-
-            <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
-              <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Or type to switch to chat</div>
-              <div className="flex gap-2">
-                <input
-                  className="input"
-                  placeholder="Type to switch to chat..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && input.trim()) {
-                      const text = input;
-                      setTab("chat");
-                      setTimeout(() => send(text), 50);
-                    }
-                  }}
-                />
-                <button
-                  className="btn-primary"
-                  style={{ padding: "0.72rem 1rem" }}
-                  onClick={() => {
-                    if (!input.trim()) return;
-                    const text = input;
-                    setTab("chat");
-                    setTimeout(() => send(text), 50);
-                  }}
-                  disabled={!input.trim()}
-                >
-                  <Send size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        ) : null}
       </div>
 
       <AnimatePresence>

@@ -34,6 +34,14 @@ def _notify_cap_hit(user_id: str, dedupe_key: str, subject: str, body: str) -> N
     supabase_service.record_usage_event(user_id, dedupe_key)
 
 
+def tryon_capped(user_id: str) -> bool:
+    """Non-raising check so a caller (Aria) can decide whether to even propose a
+    try-on before the user tries to confirm it, instead of catching an exception."""
+    if user_id in UNLIMITED_TESTER_USER_IDS:
+        return False
+    return supabase_service.count_tryons_this_month(user_id) >= FREE_TRYON_MONTHLY_LIMIT
+
+
 def check_tryon_cap(user_id: str) -> None:
     if user_id in UNLIMITED_TESTER_USER_IDS:
         return
