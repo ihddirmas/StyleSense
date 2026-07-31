@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
+import { getPostHogPublicKey } from "@/lib/posthog-key";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useAriaChat } from "@/store/ariaChat";
 import { useAppStore } from "@/store/app";
@@ -29,9 +30,9 @@ function syncUserScope(uid: string | null) {
 }
 
 // Ties PostHog events to the real user id instead of an anonymous device id.
-// No-op if NEXT_PUBLIC_POSTHOG_KEY isn't set (PostHogProvider never calls posthog.init()).
+// No-op if PostHog isn't configured (PostHogProvider never calls posthog.init()).
 function identifyForAnalytics(user: User | null) {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
+  if (!getPostHogPublicKey()) return;
   if (user) {
     posthog.identify(user.id, { email: user.email });
   } else {
@@ -105,7 +106,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
       identifyForAnalytics(sess?.user ?? null);
       if (sess?.user) {
         fetchProfile(sess.user.id);
-        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        if (getPostHogPublicKey()) {
           posthog.identify(sess.user.id, {
             name: sess.user.user_metadata?.full_name ?? undefined,
           });

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import posthog from "posthog-js";
 import { useFeatureFlagVariantKey } from "posthog-js/react";
+import { getPostHogPublicKey } from "@/lib/posthog-key";
 import { useAuth } from "@/components/AuthProvider";
 
 const tiers = [
@@ -245,7 +246,7 @@ export default function PricingPage() {
             <Link
               href="/signup"
               onClick={() => {
-                if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("upgrade_cta_clicked", { tier: tier.name, variant: ctaVariant });
+                if (getPostHogPublicKey()) posthog.capture("upgrade_cta_clicked", { tier: tier.name, variant: ctaVariant });
               }}
               className={tier.popular ? "btn-primary" : undefined}
               style={
