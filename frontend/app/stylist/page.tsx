@@ -24,6 +24,7 @@ import type {
 } from "@/types";
 import { AvatarWidget } from "@/components/stylist/AvatarWidget";
 import { AddToWardrobeModal } from "@/components/stylist/AddToWardrobeModal";
+import posthog from "posthog-js";
 
 const SUGGESTION_PROMPTS = [
   "Dinner date that says 'I have taste'",
@@ -125,6 +126,7 @@ export default function StylistPage() {
     if (picked.length === 0) return;
     if (!selfieUrl) { toast.error("Add a selfie in Avatar Setup first."); return; }
     setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, manifesting: true } : m)));
+    posthog.capture("stylist_look_manifested", { item_count: picked.length });
     try {
       const res = await apiPost<{ result_image_url: string; result_id: string }>("/api/tryon/generate-multi", {
         avatar_selfie_url: selfieUrl,
@@ -221,6 +223,8 @@ export default function StylistPage() {
     let content = text.trim();
     if (photoPreview && !content) content = "What do you think of this?";
     else if (photoPreview) content = `${content}`;
+
+    posthog.capture("stylist_message_sent", { has_photo: !!photoPreview });
 
     const userMsg: ChatMessage = {
       role: "user",

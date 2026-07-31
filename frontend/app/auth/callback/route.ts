@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -21,8 +22,21 @@ export async function GET(request: Request) {
         },
       }
     );
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (data.user) {
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: data.user.id,
+          event: "user_logged_in",
+          properties: { method: "google" },
+        });
+        posthog.identify({
+          distinctId: data.user.id,
+          properties: { name: data.user.user_metadata?.full_name ?? undefined },
+        });
+        await posthog.flush();
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

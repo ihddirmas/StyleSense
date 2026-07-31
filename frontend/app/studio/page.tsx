@@ -23,6 +23,7 @@ import { toast } from "@/components/ui/Toast";
 import { TRYON_MODELS, VIDEO_MODELS } from "@/lib/models";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { WardrobeItem, TryOnResult } from "@/types";
+import posthog from "posthog-js";
 
 const MOTION_PRESETS = [
   { label: "Slow turn to camera", prompt: "The subject slowly turns toward the camera with a confident editorial pose, gentle hair movement." },
@@ -270,6 +271,13 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
     if (!effectiveSelfieUrl) { toast.error("Upload your selfie first (Avatar Setup)."); return; }
     if (selectedItems.length === 0) { toast.error("Select at least one item from your wardrobe."); return; }
     setShowCompare(false);
+    posthog.capture("tryon_generated", {
+      item_count: selectedItems.length,
+      model: tryonModel,
+      quality,
+      has_setting: !!settingInput.trim(),
+      enhance_prompt: enhancePrompt,
+    });
     startTryOn({
       items: selectedItems,
       avatarSelfieUrl: effectiveSelfieUrl,
@@ -282,6 +290,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   function generateEventScene(context: string) {
     if (!resultUrl || !activeTryOn) return;
+    posthog.capture("event_scene_generated", { context });
     startEventScene({
       parentTaskId: activeTryOn.id,
       parentTryOnDbId: resultId,
@@ -293,6 +302,11 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
   function animate() {
     const sourceUrl = eventUrl || resultUrl;
     if (!sourceUrl || !activeTryOn) return;
+    posthog.capture("tryon_animated", {
+      model: videoModel,
+      has_event_scene: !!eventUrl,
+      enhance_prompt: enhancePrompt,
+    });
     startAnimate({
       sourceUrl,
       parentTaskId: activeTryOn.id,
@@ -315,6 +329,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
         // Also mark the underlying try-on as saved so it appears in the gallery
         resultId ? apiPost("/api/tryon/save", { tryon_id: resultId }).catch(() => {}) : Promise.resolve(),
       ]);
+      posthog.capture("outfit_saved", { item_count: selectedItemIds.length, has_event_scene: !!eventUrl });
       toast.success("Saved to Outfits + gallery.");
     } catch (e) {
       toast.error(`Save failed: ${e instanceof Error ? e.message : "unknown"}`);
