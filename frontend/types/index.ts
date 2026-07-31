@@ -38,6 +38,21 @@ export interface Outfit {
   created_at: string;
 }
 
+export interface PendingAction {
+  toolName: string;
+  toolUseId: string;
+  summary: string;
+  costCredits?: number | null;
+  status: "pending" | "confirmed" | "cancelled";
+}
+
+export interface ProductPreview {
+  imageUrl: string;
+  name: string;
+  sourceUrl: string;
+  suggestedCategory?: string | null;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -48,6 +63,8 @@ export interface ChatMessage {
   photoUrl?: string;          // user-uploaded photo shown in their chat bubble
   manifestId?: string;        // the try-on result id (to save it as an outfit)
   savedOutfit?: boolean;      // this manifested look was saved to Outfits
+  pendingAction?: PendingAction; // a tool call Aria proposed, awaiting confirm/cancel
+  productPreview?: ProductPreview; // a link Aria looked up via lookup_product_from_url
 }
 
 export interface DetectedItem {

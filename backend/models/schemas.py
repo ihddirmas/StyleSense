@@ -173,11 +173,48 @@ class StylistChatRequest(BaseModel):
     image_url: Optional[str] = None
 
 
+class PendingAction(BaseModel):
+    """A tool call Aria proposed but hasn't executed -- shown to the user as a
+    confirm/cancel card before it spends credits or writes data."""
+    tool_name: str
+    tool_use_id: str
+    tool_input: dict
+    summary: str
+    cost_credits: Optional[int] = None
+
+
+class ProductPreview(BaseModel):
+    """Result of Aria auto-executing lookup_product_from_url -- read-only, no
+    confirmation needed, so unlike PendingAction it's already resolved by the time
+    the chat response is sent."""
+    image_url: str
+    name: str
+    source_url: str
+    suggested_category: Optional[str] = None
+
+
 class StylistChatResponse(BaseModel):
     reply: str
     suggested_item_ids: List[str] = []
     occasion: Optional[str] = None
     scene: Optional[str] = None  # try-on background for "Manifest this look"
+    pending_action: Optional[PendingAction] = None
+    product_preview: Optional[ProductPreview] = None
+
+
+class ToolConfirmRequest(BaseModel):
+    tool_name: str
+    tool_use_id: str
+    decision: str  # "confirm" | "cancel"
+
+
+class ToolConfirmResponse(BaseModel):
+    executed: bool
+    summary: str
+    created: List[dict] = []
+    failed: List[AddMultiFailure] = []
+    result_image_url: Optional[str] = None
+    result_id: Optional[str] = None
 
 
 # ─────────────────────────── FRIENDS / CHAT ─────────────────────────── #
