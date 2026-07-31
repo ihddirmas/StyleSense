@@ -6,7 +6,6 @@ import posthog from "posthog-js";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useAriaChat } from "@/store/ariaChat";
 import { useAppStore } from "@/store/app";
-import posthog from "posthog-js";
 
 // Clear per-user client state (Aria chat + cached avatar/selfie) so a different
 // account on the same browser never inherits the previous user's data.
