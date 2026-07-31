@@ -36,13 +36,9 @@ export function AuthCard({ initialMode, next }: AuthCardProps) {
     setLoading(true);
 
     if (mode === "login") {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
       if (error) { toast.error(error.message); return; }
-      if (data.user) {
-        posthog.identify(data.user.id, { name: data.user.user_metadata?.full_name ?? undefined });
-        posthog.capture("user_logged_in", { method: "email" });
-      }
       toast.success("Welcome back.");
       router.push(next);
       router.refresh();
@@ -56,15 +52,22 @@ export function AuthCard({ initialMode, next }: AuthCardProps) {
         },
       });
       setLoading(false);
-      if (error) { toast.error(error.message); return; }
+      if (error) {
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+          posthog.capture("signup_failed", { method: "password", reason: error.message });
+        }
+        toast.error(error.message);
+        return;
+      }
       if (data.user && !data.session) {
-        posthog.capture("user_signed_up", { method: "email", email_confirmation_required: true });
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+          posthog.capture("signup_completed", { method: "password", requires_email_confirmation: true });
+        }
         toast.info("Check your email to confirm your account, then sign in.");
         router.push("/login");
       } else {
-        if (data.user) {
-          posthog.identify(data.user.id, { name: name || (data.user.user_metadata?.full_name ?? undefined) });
-          posthog.capture("user_signed_up", { method: "email", email_confirmation_required: false });
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+          posthog.capture("signup_completed", { method: "password", requires_email_confirmation: false });
         }
         toast.success("Welcome to StyleSense!");
         router.push(next);
@@ -75,7 +78,6 @@ export function AuthCard({ initialMode, next }: AuthCardProps) {
 
   async function googleSignIn() {
     setOauthLoading(true);
-    posthog.capture("user_logged_in", { method: "google" });
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
