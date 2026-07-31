@@ -1,11 +1,12 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, Plus } from "lucide-react";
 import { apiUpload } from "@/lib/api";
 import { useAppStore } from "@/store/app";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
 import type { WardrobeItem } from "@/types";
+import posthog from "posthog-js";
 
 type Step = 1 | 2 | 3;
 
@@ -20,6 +21,17 @@ export default function OnboardingPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_started", { step });
+  }, [step]);
+
+  useEffect(() => {
+    if (step === 3 && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      posthog.capture("onboarding_completed", { has_item: !!addedItem });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   async function handleSelfie(file: File) {
     setSelfieThumb(URL.createObjectURL(file));
     setUploading(true);
@@ -31,6 +43,7 @@ export default function OnboardingPage() {
       // non-fatal — thumbnail still shown, user continues
     } finally {
       setUploading(false);
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 1 });
       setStep(2);
     }
   }
@@ -39,6 +52,7 @@ export default function OnboardingPage() {
     setModalOpen(false);
     setAddedItem(item);
     setSelected([item.id]);
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 2 });
     setStep(3);
   }
 
@@ -48,6 +62,7 @@ export default function OnboardingPage() {
       setAddedItem(items[0]);
       setSelected(items.map((i) => i.id));
     }
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 2 });
     setStep(3);
   }
 
@@ -75,22 +90,34 @@ export default function OnboardingPage() {
             selfieThumb={selfieThumb}
             fileRef={fileRef}
             onFile={handleSelfie}
-            onSkip={() => setStep(2)}
+            onSkip={() => {
+              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_skipped", { step: 1 });
+              setStep(2);
+            }}
           />
         )}
 
         {step === 2 && (
           <StepWardrobe
             onOpenModal={() => setModalOpen(true)}
-            onSkip={() => setStep(3)}
+            onSkip={() => {
+              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_skipped", { step: 2 });
+              setStep(3);
+            }}
           />
         )}
 
         {step === 3 && (
           <StepReady
             hasItem={!!addedItem}
-            onStudio={() => router.push("/studio")}
-            onDashboard={() => router.push("/dashboard")}
+            onStudio={() => {
+              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_exit_clicked", { destination: "studio" });
+              router.push("/studio");
+            }}
+            onDashboard={() => {
+              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_exit_clicked", { destination: "dashboard" });
+              router.push("/dashboard");
+            }}
           />
         )}
       </div>
