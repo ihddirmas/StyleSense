@@ -89,7 +89,14 @@ def qa_email() -> str:
 
 
 def qa_password() -> str:
-    return (os.getenv("TEST_USER_PASSWORD") or DEFAULT_QA_PASSWORD).strip()
+    explicit = (os.getenv("TEST_USER_PASSWORD") or "").strip()
+    if explicit:
+        return explicit
+    email = qa_email()
+    for c in seed_account_credentials():
+        if c["email"] == email:
+            return c["password"]
+    return DEFAULT_QA_PASSWORD
 
 
 def seed_account_emails() -> set[str]:

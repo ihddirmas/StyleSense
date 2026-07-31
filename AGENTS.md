@@ -126,6 +126,7 @@ Set `TEST_USER_EMAIL` to the ellbit seed address and `TEST_USER_PASSWORD` to the
 
 ```bash
 cd backend && ./venv/bin/python -m scripts.ensure_test_user
+cd backend && ./venv/bin/python -m scripts.ensure_seed_users   # sync TEST_SEED_*_PASSWORD
 cd backend && ./venv/bin/python -m scripts.cleanup_test_users          # dry-run
 cd backend && ./venv/bin/python -m scripts.cleanup_test_users --apply  # delete junk
 ```
