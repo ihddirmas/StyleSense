@@ -99,27 +99,44 @@ Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthro
 
 ### QA vs real users (Supabase Auth)
 
-**There is no Supabase MCP** in this environment — use the backend scripts below (service role required).
+**Canonical QA account** (reuse forever): `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` in Cursor secrets / `backend/.env`. Agents and Playwright log in at `/login` — **do not sign up new users in the UI**.
 
-| Account type | How to identify | What to do |
-|--------------|-----------------|------------|
-| **Canonical QA** | `TEST_USER_EMAIL` in secrets (default `qa@stylesense.test`) | Reuse for all browser/E2E/agent login — **never sign up new users in the UI** |
-| **Disposable** | `@example.com`, or email prefix `smoke-`, `probe-`, `test-acct-`, `cloudagent-`, or `user_metadata.is_test=true` | Safe to delete with cleanup script |
-| **Real users** | Everything else | Never delete |
+| Account type | How to identify | Cleanup |
+|--------------|-----------------|---------|
+| **Canonical QA** | `TEST_USER_EMAIL` | Protected — never deleted |
+| **Disposable** | `@example.com`, `@stylesense-test.local`, `@styleai.test`, test prefixes, or `user_metadata.is_test=true` | `cleanup_test_users --apply` |
+| **Real users** | Gmail, real domains, `judge@stylesense.demo` | Never delete |
+
+#### Scripts (service role in `backend/.env`)
 
 ```bash
-# Create/sync the one QA account (idempotent)
 cd backend && ./venv/bin/python -m scripts.ensure_test_user
-
-# See what junk accounts would be removed
-cd backend && ./venv/bin/python -m scripts.cleanup_test_users
-
-# Delete ephemeral accounts (smoke/probe/agent signups)
-cd backend && ./venv/bin/python -m scripts.cleanup_test_users --apply
+cd backend && ./venv/bin/python -m scripts.cleanup_test_users          # dry-run
+cd backend && ./venv/bin/python -m scripts.cleanup_test_users --apply  # delete junk
 ```
 
-Optional: `TEST_USER_PROTECTED_EMAILS=admin@stylesense.com,other@real.com` — comma-separated emails cleanup must never touch.
+Optional: `TEST_USER_PROTECTED_EMAILS=admin@stylesense.com` — extra emails cleanup must never touch.
 
-Smoke test `tests.test_auth_flow` still creates a disposable `@example.com` user but **deletes it at the end**; if a run crashes, run cleanup.
+#### Supabase MCP (audit without scripts)
 
-**Agent rule:** log in with `TEST_USER_*` at `/login`. Do not use Sign up in the browser unless explicitly testing signup.
+Project ref: `zlgzpgqqodfrwnlephrc` (StylSense). Useful tools:
+
+- `list_projects` — confirm connected project
+- `list_tables` — row counts for `profiles`, `users`, etc.
+- `execute_sql` — audit auth users (read-only checks):
+
+```sql
+-- Junk vs real breakdown
+select case when email like '%@example.com' then 'example.com' else 'real' end as bucket, count(*)
+from auth.users group by 1;
+
+-- Recent signups
+select email, created_at, raw_user_meta_data->>'test_kind' as test_kind
+from auth.users order by created_at desc limit 20;
+```
+
+- `get_advisors` (`security` / `performance`) — RLS and config issues
+
+MCP can **query** `auth.users` but **cannot** replace `cleanup_test_users` for deletes — use the script (Auth Admin API handles cascades safely).
+
+**Agent rule:** log in with `TEST_USER_*`. Do not use Sign up unless testing signup itself.
