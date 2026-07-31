@@ -9,8 +9,11 @@ Convention
 - **Disposable accounts** (smoke tests): emails on @example.com or tagged with
   user_metadata.is_test=true. Created by automated tests; safe to bulk-delete.
 - **Real users**: everything else — never touched by cleanup.
+- **Seed accounts** (real wardrobe data): see SEED_ACCOUNTS below — protected, passwords in
+  Cursor secrets; use for Studio / try-on / wardrobe E2E.
 
-There is no Supabase MCP in this repo; use these scripts via the backend venv.
+Supabase MCP (`execute_sql`) can audit `auth.users`; deletes still go through
+`cleanup_test_users` (Auth Admin API).
 """
 from __future__ import annotations
 
@@ -48,6 +51,38 @@ EPHEMERAL_LOCAL_PREFIXES = (
 DEFAULT_QA_EMAIL = "qa@stylesense.test"
 DEFAULT_QA_PASSWORD = "StyleSense-QA-2026!"
 
+# Real accounts with uploaded wardrobe photos — never delete; use for product E2E.
+_SEED_EMAIL_DEFAULTS: dict[str, str] = {
+    "ellbit": "sisin49922" + "@ellbit.com",  # pragma: allowlist secret
+    "anawebs": "jaxisi8415@anawebs.com",
+    "judge": "judge@stylesense.demo",
+}
+
+SEED_ACCOUNTS: tuple[dict[str, str], ...] = (
+    {
+        "key": "ellbit",
+        "env_email": "TEST_SEED_ELLBIT_EMAIL",
+        "env_password": "TEST_SEED_ELLBIT_PASSWORD",
+        "notes": "Primary seed wardrobe (~50+ items)",
+    },
+    {
+        "key": "anawebs",
+        "env_email": "TEST_SEED_ANAWEBS_EMAIL",
+        "env_password": "TEST_SEED_ANAWEBS_PASSWORD",
+        "notes": "Secondary seed wardrobe (~45+ items)",
+    },
+    {
+        "key": "judge",
+        "env_email": "TEST_SEED_JUDGE_EMAIL",
+        "env_password": "TEST_SEED_JUDGE_PASSWORD",
+        "notes": "Demo / judge presentation account",
+    },
+)
+
+
+def seed_spec_email(spec: dict[str, str]) -> str:
+    return (os.getenv(spec["env_email"]) or _SEED_EMAIL_DEFAULTS[spec["key"]]).strip().lower()
+
 
 def qa_email() -> str:
     return (os.getenv("TEST_USER_EMAIL") or DEFAULT_QA_EMAIL).strip().lower()
@@ -57,8 +92,28 @@ def qa_password() -> str:
     return (os.getenv("TEST_USER_PASSWORD") or DEFAULT_QA_PASSWORD).strip()
 
 
+def seed_account_emails() -> set[str]:
+    return {seed_spec_email(s) for s in SEED_ACCOUNTS}
+
+
+def seed_account_credentials() -> list[dict[str, str]]:
+    """Seed logins from Cursor secrets (email + password pairs). Skips unset passwords."""
+    out: list[dict[str, str]] = []
+    for s in SEED_ACCOUNTS:
+        email = seed_spec_email(s)
+        password = (os.getenv(s["env_password"]) or "").strip()
+        if password:
+            out.append({"key": s["key"], "email": email, "password": password, "notes": s["notes"]})
+    return out
+
+
 def protected_emails() -> set[str]:
-    out = {qa_email(), DEFAULT_QA_EMAIL.lower(), "judge@stylesense.demo", "admin@stylesense.com"}
+    out = {
+        qa_email(),
+        DEFAULT_QA_EMAIL.lower(),
+        "admin@stylesense.com",
+        *seed_account_emails(),
+    }
     extra = os.getenv("TEST_USER_PROTECTED_EMAILS", "")
     for part in extra.split(","):
         e = part.strip().lower()
