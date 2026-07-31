@@ -108,6 +108,20 @@ runway_hackthon/
 - **Keep emojis out of code/files.** UI uses lucide-react icons + Cormorant Garamond display font.
 - **Don't add comments unless the WHY is non-obvious.**
 
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `ihddirmas/StyleSense` (the `origin` remote), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
 ## Common tasks
 
 ```powershell
