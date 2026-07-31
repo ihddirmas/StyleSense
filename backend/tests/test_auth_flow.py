@@ -21,6 +21,8 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 import httpx
 from supabase import create_client
 
+from scripts.test_users import test_user_metadata
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 # Read anon key from env. Add SUPABASE_ANON_KEY to backend/.env to run this test.
@@ -65,8 +67,8 @@ def main():
         result = admin.auth.admin.create_user({
             "email": TEST_EMAIL,
             "password": TEST_PASSWORD,
-            "email_confirm": True,  # auto-confirm so we can immediately sign in
-            "user_metadata": {"full_name": "Smoke Test User"},
+            "email_confirm": True,
+            "user_metadata": test_user_metadata("auth_smoke", full_name="Smoke Test User"),
         })
         if not result.user:
             failures.append(f"admin.create_user returned no user: {result}")
@@ -83,12 +85,12 @@ def main():
     # the "database error" issue specifically
     print()
     print("  Also testing public anon-key signup path (the one users hit)...")
-    public_email = f"public-{uuid.uuid4().hex[:8]}@gmail.com"
+    public_email = f"public-{uuid.uuid4().hex[:8]}@example.com"
     try:
         anon_result = anon.auth.sign_up({
             "email": public_email,
             "password": TEST_PASSWORD,
-            "options": {"data": {"full_name": "Public Smoke"}},
+            "options": {"data": test_user_metadata("auth_smoke_public", full_name="Public Smoke")},
         })
         if anon_result.user:
             print(f"  [OK] Public sign_up worked too: {anon_result.user.id}")

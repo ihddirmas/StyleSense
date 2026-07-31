@@ -96,3 +96,30 @@ Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthro
 - First dashboard load may show "Couldn't load your wardrobe" until Aurora warms up; **Retry** usually succeeds.
 - `tests.test_anthropic_smoke` requires Anthropic API credits; low balance returns HTTP 400.
 - Cloud test login secrets: `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` (if the password secret was saved as `TEST_USER_PASSWOR`, use that env name instead).
+
+### QA vs real users (Supabase Auth)
+
+**There is no Supabase MCP** in this environment — use the backend scripts below (service role required).
+
+| Account type | How to identify | What to do |
+|--------------|-----------------|------------|
+| **Canonical QA** | `TEST_USER_EMAIL` in secrets (default `qa@stylesense.test`) | Reuse for all browser/E2E/agent login — **never sign up new users in the UI** |
+| **Disposable** | `@example.com`, or email prefix `smoke-`, `probe-`, `test-acct-`, `cloudagent-`, or `user_metadata.is_test=true` | Safe to delete with cleanup script |
+| **Real users** | Everything else | Never delete |
+
+```bash
+# Create/sync the one QA account (idempotent)
+cd backend && ./venv/bin/python -m scripts.ensure_test_user
+
+# See what junk accounts would be removed
+cd backend && ./venv/bin/python -m scripts.cleanup_test_users
+
+# Delete ephemeral accounts (smoke/probe/agent signups)
+cd backend && ./venv/bin/python -m scripts.cleanup_test_users --apply
+```
+
+Optional: `TEST_USER_PROTECTED_EMAILS=admin@stylesense.com,other@real.com` — comma-separated emails cleanup must never touch.
+
+Smoke test `tests.test_auth_flow` still creates a disposable `@example.com` user but **deletes it at the end**; if a run crashes, run cleanup.
+
+**Agent rule:** log in with `TEST_USER_*` at `/login`. Do not use Sign up in the browser unless explicitly testing signup.
