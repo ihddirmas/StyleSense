@@ -19,20 +19,12 @@ function LoginInner() {
   const next = search.get("next") || "/dashboard";
 
   return (
-    <div className="h-screen overflow-y-auto" style={{ position: "relative", zIndex: 1 }}>
+    <div className="h-screen overflow-y-auto relative z-10">
       <FashionBackground />
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium tracking-wide"
-        style={{
-          position: "fixed",
-          top: 28,
-          left: 28,
-          color: "var(--text-muted)",
-          textDecoration: "none",
-          zIndex: 3,
-          transition: "color 0.15s",
-        }}
+        className="inline-flex items-center gap-1.5 text-sm font-medium tracking-wide fixed top-7 left-7 z-10 no-underline transition-colors"
+        style={{ color: "var(--text-muted)" }}
         onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
         onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
       >

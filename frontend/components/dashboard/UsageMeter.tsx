@@ -9,8 +9,8 @@ export function UsageMeter() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiGet<{ used: number; limit: number }>("/api/tryon/usage-status")
-      .then((d) => { setStatus(d); setLoading(false); })
+    apiGet<{ tryon: { used: number; limit: number } }>("/api/tryon/usage-status")
+      .then((d) => { setStatus(d.tryon); setLoading(false); })
       .catch(() => { setFailed(true); setLoading(false); });
   }, []);
 
