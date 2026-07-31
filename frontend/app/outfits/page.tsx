@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ui/Dialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { toast } from "@/components/ui/Toast";
 import type { Outfit } from "@/types";
+import posthog from "posthog-js";
 
 export default function OutfitsPage() {
   const { user } = useAuth();
@@ -106,7 +107,7 @@ export default function OutfitsPage() {
                 outfit={o}
                 index={i}
                 onOpen={() => setOpenOutfit(o)}
-                onShare={() => setShareTarget(o)}
+                onShare={() => { posthog.capture("outfit_shared", { item_count: o.item_ids.length }); setShareTarget(o); }}
                 onDelete={() => setPendingDelete(o)}
               />
             ))}

@@ -6,6 +6,7 @@ import { Plus, Loader2, Link as LinkIcon, Upload, Check, X, Trash2, Sparkles, Im
 import { apiPost, apiUpload } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import type { WardrobeItem, DetectedItem } from "@/types";
+import posthog from "posthog-js";
 
 const CATEGORIES = ["tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"];
 const OCCASIONS = ["any", "casual", "formal", "evening", "sport", "beach"];
@@ -227,7 +228,10 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
             "/api/wardrobe/add-multi",
             { source_image_url: res.image_url, items: res.detected }
           );
-          if (r2.created?.length) { toast.success("Item added."); onAddedMany?.(r2.created); onClose(); }
+          if (r2.created?.length) {
+            posthog.capture("wardrobe_item_added", { method: "url", item_count: r2.created.length, category: r2.created[0]?.category });
+            toast.success("Item added."); onAddedMany?.(r2.created); onClose();
+          }
           else { toast.error(`Could not add: ${r2.failed?.[0]?.reason || "unknown"}`); setPhase("form"); }
           return;
         }
@@ -269,6 +273,7 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
         if (finalColor) fd2.append("color", finalColor);
         if (finalBrand) fd2.append("brand", finalBrand);
         const item = await apiUpload<WardrobeItem>("/api/wardrobe/upload", fd2);
+        posthog.capture("wardrobe_item_added", { method: "upload", item_count: 1, category: finalCategory });
         toast.success("Item added.");
         onAdded?.(item);
         onClose();
@@ -294,6 +299,7 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
       const okCount = res.created?.length || 0;
       const failCount = res.failed?.length || 0;
       if (okCount > 0) {
+        posthog.capture("wardrobe_item_added", { method: "multi_detect", item_count: okCount });
         toast.success(
           failCount > 0
             ? `${okCount} item${okCount === 1 ? "" : "s"} added. ${failCount} failed.`
