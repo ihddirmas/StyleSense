@@ -61,7 +61,7 @@ For this hackathon we added a **production-minded media pipeline**: **Genblaze**
 - **Animated runway videos** (Genblaze pipeline output landed directly in B2)
 - **Provenance manifests** (SHA-256 canonical hash per run; verifiable downstream)
 
-**Why B2:** Runway and composite URLs expire; B2 is the durable system of record for a user’s look library and audit trail.
+**Why B2:** Runway and composite URLs expire; B2 is the durable system of record for a user’s look library and audit trail. Supabase stays the **hot CDN** for fast UI loads (`result_image_url`); `b2_image_url` + `image_manifest_hash` on each row is the **cold archive** with verifiable provenance. API video playback prefers `b2_video_url` when present.
 
 **Env vars:** `B2_BUCKET`, `B2_KEY_ID`, `B2_APP_KEY`, optional `B2_REGION`, `B2_PUBLIC_URL_BASE`.
 
