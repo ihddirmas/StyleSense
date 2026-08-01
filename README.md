@@ -2,6 +2,18 @@
 
 > Built for the **AWS + Runway AI Hackathon** · May–June 2026
 
+## Live deployment (`master`)
+
+| Service | URL |
+|---------|-----|
+| **Frontend** (Vercel, `master`) | [https://style-sense-beryl.vercel.app](https://style-sense-beryl.vercel.app) |
+| **Backend** (Render, `master`) | [https://styleai-backend-5vk9.onrender.com](https://styleai-backend-5vk9.onrender.com) |
+| **API health** | `GET /health` → `{"status":"ok"}` |
+| **API docs** | [https://styleai-backend-5vk9.onrender.com/docs](https://styleai-backend-5vk9.onrender.com/docs) |
+
+Vercel project **style-sense** tracks `github.com/ihddirmas/StyleSense` branch **`master`** with root directory `frontend/`.  
+Set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SITE_URL` in Vercel if you override defaults; otherwise `frontend/.env.production` and `lib/api-base.ts` point at the URLs above.
+
 ## The Wow Moment
 
 Upload a selfie → add clothes from Amazon URLs → see yourself wearing them via Runway → place yourself at a "beach wedding" → animate as a 5-second runway video → talk to an AI stylist that knows your entire wardrobe.
