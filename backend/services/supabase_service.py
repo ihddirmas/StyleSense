@@ -1,10 +1,8 @@
-"""Supabase Storage + Auth/social client, and the core relational helpers.
+"""Supabase Storage + Auth/social client, and core relational helpers.
 
-Storage (buckets) and the module-level `supabase` client (used for Auth and the
-social tables: profiles, friendships, messages) stay on Supabase. The core domain
-tables - users, wardrobe_items, try_on_results, outfits - are now backed by Aurora
-PostgreSQL via `services.db`. The function signatures here are unchanged so callers
-(routers/services) need no edits.
+Auth, Storage buckets, profiles, friendships, and messages use the Supabase
+client (`supabase`). Core domain tables (users, wardrobe_items, try_on_results,
+outfits, stylist_sessions, usage_events) use Supabase via `services.db`.
 """
 import os
 import json
@@ -100,7 +98,7 @@ def upload_url_to_storage(
 
 
 # ============================================================================ #
-# Core relational tables below are backed by Aurora PostgreSQL (services.db).
+# Core relational tables — Supabase (services.db).
 # Signatures are unchanged from the Supabase versions so callers stay the same.
 # ============================================================================ #
 
@@ -206,11 +204,10 @@ def upsert_user(user_id: str, **fields) -> dict:
 
 def ensure_user(user_id: str, email: Optional[str] = None) -> None:
     """
-    Idempotently create the Aurora `users` row for an authenticated user.
+    Idempotently create the `users` row for an authenticated user.
 
-    Replaces the Supabase handle_new_user() trigger, which can no longer populate
-    `users` now that the table lives in Aurora (the trigger still creates the
-    Supabase `profiles` row). Called once per request from auth_service.current_user.
+    Supabase `handle_new_user()` may also create a legacy row; this ensures the
+    core `users` record exists for API routes. Called from auth_service.current_user.
     """
     db.query(
         """

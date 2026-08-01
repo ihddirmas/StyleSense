@@ -15,7 +15,7 @@ StyleSense is a monorepo: **FastAPI backend** (`backend/`, port 8000) + **Next.j
 | `backend/.env` | Copy from `backend/.env.example` and fill secrets |
 | `frontend/.env.local` | Copy from `frontend/.env.example`; public Supabase keys are also in `frontend/.env.production` |
 
-**Backend will not import** without Aurora config (`AURORA_IAM_AUTH` + AWS vars, or `AURORA_DATABASE_URL`) and Supabase service role (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`). `services/db.py` and `services/supabase_service.py` raise at import time if missing.
+**Backend will not import** without `DATABASE_URL` (Supabase DB URI) and Supabase service role (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`). `services/db.py` and `services/supabase_service.py` raise at import time if missing.
 
 When Cursor Cloud injects secrets as env vars, write both files once per session (strip trailing whitespace — injected `ANTHROPIC_API_KEY` may include a `\n` that breaks HTTP headers):
 
@@ -31,14 +31,7 @@ backend = "\n".join([
     f"SUPABASE_URL={g('SUPABASE_URL')}",
     f"SUPABASE_SERVICE_ROLE_KEY={g('SUPABASE_SERVICE_ROLE_KEY')}",
     f"SUPABASE_ANON_KEY={g('SUPABASE_ANON_KEY')}",
-    f"AURORA_IAM_AUTH={g('AURORA_IAM_AUTH', 'true')}",
-    f"AURORA_HOST={g('AURORA_HOST')}",
-    f"AURORA_PORT={g('AURORA_PORT', '5432')}",
-    f"AURORA_DB={g('AURORA_DB')}",
-    f"AURORA_USER={g('AURORA_USER')}",
-    f"AWS_REGION={g('AWS_REGION')}",
-    f"AWS_ACCESS_KEY_ID={g('AWS_ACCESS_KEY_ID')}",
-    f"AWS_SECRET_ACCESS_KEY={g('AWS_SECRET_ACCESS_KEY')}",
+    f"DATABASE_URL={g('DATABASE_URL')}",
     f"ANTHROPIC_API_KEY={g('ANTHROPIC_API_KEY')}",
     f"FRONTEND_URL={g('FRONTEND_URL', 'http://localhost:3000')}",
 ]) + "\n"
@@ -85,7 +78,7 @@ With `frontend/.env.local` containing `NEXT_PUBLIC_SUPABASE_*` from `.env.produc
 
 ### External services
 
-Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthropic are all cloud-hosted. No Docker Compose in repo. Deployed backend reference: `https://styleai-backend.onrender.com/health` (may differ from local FastAPI response shape).
+Supabase (auth + storage + social + core DB), Runway, and Anthropic are cloud-hosted. No Docker Compose in repo.
 
 ### Gotchas
 
@@ -93,7 +86,7 @@ Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthro
 - Runway image URLs must be public HTTPS — localhost fails; use Supabase Storage.
 - `posthog-node` warns on Node 22.14; dev still works.
 - Python commands in docs use Windows paths; on Linux use `backend/venv/bin/python`.
-- First dashboard load may show "Couldn't load your wardrobe" until Aurora warms up; **Retry** usually succeeds.
+- First dashboard load may fail wardrobe until `DATABASE_URL` is set and Supabase schema is applied; **Retry** after fixing env.
 - `tests.test_anthropic_smoke` requires Anthropic API credits; low balance returns HTTP 400.
 - Cloud test login secrets: `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` (if the password secret was saved as `TEST_USER_PASSWOR`, use that env name instead).
 
