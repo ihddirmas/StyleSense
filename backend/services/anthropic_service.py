@@ -12,7 +12,7 @@ from anthropic import Anthropic
 
 logger = logging.getLogger(__name__)
 
-_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+_API_KEY = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
 if not _API_KEY:
     raise RuntimeError("Missing ANTHROPIC_API_KEY in backend/.env")
 
