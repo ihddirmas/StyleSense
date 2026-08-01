@@ -12,7 +12,7 @@ from typing import Optional
 import httpx
 from PIL import Image
 
-from services import runway_service, supabase_service, analytics_service, usage_limits
+from services import runway_service, supabase_service, analytics_service, usage_limits, genblaze_media_service
 from services.rate_limit import check_cooldown
 from graphs import prompt_graph
 
@@ -158,6 +158,25 @@ async def run_multi_tryon(
     analytics_service.capture(user_id, "tryon_generated", {
         "model_used": result["model_used"], "endpoint": "generate-multi", "item_count": len(items),
     })
+
+    if genblaze_media_service.is_configured():
+        try:
+            prov = await run_blocking(
+                genblaze_media_service.ingest_tryon_image,
+                user_id,
+                image_url,
+                tryon_id=saved.get("id"),
+                model_used=result["model_used"],
+                item_ids=[i.get("id") for i in items if i.get("id")],
+            )
+            if prov.get("manifest_hash"):
+                analytics_service.capture(user_id, "media_provenance_archived", {
+                    "kind": "tryon",
+                    "manifest_hash": prov["manifest_hash"],
+                    "b2_url": prov.get("b2_url"),
+                })
+        except Exception as exc:
+            logger.warning("B2 try-on ingest failed (non-fatal): %s", exc)
 
     return {
         "result_image_url": image_url,
