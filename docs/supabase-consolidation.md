@@ -1,6 +1,16 @@
-# Supabase consolidation
+## Applied via Supabase MCP (2026-08-01)
 
-Core relational tables are back on **Supabase** (single database with Auth, Storage, social).
+On project **StylSense** (`zlgzpgqqodfrwnlephrc`):
+
+| Migration | Contents |
+|-----------|----------|
+| `consolidate_core_v2j` | `usage_events`, B2 provenance columns, `cutout_url`, indexes |
+| `stylist_tool_calls` | Human-in-the-loop tool proposal ledger for Aria |
+
+Verify: `SELECT table_name FROM information_schema.tables WHERE table_name IN ('usage_events','stylist_tool_calls');`
+
+**Render still needs `DATABASE_URL`** (Supabase pooler URI) before the backend uses this DB instead of Aurora.
+
 
 ## Cutover steps (production)
 
