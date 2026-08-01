@@ -85,7 +85,9 @@ With `frontend/.env.local` containing `NEXT_PUBLIC_SUPABASE_*` from `.env.produc
 
 ### External services
 
-Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthropic are all cloud-hosted. No Docker Compose in repo. Deployed backend reference: `https://styleai-backend.onrender.com/health` (may differ from local FastAPI response shape).
+Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthropic are all cloud-hosted. No Docker Compose in repo.
+
+**Live (master):** frontend [style-sense-beryl.vercel.app](https://style-sense-beryl.vercel.app) · backend [styleai-backend-5vk9.onrender.com/health](https://styleai-backend-5vk9.onrender.com/health)
 
 ### Gotchas
 
