@@ -8,6 +8,7 @@ from services import runway_service, supabase_service, analytics_service, usage_
 from services.auth_service import current_user
 from services.rate_limit import check_cooldown
 from services.usage_limits import check_tryon_cap, check_event_scene_cap, check_animate_cap
+from services import genblaze_media_service
 from services.tryon_service import (
     run_blocking as _run_blocking,
     maybe_restore_face as _maybe_restore_face,
@@ -137,12 +138,22 @@ async def animate(req: AnimateRequest, user = Depends(current_user)):
 
     try:
         result = await _run_blocking(
-            runway_service.runway_animate,
+            genblaze_media_service.animate_with_genblaze,
             image_url=req.image_url,
-            motion_prompt=motion,
+            motion_prompt=motion or "",
             model=runway_service.valid_video_model(req.model),
             scene=scene,
+            duration=6,
+            user_id=user["id"],
         )
+        if not result:
+            result = await _run_blocking(
+                runway_service.runway_animate,
+                image_url=req.image_url,
+                motion_prompt=motion,
+                model=runway_service.valid_video_model(req.model),
+                scene=scene,
+            )
     except RuntimeError as e:
         raise HTTPException(500, str(e))
     supabase_service.record_usage_event(user["id"], "animate")

@@ -2,6 +2,30 @@
 
 > Built for the **AWS + Runway AI Hackathon** · May–June 2026
 
+## Live deployment (`master`)
+
+| Service | URL |
+|---------|-----|
+| **Frontend** (Vercel, `master`) | [https://style-sense-beryl.vercel.app](https://style-sense-beryl.vercel.app) |
+| **Backend** (Render, `master`) | [https://styleai-backend-5vk9.onrender.com](https://styleai-backend-5vk9.onrender.com) |
+| **API health** | `GET /health` → `{"status":"ok"}` |
+
+Vercel project **style-sense** tracks `github.com/ihddirmas/StyleSense` branch **`master`** with root directory `frontend/`.
+
+## Backblaze Generative AI Media Hackathon (2026)
+
+StyleSense is submitted to the **Backblaze + Genblaze** hackathon as an **agentic fashion media app**:
+
+- **Genblaze** orchestrates Runway image-to-video (`Pipeline` + `RunwayProvider`) and ingests try-on stills with SHA-256 provenance manifests.
+- **Backblaze B2** durably stores generated images, videos, and manifests (beyond short-lived Runway URLs).
+
+Full Devpost copy, judging alignment, demo script, and env setup: **[docs/hackathons/BACKBLAZE_GEN_MEDIA_2026.md](docs/hackathons/BACKBLAZE_GEN_MEDIA_2026.md)**
+
+```bash
+# Optional B2 + Genblaze (see backend/.env.example)
+cd backend && ./venv/bin/python -m scripts.test_genblaze_smoke
+```
+
 ## The Wow Moment
 
 Upload a selfie → add clothes from Amazon URLs → see yourself wearing them via Runway → place yourself at a "beach wedding" → animate as a 5-second runway video → talk to an AI stylist that knows your entire wardrobe.
@@ -11,7 +35,8 @@ Upload a selfie → add clothes from Amazon URLs → see yourself wearing them v
 - **Virtual Try-On** — Runway `gen4_image` composites your face onto any outfit
 - **Event Scene Placement** — `gen4_image` puts your try-on in any setting ("rooftop cocktail party at night")
 - **Runway Walk Video** — `gen4.5` image-to-video animates any try-on into a 5-second catwalk clip
-- **AI Stylist (Aria)** — Claude-powered chat + Runway WebRTC voice avatar with wardrobe knowledge sync
+- **AI Stylist (Aria)** — **Agentic** LangGraph stylist: wardrobe-aware picks, tool calling (`generate_tryon`, product URL lookup), human-in-the-loop pending actions — not basic chat
+- **Durable media (B2 + Genblaze)** — Try-ons and runway videos archived to Backblaze B2 with SHA-256 provenance manifests (hackathon integration)
 - **Smart Wardrobe** — Add items by URL (Myntra, Amazon, Uniqlo) or photo upload; Claude vision auto-categorizes multi-item hauls
 - **Social Loop** — Friends, real-time chat, share outfits and try-ons with friends
 
