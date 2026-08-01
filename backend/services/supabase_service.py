@@ -14,6 +14,7 @@ from typing import Optional
 from supabase import create_client, Client
 
 from services import db
+from services.tryon_serialization import serialize_tryon, serialize_tryons
 
 logger = logging.getLogger(__name__)
 
@@ -271,15 +272,55 @@ def update_tryon_event_scene(tryon_id: str, event_url: str, event_context: str) 
     ) or {}
 
 
-def update_tryon_video(tryon_id: str, video_url: str, task_id: str) -> dict:
+def update_tryon_video(
+    tryon_id: str,
+    video_url: str,
+    task_id: str,
+    *,
+    b2_video_url: Optional[str] = None,
+    video_manifest_hash: Optional[str] = None,
+) -> dict:
     return db.query(
         """
         UPDATE try_on_results
-        SET result_video_url = :video_url, runway_video_task_id = :task_id
+        SET result_video_url = :video_url,
+            runway_video_task_id = :task_id,
+            b2_video_url = COALESCE(:b2_video_url, b2_video_url),
+            video_manifest_hash = COALESCE(:video_manifest_hash, video_manifest_hash)
         WHERE id = :id
         RETURNING *
         """,
-        {"id": tryon_id, "video_url": video_url, "task_id": task_id},
+        {
+            "id": tryon_id,
+            "video_url": video_url,
+            "task_id": task_id,
+            "b2_video_url": b2_video_url,
+            "video_manifest_hash": video_manifest_hash,
+        },
+        fetch="one",
+    ) or {}
+
+
+def update_tryon_b2_archive(
+    tryon_id: str,
+    *,
+    b2_image_url: str,
+    image_manifest_hash: str,
+) -> dict:
+    """Persist cold-archive URL + ingest manifest after Genblaze Pipeline.ingest."""
+    return db.query(
+        """
+        UPDATE try_on_results
+        SET b2_image_url = :b2_image_url,
+            image_manifest_hash = :image_manifest_hash
+        WHERE id = :id
+        RETURNING *
+        """,
+        {
+            "id": tryon_id,
+            "b2_image_url": b2_image_url,
+            "image_manifest_hash": image_manifest_hash,
+        },
         fetch="one",
     ) or {}
 
@@ -295,18 +336,20 @@ def mark_tryon_saved(tryon_id: str) -> dict:
 
 def get_tryon(tryon_id: str) -> Optional[dict]:
     """Fetch a single try-on by id (used to hydrate shared chat attachments)."""
-    return db.query("SELECT * FROM try_on_results WHERE id = :id", {"id": tryon_id}, fetch="one")
+    row = db.query("SELECT * FROM try_on_results WHERE id = :id", {"id": tryon_id}, fetch="one")
+    return serialize_tryon(row)
 
 
 def get_tryons_by_ids(tryon_ids: list) -> list:
     """Batch fetch try-ons by id (avoids N+1 when hydrating a chat thread)."""
     if not tryon_ids:
         return []
-    return db.query(
+    rows = db.query(
         "SELECT * FROM try_on_results WHERE id = ANY((:ids)::uuid[])",
         {"ids": list(tryon_ids)},
         fetch="all",
     )
+    return serialize_tryons(rows)
 
 
 def count_tryons_this_month(user_id: str) -> int:
@@ -353,7 +396,7 @@ def get_recent_tryons(user_id: str, limit: int = 12, saved_only: bool = True) ->
     # saved_only=True (default): only explicitly saved try-ons (history/dashboard).
     # saved_only=False: all recent generations (used by the chat share tray).
     saved_clause = " AND saved = TRUE" if saved_only else ""
-    return db.query(
+    rows = db.query(
         f"""
         SELECT * FROM try_on_results
         WHERE user_id = :user_id{saved_clause}
@@ -363,6 +406,7 @@ def get_recent_tryons(user_id: str, limit: int = 12, saved_only: bool = True) ->
         {"user_id": user_id, "limit": limit},
         fetch="all",
     )
+    return serialize_tryons(rows)
 
 
 # ───────────────────────────── OUTFITS ───────────────────────────── #
