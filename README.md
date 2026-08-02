@@ -2,6 +2,30 @@
 
 > Built for the **AWS + Runway AI Hackathon** · May–June 2026
 
+## Live deployment (`master`)
+
+| Service | URL |
+|---------|-----|
+| **Frontend** (Vercel, `master`) | [https://style-sense-beryl.vercel.app](https://style-sense-beryl.vercel.app) |
+| **Backend** (Render, `master`) | [https://styleai-backend-5vk9.onrender.com](https://styleai-backend-5vk9.onrender.com) |
+| **API health** | `GET /health` → `{"status":"ok"}` |
+
+Vercel project **style-sense** tracks `github.com/ihddirmas/StyleSense` branch **`master`** with root directory `frontend/`.
+
+## Backblaze Generative AI Media Hackathon (2026)
+
+StyleSense is submitted to the **Backblaze + Genblaze** hackathon as an **agentic fashion media app**:
+
+- **Genblaze** orchestrates Runway image-to-video (`Pipeline` + `RunwayProvider`) and ingests try-on stills with SHA-256 provenance manifests.
+- **Backblaze B2** durably stores generated images, videos, and manifests (beyond short-lived Runway URLs).
+
+Full Devpost copy, judging alignment, demo script, and env setup: **[docs/hackathons/BACKBLAZE_GEN_MEDIA_2026.md](docs/hackathons/BACKBLAZE_GEN_MEDIA_2026.md)**
+
+```bash
+# Optional B2 + Genblaze (see backend/.env.example)
+cd backend && ./venv/bin/python -m scripts.test_genblaze_smoke
+```
+
 ## The Wow Moment
 
 Upload a selfie → add clothes from Amazon URLs → see yourself wearing them via Runway → place yourself at a "beach wedding" → animate as a 5-second runway video → talk to an AI stylist that knows your entire wardrobe.
@@ -11,7 +35,8 @@ Upload a selfie → add clothes from Amazon URLs → see yourself wearing them v
 - **Virtual Try-On** — Runway `gen4_image` composites your face onto any outfit
 - **Event Scene Placement** — `gen4_image` puts your try-on in any setting ("rooftop cocktail party at night")
 - **Runway Walk Video** — `gen4.5` image-to-video animates any try-on into a 5-second catwalk clip
-- **AI Stylist (Aria)** — Claude-powered chat + Runway WebRTC voice avatar with wardrobe knowledge sync
+- **AI Stylist (Aria)** — **Agentic** LangGraph stylist: wardrobe-aware picks, tool calling (`generate_tryon`, product URL lookup), human-in-the-loop pending actions — not basic chat
+- **Durable media (B2 + Genblaze)** — Try-ons and runway videos archived to Backblaze B2 with SHA-256 provenance manifests (hackathon integration)
 - **Smart Wardrobe** — Add items by URL (Myntra, Amazon, Uniqlo) or photo upload; Claude vision auto-categorizes multi-item hauls
 - **Social Loop** — Friends, real-time chat, share outfits and try-ons with friends
 
@@ -32,8 +57,8 @@ Upload a selfie → add clothes from Amazon URLs → see yourself wearing them v
 | Frontend | Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Zustand |
 | Backend | Python 3.12 · FastAPI · LangGraph (agentic stylist) |
 | Auth | Supabase Auth (JWT, email/password) |
-| Database | AWS Aurora PostgreSQL Serverless v2 (IAM auth + SQLAlchemy) |
-| Storage & Social | Supabase Storage (public HTTPS for Runway) + Realtime |
+| Database | Supabase (single project DB for core + auth + social) |
+| Storage | Supabase Storage (public HTTPS for Runway) + Realtime |
 | AI | Runway SDK · Anthropic Claude (claude-haiku-4-5 stylist chat + vision) |
 
 ## Architecture
@@ -62,17 +87,10 @@ flowchart TD
     end
     BE:::app
 
-    subgraph AURORA [AWS Aurora PostgreSQL Serverless v2]
-        Users[(users — selfie, avatar, body_analysis)]
-        Wardrobe[(wardrobe_items — image_url, category, color)]
-        TryOn[(try_on_results — result, event_scene, video)]
-        Outfits[(outfits — item_ids, preview, occasion)]
-    end
-    AURORA:::aws
-
     subgraph SUPABASE [Supabase]
         Auth[Auth — JWT]
         Storage[Storage — wardrobe · selfies · tryons]
+        PG[(Core DB — users · wardrobe · try-ons · stylist_sessions)]
         Social[Social — profiles · friendships · messages · Realtime]
     end
     SUPABASE:::supabase
@@ -89,7 +107,7 @@ flowchart TD
     Pages -->|REST| API
     SDK -->|WebRTC| Characters
     API -->|JWT verify| Auth
-    API -->|IAM auth| AURORA
+    API -->|SQLAlchemy| PG
     API -->|Storage SDK| Storage
     API -->|Realtime| Social
     Services -->|Runway SDK| Gen4
@@ -130,17 +148,23 @@ SUPABASE_ANON_KEY=
 ANTHROPIC_API_KEY=
 STYLIST_CHARACTER_ID=   # from: python -m scripts.setup_admin_stylist
 STYLIST_HERO_VIDEO_URL= # from: python -m scripts.animate_admin_stylist
-DATABASE_URL=           # Aurora PostgreSQL connection string
+DATABASE_URL=           # Supabase connection string (Settings → Database)
 ```
 
-### Database (Supabase + Aurora)
+### Database (Supabase)
 
 Apply schema migrations in order in the Supabase SQL editor:
 ```
 backend/supabase_schema.sql
 backend/supabase_schema_v2_social.sql
 backend/supabase_schema_v2b_fix.sql  (through v2h)
+backend/supabase_schema_v2j_consolidate_core.sql
 ```
+
+Verify connectivity: `cd backend && ./venv/bin/python -m scripts.check_db`
+
+**Migrating from a split-DB setup:** apply `v2j`, set `LEGACY_DATABASE_URL` and `DATABASE_URL`, run
+`python -m scripts.migrate_legacy_db_to_supabase`, then remove legacy env vars on Render.
 
 ### Frontend
 
