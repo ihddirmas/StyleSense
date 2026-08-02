@@ -19,6 +19,10 @@ export interface TryOnResult {
   wardrobe_item_id: string | null;
   result_image_url: string;
   result_video_url: string | null;
+  b2_image_url?: string | null;
+  image_manifest_hash?: string | null;
+  b2_video_url?: string | null;
+  video_manifest_hash?: string | null;
   event_scene_url: string | null;
   event_context: string | null;
   prompt_used: string | null;
