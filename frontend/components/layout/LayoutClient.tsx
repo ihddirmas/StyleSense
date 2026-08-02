@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAppStore } from "@/store/app";
-import { useAriaChat } from "@/store/ariaChat";
+import { useAriaChat, finishAriaChatHydration } from "@/store/ariaChat";
 import { useAuth } from "@/components/AuthProvider";
 import { apiGet } from "@/lib/api";
 import type { WardrobeItem } from "@/types";
@@ -19,7 +19,13 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     });
     useAppStore.persist.rehydrate();
     useAriaChat.persist.rehydrate();
-    return unsub;
+    const unsubAria = useAriaChat.persist.onFinishHydration(() => {
+      void finishAriaChatHydration();
+    });
+    return () => {
+      unsub();
+      unsubAria();
+    };
   }, []);
 
   // Warm wardrobe cache on app load so Aria/Studio show real counts immediately.

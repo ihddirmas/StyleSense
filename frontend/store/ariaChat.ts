@@ -1,6 +1,6 @@
 "use client";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 import type { ChatMessage } from "@/types";
 
@@ -12,7 +12,24 @@ interface StylistSession {
   updated_at: string;
 }
 
+function chatStorageKey(): string {
+  if (typeof window === "undefined") return "stylesense-aria-chat";
+  const uid = window.localStorage.getItem("stylesense-last-user");
+  return uid ? `stylesense-aria-chat-${uid}` : "stylesense-aria-chat";
+}
+
+function sanitizeForPersist(messages: ChatMessage[]): ChatMessage[] {
+  return messages.map((m) => ({
+    ...m,
+    photoUrl: m.photoUrl?.startsWith("data:") ? undefined : m.photoUrl,
+    manifesting: false,
+    pendingAction:
+      m.pendingAction?.status === "pending" ? undefined : m.pendingAction,
+  }));
+}
+
 interface AriaChatState {
+  hydrated: boolean;
   sessions: StylistSession[];
   currentSessionId: string | null;
   messages: ChatMessage[];
@@ -30,6 +47,7 @@ interface AriaChatState {
 export const useAriaChat = create<AriaChatState>()(
   persist(
     (set, get) => ({
+      hydrated: false,
       sessions: [],
       currentSessionId: null,
       messages: [],
@@ -75,7 +93,11 @@ export const useAriaChat = create<AriaChatState>()(
         if (!currentSessionId) return;
         await apiPut<StylistSession>(`/api/stylist/sessions/${currentSessionId}`, { messages, title });
         set((s) => ({
-          sessions: s.sessions.map((ses) => (ses.id === currentSessionId ? { ...ses, messages, updated_at: new Date().toISOString() } : ses)),
+          sessions: s.sessions.map((ses) =>
+            ses.id === currentSessionId
+              ? { ...ses, messages, updated_at: new Date().toISOString(), ...(title ? { title } : {}) }
+              : ses
+          ),
           messages,
         }));
       },
@@ -87,17 +109,34 @@ export const useAriaChat = create<AriaChatState>()(
     }),
     {
       name: "stylesense-aria-chat",
+      storage: createJSONStorage(() => ({
+        getItem: (name) => localStorage.getItem(chatStorageKey()),
+        setItem: (_name, value) => localStorage.setItem(chatStorageKey(), value),
+        removeItem: (_name) => localStorage.removeItem(chatStorageKey()),
+      })),
       skipHydration: true,
-      // Persist current session ID + messages for instant hydration
       partialize: (state) => ({
         currentSessionId: state.currentSessionId,
-        messages: state.messages,
+        messages: sanitizeForPersist(state.messages),
       }),
       onRehydrateStorage: () => (state) => {
-        if (state?.messages?.some((m) => m.manifesting)) {
+        if (!state) return;
+        if (state.messages.some((m) => m.manifesting)) {
           state.setMessages((prev) => prev.map((m) => (m.manifesting ? { ...m, manifesting: false } : m)));
         }
       },
     }
   )
 );
+
+export async function finishAriaChatHydration() {
+  const { currentSessionId, messages, setCurrentSession } = useAriaChat.getState();
+  if (currentSessionId && messages.length === 0) {
+    try {
+      await setCurrentSession(currentSessionId);
+    } catch {
+      /* server session may be gone; user can start fresh */
+    }
+  }
+  useAriaChat.setState({ hydrated: true });
+}
