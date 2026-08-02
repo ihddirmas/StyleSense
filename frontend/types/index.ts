@@ -60,6 +60,7 @@ export interface ProductPreview {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  createdAt?: string;
   suggestedItemIds?: string[];
   scene?: string | null;      // try-on background for "Manifest this look"
   manifesting?: boolean;      // an inline try-on is generating
