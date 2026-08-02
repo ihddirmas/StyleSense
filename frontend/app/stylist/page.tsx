@@ -337,23 +337,25 @@ export default function StylistPage() {
       <div className="shrink-0">
         <PageHeader
           eyebrow="AI Stylist"
+          title="Aria"
           tutorialKey="stylist"
           subtitle="Ask anything — I know your full wardrobe and pick specific items."
         />
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-5">
+        <div className="flex flex-wrap gap-2 mb-5">
           <button
+            type="button"
             className={`chip ${tab === "chat" ? "chip-active" : ""}`}
             onClick={() => setTab("chat")}
           >
-            <MessageCircle size={12} style={{ marginRight: 6 }} /> Text chat
+            <MessageCircle size={12} className="mr-1.5" /> Text chat
           </button>
           <button
+            type="button"
             className={`chip ${tab === "this-or-that" ? "chip-active" : ""}`}
             onClick={() => setTab("this-or-that")}
           >
-            <Shuffle size={12} style={{ marginRight: 6 }} /> This or That
+            <Shuffle size={12} className="mr-1.5" /> This or That
           </button>
         </div>
       </div>
@@ -362,24 +364,23 @@ export default function StylistPage() {
         {tab === "chat" ? (
           <div className="surface flex flex-col flex-1 min-h-0">
             {/* Aria header */}
-            <div className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                   style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}>
-                <Sparkles size={14} style={{ color: "var(--gold)" }} />
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-border">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gold-dim border border-border-gold">
+                <Sparkles size={14} className="text-gold" />
               </div>
-              <div className="flex-1">
-                <div className="font-display text-base leading-none" style={{ color: "var(--text)" }}>Aria</div>
-                <div className="text-2xs uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>
-                  AI Stylist · {items.length} items in context
+              <div className="flex-1 min-w-0">
+                <div className="font-display text-base leading-none text-ink">Aria</div>
+                <div className="section-label mt-1 normal-case tracking-widest text-2xs">
+                  {items.length} items in context
                 </div>
               </div>
               
               {/* Session picker dropdown */}
               <div className="relative" data-session-picker>
                 <button
+                  type="button"
                   onClick={() => setShowSessionPicker(!showSessionPicker)}
-                  className="text-xs flex items-center gap-1"
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                  className="icon-btn text-xs gap-1"
                   title="Chat history"
                 >
                   <MessageCircle size={14} />

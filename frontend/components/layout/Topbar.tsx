@@ -80,13 +80,7 @@ export function Topbar() {
           {runningCount > 0 && (
             <Link
               href="/studio"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
-              style={{
-                background: "var(--surface2)",
-                border: "1px solid var(--border-hover)",
-                color: "var(--ink)",
-                textDecoration: "none",
-              }}
+              className="status-pill hidden sm:inline-flex"
               title="Click to view in Studio"
             >
               <Loader2 size={12} className="spin" />
@@ -211,17 +205,9 @@ function UsagePill({ usage }: { usage: { tryon: { used: number; limit: number };
   const pct = usage.tryon.used / usage.tryon.limit;
   const color = pct >= 0.8 ? "var(--red)" : pct >= 0.6 ? "#b87333" : "var(--text-muted)";
   return (
-    <div
-      className="flex items-center gap-1.5 px-2 md:px-2.5 py-1 mr-1 text-2xs md:text-xs font-mono tracking-wide rounded-full"
-      style={{
-        background: "rgba(20,14,10,0.06)",
-        border: "1px solid var(--border)",
-        color,
-        whiteSpace: "nowrap",
-      }}
-    >
+    <div className="status-pill font-mono text-2xs md:text-xs" style={{ color }}>
       <span>{usage.tryon.used}/{usage.tryon.limit}</span>
-      <span className="hidden sm:inline" style={{ color: "var(--text-dim)" }}>try-ons</span>
+      <span className="hidden sm:inline text-dim">try-ons</span>
     </div>
   );
 }
