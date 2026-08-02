@@ -4,9 +4,14 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAppStore } from "@/store/app";
 import { useAriaChat } from "@/store/ariaChat";
+import { useAuth } from "@/components/AuthProvider";
+import { apiGet } from "@/lib/api";
+import type { WardrobeItem } from "@/types";
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user } = useAuth();
+  const hydrated = useAppStore((s) => s.hydrated);
 
   useEffect(() => {
     const unsub = useAppStore.persist.onFinishHydration(() => {
@@ -16,6 +21,15 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     useAriaChat.persist.rehydrate();
     return unsub;
   }, []);
+
+  // Warm wardrobe cache on app load so Aria/Studio show real counts immediately.
+  useEffect(() => {
+    if (!user || !hydrated) return;
+    if (useAppStore.getState().cachedWardrobe.length) return;
+    apiGet<WardrobeItem[]>("/api/wardrobe")
+      .then((items) => useAppStore.getState().setCachedWardrobe(items))
+      .catch(() => {});
+  }, [user, hydrated]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">

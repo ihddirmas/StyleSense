@@ -8,9 +8,9 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { useAppStore } from "@/store/app";
+import { useWardrobeItems } from "@/lib/useWardrobeItems";
 import { useStore } from "zustand";
+import { useAppStore } from "@/store/app";
 import { useAriaChat } from "@/store/ariaChat";
 import { useAuth } from "@/components/AuthProvider";
 import { apiGet, apiPost } from "@/lib/api";
@@ -58,7 +58,7 @@ export default function StylistPage() {
   });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<WardrobeItem[]>([]);
+  const { items, refresh: refreshWardrobe, count: wardrobeCount, countReady: wardrobeCountReady } = useWardrobeItems();
   const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -110,7 +110,6 @@ export default function StylistPage() {
 
   useEffect(() => {
     if (!user) return;
-    apiGet<WardrobeItem[]>(`/api/wardrobe`).then(setItems).catch(() => {});
     Promise.all([
       apiGet<{ selfie_urls: string[]; primary_url: string | null }>("/api/avatar/selfies").catch(() => null),
       apiGet<{ full_body_url: string | null }>("/api/avatar/full-body").catch(() => null),
@@ -174,7 +173,7 @@ export default function StylistPage() {
       return result.resultImageUrl ? updated : [...updated, { role: "assistant" as const, content: result.summary }];
     });
     if (result.status === "confirmed" && !result.resultImageUrl) {
-      apiGet<WardrobeItem[]>("/api/wardrobe").then(setItems).catch(() => {});
+      refreshWardrobe().catch(() => {});
     }
   }
 
@@ -225,7 +224,7 @@ export default function StylistPage() {
       },
     ]);
     // Refresh wardrobe list
-    apiGet<WardrobeItem[]>("/api/wardrobe").then(setItems).catch(() => {});
+    refreshWardrobe().catch(() => {});
     // Clear photo preview and close modal
     setPhotoPreview(null);
     setWardrobeModal(null);
@@ -333,14 +332,8 @@ export default function StylistPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0">
-        <PageHeader
-          title="Aria"
-          tutorialKey="stylist"
-          subtitle="Outfit picks from your real wardrobe."
-        />
-
-        <div className="flex flex-wrap gap-2 mb-5">
+      <div className="shrink-0 mb-5">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             className={`chip ${tab === "chat" ? "chip-active" : ""}`}
@@ -363,7 +356,14 @@ export default function StylistPage() {
           <div className="surface flex flex-col flex-1 min-h-0">
             {/* Chat toolbar */}
             <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border text-xs text-muted">
-              <span className="font-mono">{items.length} items in wardrobe</span>
+              {wardrobeCountReady ? (
+                <span className="font-mono">{wardrobeCount} items in wardrobe</span>
+              ) : (
+                <span
+                  className="inline-block h-3 w-28 rounded shimmer"
+                  aria-label="Loading wardrobe"
+                />
+              )}
               <div className="flex items-center gap-1">
                 <div className="relative" data-session-picker>
                   <button
