@@ -359,6 +359,8 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
     <div className="h-full flex flex-col">
       <div className="shrink-0">
         <PageHeader
+          eyebrow="Try-On"
+          title="Studio"
           subtitle="Pick 1 or 2 items from your wardrobe, then generate a try-on on your avatar."
           tutorialKey="studio"
         />
@@ -383,20 +385,20 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
         )}
 
         <div className="flex items-center gap-2 mb-3 relative" data-filter-menu>
-          <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Wardrobe</span>
+          <span className="section-label">Wardrobe</span>
           <button
+            type="button"
             onClick={() => setShowFilterMenu((v) => !v)}
-            className="text-2xs flex items-center gap-1 px-2 py-0.5 rounded"
-            style={{ background: "var(--surface2)", border: "1px solid var(--border-hover)", color: "var(--text-muted)", cursor: "pointer" }}
+            className="text-2xs flex items-center gap-1 px-2 py-0.5 rounded-sm bg-surface2 border border-border text-muted cursor-pointer"
           >
             {filterCategory === "all" ? "All" : filterCategory} <ChevronDown size={10} />
           </button>
           <button
+            type="button"
             onClick={() => setShowQuickAdd(true)}
-            className="btn-secondary text-xs"
-            style={{ padding: "0.25rem 0.6rem", minHeight: "unset" }}
+            className="btn-secondary btn-sm"
           >
-            <Plus size={12} style={{ marginRight: 4 }} /> Add
+            <Plus size={12} /> Add
           </button>
           {showFilterMenu && (
             <div className="absolute top-full left-0 mt-1 surface z-50 py-1" style={{ minWidth: 120 }}>
@@ -780,7 +782,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               )}
               <div className="flex flex-wrap gap-1 mt-3">
                 {EVENT_PRESETS.map((p) => (
-                  <button key={p} className="chip rounded-full" onClick={() => { setEventInput(p); generateEventScene(p); }}
+                  <button key={p} type="button" className="chip" onClick={() => { setEventInput(p); generateEventScene(p); }}
                           disabled={!resultUrl || eventLoading} style={{ padding: "0.2rem 0.6rem" }}>
                     {p.split(",")[0]}
                   </button>
