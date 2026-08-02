@@ -5,7 +5,8 @@ import { X } from "lucide-react";
 import { StyleInsightCard } from "@/components/dashboard/StyleInsightCard";
 import { UsageMeter } from "@/components/dashboard/UsageMeter";
 import { ContinueCard } from "@/components/dashboard/ContinueCard";
-import { QuickActions } from "@/components/dashboard/QuickActions";
+import { DashboardEmptyPanel } from "@/components/dashboard/DashboardEmptyPanel";
+import { WardrobeFetchError } from "@/components/dashboard/WardrobeFetchError";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { TryOnResult } from "@/types";
 import { HeroVideo } from "@/components/dashboard/HeroVideo";
@@ -99,8 +100,8 @@ export default function DashboardPage() {
     .filter(i => !triedItemIds.has(i.id))
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
 
-  const showQuickActions = !loading && items.length === 0;
-  const showSidebarQuickActions = items.length > 0 || !!insight;
+  const showEmptyPanel = !loading && items.length === 0;
+  const showStaleBanner = fetchError && items.length > 0;
 
   const statsAction =
     items.length > 0 || displayRecent.length > 0 ? (
@@ -134,17 +135,8 @@ export default function DashboardPage() {
         action={statsAction}
       />
 
-      {fetchError && (
-        <div className="alert-banner alert-banner-error" role="alert">
-          <span>Couldn&apos;t load your wardrobe.</span>
-          <button
-            type="button"
-            onClick={() => setRetryKey(k => k + 1)}
-            className="btn-ghost btn-sm"
-          >
-            Retry
-          </button>
-        </div>
+      {showStaleBanner && (
+        <WardrobeFetchError onRetry={() => setRetryKey(k => k + 1)} variant="stale" />
       )}
 
       {!hintSeen && !hintDismissed && (
@@ -170,20 +162,22 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 md:gap-5">
-        <HeroVideo />
-        <div className="flex flex-col gap-3 md:gap-4">
-          <StyleInsightCard insight={insight} items={items} recent={recent} />
-          <UsageMeter />
-          {continueItem && !atCap && <ContinueCard item={continueItem} />}
-          {showSidebarQuickActions && <QuickActions compact />}
-        </div>
-      </div>
-
-      {showQuickActions && (
-        <div>
-          <h2 className="section-label mb-3">Get started</h2>
-          <QuickActions />
+      {showEmptyPanel ? (
+        <>
+          <HeroVideo />
+          <DashboardEmptyPanel
+            fetchError={fetchError}
+            onRetry={() => setRetryKey(k => k + 1)}
+          />
+        </>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 md:gap-5">
+          <HeroVideo />
+          <div className="flex flex-col gap-3 md:gap-4">
+            <StyleInsightCard insight={insight} items={items} recent={recent} />
+            <UsageMeter />
+            {continueItem && !atCap && <ContinueCard item={continueItem} />}
+          </div>
         </div>
       )}
 
