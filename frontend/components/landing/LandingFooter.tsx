@@ -9,7 +9,7 @@ const COLUMNS = [
       { label: "Wardrobe", href: "/wardrobe" },
       { label: "Studio", href: "/studio" },
       { label: "Outfits", href: "/outfits" },
-      { label: "AI Stylist", href: "/stylist" },
+      { label: "Aria Agent", href: "/stylist" },
     ],
   },
   {

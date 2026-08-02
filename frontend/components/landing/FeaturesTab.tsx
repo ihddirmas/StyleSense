@@ -8,6 +8,18 @@ gsap.registerPlugin(ScrollTrigger);
 
 const TABS = [
   {
+    id: "agent",
+    label: "Style Agent",
+    heading: "An agent that acts on your wardrobe",
+    bullets: [
+      "Chat with Aria — she picks from items you actually own",
+      "Confirm before she adds clothes, generates try-ons, or spends credits",
+      "Paste a product URL and she looks it up instantly",
+    ],
+    color: "#6b8e5f",
+    placeholder: "Agent Preview",
+  },
+  {
     id: "tryon",
     label: "Virtual Try-On",
     heading: "See yourself in any outfit — instantly",
@@ -45,14 +57,14 @@ const TABS = [
   },
   {
     id: "stylist",
-    label: "AI Stylist",
-    heading: "A stylist that knows your closet",
+    label: "Outfit picks",
+    heading: "Grounded in your real closet",
     bullets: [
-      "Chat with Aria — she knows every item you own",
-      "Ask for outfit suggestions, styling tips, or packing lists",
-      "Voice-enabled with a live avatar",
+      "Every recommendation tags specific wardrobe items",
+      "Style profile + color analysis baked into every reply",
+      "One tap to generate the look on your avatar",
     ],
-    color: "#6b8e5f",
+    color: "#c9a84c",
     placeholder: "Stylist Preview",
   },
 ];

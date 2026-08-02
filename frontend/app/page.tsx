@@ -12,23 +12,23 @@ import LandingFooter from "@/components/landing/LandingFooter";
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: "StyleSense — AI Wardrobe & Virtual Try-On",
+  title: "StyleSense — AI Style Agent & Virtual Try-On",
   description:
-    "StyleSense is your AI-powered wardrobe and virtual try-on studio. Upload a selfie, add clothes, see yourself in any outfit, place yourself in any scene, and chat with a stylist that knows your closet.",
+    "Meet Aria, your AI style agent. She knows your wardrobe, recommends outfits, adds items from photos, looks up products, and generates try-ons — you confirm every action.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "StyleSense — AI Wardrobe & Virtual Try-On",
+    title: "StyleSense — AI Style Agent & Virtual Try-On",
     description:
-      "Upload a selfie, try on outfits with AI, place yourself in any scene, and chat with a stylist that knows your closet.",
+      "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
     type: "website",
     siteName: "StyleSense",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "StyleSense — AI Wardrobe & Virtual Try-On",
+    title: "StyleSense — AI Style Agent & Virtual Try-On",
     description:
-      "Upload a selfie, try on outfits with AI, place yourself in any scene, and chat with a stylist that knows your closet.",
+      "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
   },
 };
 
@@ -37,7 +37,7 @@ const jsonLd = {
   "@type": "SoftwareApplication",
   name: "StyleSense",
   applicationCategory: "LifestyleApplication",
-  description: "AI-powered wardrobe, virtual try-on, and personal stylist.",
+  description: "AI style agent, wardrobe, and virtual try-on.",
   operatingSystem: "Web",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };

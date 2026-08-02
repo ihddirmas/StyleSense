@@ -28,7 +28,7 @@ export default function HeroSection() {
   const frameWrapRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
 
-  const headline = "Wear it before you buy it";
+  const headline = "Your closet, powered by an agent";
 
   useEffect(() => {
     const mm = gsap.matchMedia();
@@ -171,7 +171,7 @@ export default function HeroSection() {
           ref={subtextRef}
           className="text-muted opacity-0 mx-auto mb-11 max-w-[520px] text-base sm:text-lg leading-relaxed"
         >
-          Upload a selfie. Add clothes from any URL. See yourself in them — in any scene, any world, in seconds.
+          Aria knows every piece you own — recommends outfits, adds items from photos, generates try-ons, and looks up products from any URL. You confirm every action.
         </p>
 
         <div
@@ -182,7 +182,7 @@ export default function HeroSection() {
             href="/signup"
             className="btn-primary tracking-wide px-9 py-3.5 text-sm"
           >
-            Get started free
+            Talk to Aria
           </Link>
           <button
             type="button"

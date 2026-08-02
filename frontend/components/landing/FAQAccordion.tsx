@@ -10,7 +10,11 @@ gsap.registerPlugin(ScrollTrigger);
 const FAQS = [
   {
     q: "What is StyleSense?",
-    a: "StyleSense is an AI-powered wardrobe and virtual try-on app. Upload a selfie, add clothes from any URL, and see yourself wearing them — in any outfit, any scene, animated as a video.",
+    a: "StyleSense is an AI wardrobe with a built-in style agent, Aria. She knows every item you own, recommends outfits from your real closet, and can add items, look up products, or generate try-ons — always with your confirmation before anything spends credits.",
+  },
+  {
+    q: "What can Aria do?",
+    a: "Aria picks outfits from your wardrobe, looks up products from URLs you paste, proposes adding items from photos you share, and generates try-on images on your avatar. Confirm-gated actions mean she never spends credits without your approval.",
   },
   {
     q: "How does the virtual try-on work?",
