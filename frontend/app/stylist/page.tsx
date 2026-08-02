@@ -1,11 +1,10 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send, Loader2, Sparkles, MessageCircle, ChevronRight,
-  Camera, X, Shuffle, Wand2, Plus, Bookmark, Check, ChevronDown, Trash2,
-  ShoppingBag,
+  Send, Loader2, MessageCircle, ChevronRight,
+  Camera, X, Shuffle, Plus, Bookmark, Check, ChevronDown, Trash2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useWardrobeItems } from "@/lib/useWardrobeItems";
@@ -25,6 +24,8 @@ import type {
 import { AddToWardrobeModal } from "@/components/stylist/AddToWardrobeModal";
 import posthog from "posthog-js";
 import { PendingActionCard, type PendingActionResult } from "@/components/stylist/PendingActionCard";
+import ThinkingIndicator from "@/components/stylist/ThinkingIndicator";
+import TrainTasteModal from "@/components/stylist/TrainTasteModal";
 
 const SUGGESTION_PROMPTS = [
   "Dinner date outfit from my closet",
@@ -36,11 +37,11 @@ const SUGGESTION_PROMPTS = [
 export default function StylistPage() {
   const { user, profile } = useAuth();
   const firstName = profile?.full_name?.split(" ")[0];
-  const [tab, setTab] = useState<"chat" | "this-or-that">("chat");
+  const [trainTasteOpen, setTrainTasteOpen] = useState(false);
   const {
     messages,
     setMessages,
-    reset,
+    hydrated,
     sessions,
     currentSessionId,
     loadSessions,
@@ -58,8 +59,8 @@ export default function StylistPage() {
   });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [thinkingStartedAt, setThinkingStartedAt] = useState<number | null>(null);
   const { items, refresh: refreshWardrobe, count: wardrobeCount, countReady: wardrobeCountReady } = useWardrobeItems();
-  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -72,20 +73,18 @@ export default function StylistPage() {
   } | null>(null);
   const [detecting, setDetecting] = useState(false);
 
-  // Load sessions on mount + hydrate currentSessionId
+  // Load session list once user is present (chat body rehydrates in LayoutClient).
   useEffect(() => {
     if (!user) return;
-    const hydrate = useAriaChat.persist?.rehydrate;
-    if (hydrate) hydrate();
     loadSessions().catch(() => toast.error("Failed to load chat history"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, loadSessions]);
 
-  // Set greeting if messages are empty
+  // Greeting only after localStorage hydration + optional server session restore.
   useEffect(() => {
-    if (messages.length === 0) setMessages([greeting()]);
+    if (!hydrated) return;
+    if (messages.length === 0) setMessages([{ ...greeting(), createdAt: new Date().toISOString() }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, firstName]);
+  }, [hydrated, messages.length, firstName]);
 
   // Close session picker on outside click
   useEffect(() => {
@@ -101,46 +100,13 @@ export default function StylistPage() {
   async function startNewChat() {
     try {
       await newChat();
-      setMessages([greeting()]);
+      setMessages([{ ...greeting(), createdAt: new Date().toISOString() }]);
       toast.success("Started new chat");
     } catch (e) {
       toast.error(`Failed to start new chat: ${e instanceof Error ? e.message : "unknown"}`);
     }
   }
 
-  useEffect(() => {
-    if (!user) return;
-    Promise.all([
-      apiGet<{ selfie_urls: string[]; primary_url: string | null }>("/api/avatar/selfies").catch(() => null),
-      apiGet<{ full_body_url: string | null }>("/api/avatar/full-body").catch(() => null),
-    ]).then(([s, b]) => {
-      setSelfieUrl(s?.primary_url || s?.selfie_urls?.[0] || b?.full_body_url || null);
-    });
-  }, [user]);
-
-  async function manifestLook(idx: number) {
-    const msg = messages[idx];
-    const picked = items.filter((it) => (msg.suggestedItemIds || []).includes(it.id));
-    if (picked.length === 0) return;
-    if (!selfieUrl) { toast.error("Add a selfie in Avatar Setup first."); return; }
-    setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, manifesting: true } : m)));
-    posthog.capture("stylist_look_manifested", { item_count: picked.length });
-    try {
-      const res = await apiPost<{ result_image_url: string; result_id: string }>("/api/tryon/generate-multi", {
-        avatar_selfie_url: selfieUrl,
-        items: picked.map((it) => ({ image_url: it.image_url, name: it.name, category: it.category })),
-        model: useAppStore.getState().tryonModel,
-        setting: msg.scene || undefined,
-        enhance_prompt: true,
-      });
-      setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, manifesting: false, manifestUrl: res.result_image_url, manifestId: res.result_id } : m)));
-    } catch (e) {
-      setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, manifesting: false } : m)));
-      toast.error(`Manifest failed: ${e instanceof Error ? e.message : "unknown"}`);
-    }
-  }
-
-  // Save a manifested chat look to the Outfits section.
   async function saveManifestOutfit(idx: number) {
     const msg = messages[idx];
     const picked = items.filter((it) => (msg.suggestedItemIds || []).includes(it.id));
@@ -160,6 +126,14 @@ export default function StylistPage() {
     }
   }
 
+  function wardrobeAddedMessage(result: PendingActionResult): string {
+    const names = result.created?.map((c) => c.name).filter(Boolean);
+    if (names?.length) {
+      return `Added to your wardrobe: ${names.join(", ")}.`;
+    }
+    return result.summary || "Added to your wardrobe.";
+  }
+
   function resolvePendingAction(idx: number, result: PendingActionResult) {
     setMessages((prev) => {
       const updated = prev.map((m, i) => {
@@ -167,13 +141,78 @@ export default function StylistPage() {
         return {
           ...m,
           pendingAction: { ...m.pendingAction, status: result.status },
-          ...(result.resultImageUrl ? { manifestUrl: result.resultImageUrl, manifestId: result.resultId } : {}),
+          ...(result.resultImageUrl
+            ? { manifestUrl: result.resultImageUrl, manifestId: result.resultId }
+            : {}),
         };
       });
-      return result.resultImageUrl ? updated : [...updated, { role: "assistant" as const, content: result.summary }];
+
+      if (result.status !== "confirmed") {
+        return [
+          ...updated,
+          {
+            role: "assistant" as const,
+            content: result.summary,
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }
+
+      if (result.resultImageUrl) {
+        const parent = prev[idx];
+        return [
+          ...updated,
+          {
+            role: "assistant" as const,
+            content: result.summary || "Here's your try-on!",
+            manifestUrl: result.resultImageUrl,
+            manifestId: result.resultId,
+            suggestedItemIds: parent?.suggestedItemIds,
+            scene: parent?.scene,
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }
+
+      if (result.toolName === "add_wardrobe_items") {
+        return [
+          ...updated,
+          {
+            role: "assistant" as const,
+            content: wardrobeAddedMessage(result),
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }
+
+      return [
+        ...updated,
+        {
+          role: "assistant" as const,
+          content: result.summary,
+          createdAt: new Date().toISOString(),
+        },
+      ];
     });
-    if (result.status === "confirmed" && !result.resultImageUrl) {
-      refreshWardrobe().catch(() => {});
+
+    if (result.status === "confirmed") {
+      if (result.toolName === "add_wardrobe_items") {
+        const label = result.created?.length
+          ? `Added ${result.created.length} item${result.created.length === 1 ? "" : "s"} to wardrobe`
+          : "Added to wardrobe";
+        toast.success(label);
+        refreshWardrobe().catch(() => {});
+      } else if (result.resultImageUrl) {
+        toast.success("Try-on ready");
+      }
+    }
+
+    const sessionId = useAriaChat.getState().currentSessionId;
+    if (sessionId) {
+      setTimeout(() => {
+        const latest = useAriaChat.getState().messages;
+        updateSession(latest).catch(() => {});
+      }, 0);
     }
   }
 
@@ -221,8 +260,10 @@ export default function StylistPage() {
       {
         role: "assistant",
         content: `Done! I added ${res.summary} to your wardrobe.`,
+        createdAt: new Date().toISOString(),
       },
     ]);
+    toast.success(`Added ${res.summary} to wardrobe`);
     // Refresh wardrobe list
     refreshWardrobe().catch(() => {});
     // Clear photo preview and close modal
@@ -245,32 +286,32 @@ export default function StylistPage() {
       role: "user",
       content,
       photoUrl: photoPreview || undefined,
+      createdAt: new Date().toISOString(),
     };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
+    const attachedPhoto = photoPreview;
     setPhotoPreview(null);
     setLoading(true);
+    setThinkingStartedAt(Date.now());
 
-    // Create session on first user message
-    const isFirstMessage = !currentSessionId && messages.length <= 1;
-    if (isFirstMessage) {
-      try {
-        const title = content.slice(0, 60) || "New chat";
-        await createSession(next, title);
-      } catch (e) {
-        toast.error(`Session creation failed: ${e instanceof Error ? e.message : "unknown"}`);
-      }
-    }
+    const hadSession = !!useAriaChat.getState().currentSessionId;
+    const isFirstMessage = !hadSession && messages.filter((m) => m.role === "user").length === 0;
 
     try {
+      if (isFirstMessage) {
+        const title = content.slice(0, 60) || "New chat";
+        await createSession(next, title);
+      }
+
       const payload: Record<string, unknown> = {
         messages: next.map((m) => ({
           role: m.role,
           content: m.photoUrl ? `[Photo shared] ${m.content}` : m.content,
         })),
       };
-      if (photoPreview) payload.image_url = photoPreview;
+      if (attachedPhoto) payload.image_url = attachedPhoto;
 
       const res = await apiPost<{
         reply: string;
@@ -294,6 +335,7 @@ export default function StylistPage() {
         content: res.reply,
         suggestedItemIds: res.suggested_item_ids,
         scene: res.scene,
+        createdAt: new Date().toISOString(),
         pendingAction: res.pending_action
           ? {
               toolName: res.pending_action.tool_name,
@@ -315,8 +357,8 @@ export default function StylistPage() {
       const updatedMessages = [...next, assistantMsg];
       setMessages(updatedMessages);
 
-      // Update session after assistant reply
-      if (currentSessionId) {
+      const sessionId = useAriaChat.getState().currentSessionId;
+      if (sessionId) {
         try {
           await updateSession(updatedMessages);
         } catch (e) {
@@ -327,33 +369,23 @@ export default function StylistPage() {
       toast.error(`Stylist failed: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
       setLoading(false);
+      setThinkingStartedAt(null);
+    }
+  }
+
+  function formatMsgTime(iso?: string) {
+    if (!iso) return null;
+    try {
+      return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    } catch {
+      return null;
     }
   }
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 mb-5">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={`chip ${tab === "chat" ? "chip-active" : ""}`}
-            onClick={() => setTab("chat")}
-          >
-            <MessageCircle size={12} className="mr-1.5" /> Chat
-          </button>
-          <button
-            type="button"
-            className={`chip ${tab === "this-or-that" ? "chip-active" : ""}`}
-            onClick={() => setTab("this-or-that")}
-          >
-            <Shuffle size={12} className="mr-1.5" /> This or That
-          </button>
-        </div>
-      </div>
-
       <div className="flex-1 min-h-0 flex flex-col">
-        {tab === "chat" ? (
-          <div className="surface flex flex-col flex-1 min-h-0">
+        <div className="surface flex flex-col flex-1 min-h-0">
             {/* Chat toolbar */}
             <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border text-xs text-muted">
               {wardrobeCountReady ? (
@@ -365,6 +397,14 @@ export default function StylistPage() {
                 />
               )}
               <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setTrainTasteOpen(true)}
+                  className="icon-btn"
+                  title="Train Aria's taste"
+                >
+                  <Shuffle size={14} />
+                </button>
                 <div className="relative" data-session-picker>
                   <button
                     type="button"
@@ -514,12 +554,13 @@ export default function StylistPage() {
                         content={m.content}
                         itemIds={m.suggestedItemIds || []}
                         items={items}
-                        manifesting={m.manifesting}
                         manifestUrl={m.manifestUrl}
                         savedOutfit={!!m.savedOutfit}
-                        onManifest={m.role === "assistant" && (m.suggestedItemIds?.length ?? 0) > 0 ? () => manifestLook(i) : undefined}
-                        onSaveOutfit={() => saveManifestOutfit(i)}
+                        onSaveOutfit={m.manifestUrl ? () => saveManifestOutfit(i) : undefined}
                       />
+                      {formatMsgTime(m.createdAt) && (
+                        <p className="text-2xs text-muted mt-2 mb-0 text-right">{formatMsgTime(m.createdAt)}</p>
+                      )}
                       {m.pendingAction && (
                         <PendingActionCard
                           action={m.pendingAction}
@@ -530,17 +571,7 @@ export default function StylistPage() {
                   </motion.div>
                 ))}
               </AnimatePresence>
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="flex gap-1 px-4 py-3"
-                       style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
-                    {[0, 0.15, 0.3].map((d, i) => (
-                      <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce inline-block"
-                            style={{ background: "var(--text-dim)", animationDelay: `${d}s` }} />
-                    ))}
-                  </div>
-                </div>
-              )}
+              {loading && thinkingStartedAt && <ThinkingIndicator startedAt={thinkingStartedAt} />}
             </div>
 
             {/* Suggestion chips */}
@@ -644,12 +675,9 @@ export default function StylistPage() {
               </div>
             </div>
           </div>
-
-        ) : tab === "this-or-that" ? (
-          <ThisOrThat items={items} />
-
-        ) : null}
       </div>
+
+      <TrainTasteModal open={trainTasteOpen} onClose={() => setTrainTasteOpen(false)} />
 
       <AnimatePresence>
         {wardrobeModal && (
@@ -665,291 +693,18 @@ export default function StylistPage() {
   );
 }
 
-// ── This or That ─────────────────────────────────────────────────────────────
-
-interface StyleCard {
-  id: string;
-  name: string;
-  description?: string;
-  image_url?: string;
-  cutout_url?: string;
-  category?: string;
-}
-
-function ThisOrThat({ items }: { items: WardrobeItem[] }) {
-  const [mode, setMode] = useState<"items" | "styles">("items");
-  const [choices, setChoices] = useState(0);
-  const [lastPick, setLastPick] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  // Item mode — client-side shuffle for zero latency
-  const [pairIdx, setPairIdx] = useState(0);
-  const pairs = useMemo(() => {
-    const arr = [...items].sort(() => Math.random() - 0.5);
-    const out: { a: WardrobeItem; b: WardrobeItem }[] = [];
-    for (let i = 0; i + 1 < arr.length; i += 2) out.push({ a: arr[i], b: arr[i + 1] });
-    return out;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length]);
-
-  // Style archetype mode — backend pairs
-  const [stylePair, setStylePair] = useState<{ pair_id: string; item_a: StyleCard; item_b: StyleCard } | null>(null);
-  const [loadingStyle, setLoadingStyle] = useState(false);
-
-  async function fetchStylePair() {
-    setLoadingStyle(true);
-    try {
-      const d = await apiGet<{ pair_id: string; item_a: StyleCard; item_b: StyleCard }>(
-        "/api/stylist/this-or-that?type=styles"
-      );
-      setStylePair(d);
-    } catch {
-      toast.error("Could not load style pair.");
-    } finally {
-      setLoadingStyle(false);
-    }
-  }
-
-  useEffect(() => {
-    if (mode === "styles" && !stylePair) fetchStylePair();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
-
-  async function pickItem(chosen: WardrobeItem, other: WardrobeItem) {
-    setLastPick(chosen.name);
-    setChoices((c) => c + 1);
-    setPairIdx((i) => i + 1);
-    setSaving(true);
-    try {
-      await apiPost("/api/stylist/this-or-that", {
-        pair_id: `local-${Date.now()}`,
-        question_type: "items",
-        item_a_id: chosen.id,
-        item_b_id: other.id,
-        chosen_id: chosen.id,
-      });
-    } catch { /* non-fatal */ } finally { setSaving(false); }
-  }
-
-  async function pickStyle(chosen: StyleCard, other: StyleCard) {
-    setLastPick(chosen.name);
-    setChoices((c) => c + 1);
-    setSaving(true);
-    try {
-      await apiPost("/api/stylist/this-or-that", {
-        pair_id: stylePair?.pair_id || `style-${Date.now()}`,
-        question_type: "styles",
-        item_a_id: chosen.id,
-        item_b_id: other.id,
-        chosen_id: chosen.id,
-        chosen_name: chosen.name,
-        rejected_name: other.name,
-      });
-    } catch { /* non-fatal */ } finally { setSaving(false); }
-    fetchStylePair();
-  }
-
-  const feedbackLine =
-    choices === 0 ? "Aria will use your choices to personalise every recommendation." :
-    choices < 3  ? `Noted. ${3 - choices} more choice${3 - choices !== 1 ? "s" : ""} to warm up Aria.` :
-    choices < 7  ? `Style fingerprint forming (${choices} data points) — chat with Aria to see it.` :
-                   `Aria has a strong read on your aesthetic (${choices} choices) ✓`;
-
-  if (items.length < 2 && mode === "items") {
-    return (
-      <div className="surface flex-1 flex flex-col items-center justify-center p-8 text-center" style={{ color: "var(--text-muted)" }}>
-        <Shuffle size={28} className="mb-3" style={{ color: "var(--text-dim)" }} />
-        <p className="text-sm mb-3">Add at least two items to your wardrobe to compare pieces.</p>
-        <button className="chip" onClick={() => setMode("styles")}>
-          Switch to style archetypes →
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="surface flex-1 flex flex-col min-h-0">
-      {/* Header */}
-      <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
-        <div>
-          <div className="font-display text-xl leading-none">This or That</div>
-          <div className="text-2xs uppercase tracking-widest mt-1" style={{ color: "var(--text-muted)" }}>
-            Training Aria&apos;s style read of you
-          </div>
-        </div>
-        {saving && <Loader2 size={12} className="spin" style={{ color: "var(--text-dim)" }} />}
-      </div>
-
-      {/* Mode toggle */}
-      <div className="flex gap-2 px-5 pt-4">
-        <button className={`chip ${mode === "items" ? "chip-active" : ""}`} onClick={() => setMode("items")}>
-          My items
-        </button>
-        <button className={`chip ${mode === "styles" ? "chip-active" : ""}`} onClick={() => setMode("styles")}>
-          Style archetypes
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col items-center gap-4">
-        <AnimatePresence>
-          <motion.p
-            key={feedbackLine}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="text-xs text-center"
-            style={{ color: choices > 0 ? "var(--text)" : "var(--text-muted)" }}
-          >
-            {feedbackLine}
-          </motion.p>
-        </AnimatePresence>
-
-        {mode === "items" && (() => {
-          const pair = pairs[pairIdx % pairs.length];
-          return (
-            <ItemPair
-              a={pair.a} b={pair.b}
-              onPick={(chosen) => pickItem(chosen, chosen.id === pair.a.id ? pair.b : pair.a)}
-            />
-          );
-        })()}
-
-        {mode === "styles" && (
-          loadingStyle || !stylePair ? (
-            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
-              <Loader2 size={14} className="spin" /> Loading styles…
-            </div>
-          ) : (
-            <StyleArchetypePair
-              a={stylePair.item_a} b={stylePair.item_b}
-              onPick={(chosen) => {
-                const other = chosen.id === stylePair!.item_a.id ? stylePair!.item_b : stylePair!.item_a;
-                pickStyle(chosen, other);
-              }}
-            />
-          )
-        )}
-
-        {choices >= 3 && (
-            <button
-              className="btn-secondary"
-              style={{ padding: "0.45rem 1rem" }}
-              onClick={() => { if (mode === "items") { setPairIdx(0); setLastPick(null); } else fetchStylePair(); }}
-          >
-            <Shuffle size={13} /> Next pair
-          </button>
-        )}
-
-        {choices >= 3 && (
-          <div
-            className="text-2xs text-center max-w-xs"
-            style={{ color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: 12 }}
-          >
-            Switch to Text Chat and ask Aria for an outfit — she now knows your aesthetic from these choices.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ItemPair({ a, b, onPick }: { a: WardrobeItem; b: WardrobeItem; onPick: (item: WardrobeItem) => void }) {
-  return (
-    <div className="relative grid grid-cols-2 gap-4 w-full max-w-sm">
-      {[a, b].map((item) => (
-        <motion.button
-          key={item.id}
-          whileHover={{ y: -4 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => onPick(item)}
-          className="surface text-left"
-          style={{ padding: 0, cursor: "pointer", border: "1px solid var(--border)" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={item.cutout_url || item.image_url}
-            alt={item.name}
-            className="w-full object-cover"
-            style={{ aspectRatio: "3/4", display: "block" }}
-          />
-          <div className="p-2">
-            <div className="text-xs font-mono truncate" style={{ color: "var(--text)" }}>{item.name}</div>
-            <div className="text-2xs capitalize mt-0.5" style={{ color: "var(--text-dim)" }}>{item.category}</div>
-          </div>
-        </motion.button>
-      ))}
-      <OrDivider />
-    </div>
-  );
-}
-
-function StyleArchetypePair({ a, b, onPick }: { a: StyleCard; b: StyleCard; onPick: (card: StyleCard) => void }) {
-  return (
-    <div className="relative grid grid-cols-2 gap-4 w-full max-w-sm">
-      {[a, b].map((card) => (
-        <motion.button
-          key={card.id}
-          whileHover={{ y: -4 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => onPick(card)}
-          className="surface text-left flex flex-col"
-          style={{ padding: 0, cursor: "pointer", border: "1px solid var(--border)", minHeight: 160 }}
-        >
-          <div
-            className="w-full flex items-center justify-center flex-1 p-4"
-            style={{ background: "var(--surface2)", aspectRatio: "1/1" }}
-          >
-            <span className="font-display text-center leading-tight text-base" style={{ color: "var(--text)" }}>
-              {card.name}
-            </span>
-          </div>
-          {card.description && (
-            <div className="p-2">
-              <div className="text-2xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-                {card.description}
-              </div>
-            </div>
-          )}
-        </motion.button>
-      ))}
-      <OrDivider />
-    </div>
-  );
-}
-
-function OrDivider() {
-  return (
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        top: "calc(50% - 14px)",
-        left: "calc(50% - 13px)",
-        background: "var(--bg)",
-        border: "1px solid var(--border)",
-        padding: "2px 7px",
-        zIndex: 2,
-      }}
-    >
-      <span className="text-xs font-mono" style={{ color: "var(--text-dim)" }}>or</span>
-    </div>
-  );
-}
-
 // ── Formatted reply ───────────────────────────────────────────────────────────
 
 function FormattedReply({
-  content, itemIds, items, manifesting, manifestUrl, savedOutfit, onManifest, onSaveOutfit,
+  content, itemIds, items, manifestUrl, savedOutfit, onSaveOutfit,
 }: {
   content: string;
   itemIds: string[];
   items: WardrobeItem[];
-  manifesting?: boolean;
   manifestUrl?: string;
   savedOutfit?: boolean;
-  onManifest?: () => void;
   onSaveOutfit?: () => void;
 }) {
-  // Strip the [ITEM:id] tokens from the displayed text (shown as cards below) and
-  // tidy up so markdown bold still renders (e.g. "**[ITEM:x] Name**" -> "**Name**";
-  // markdown ignores "** text**" with a space right after the **).
   const stripped = content
     .replace(/\s*\[ITEM:[a-zA-Z0-9\-]+\]\s*/g, " ")
     .replace(/\*\*\s+/g, "**")
@@ -980,14 +735,13 @@ function FormattedReply({
         </ReactMarkdown>
       </div>
 
-      {/* Suggested item chips */}
       {referenced.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-3">
           {referenced.map((it) => (
             <Link
               key={it.id}
               href="/studio"
-              onClick={() => useAppStore.getState().setSelected([it.id])}
+              onClick={() => useAppStore.getState().setSelected(referenced.length >= 2 ? itemIds : [it.id])}
               className="flex items-center gap-2 px-2 py-1 text-xs"
               style={{ background: "var(--surface3)", color: "var(--text)", textDecoration: "none", border: "1px solid var(--border)" }}
             >
@@ -999,53 +753,24 @@ function FormattedReply({
         </div>
       )}
 
-      {/* Try all in Studio — only when 2+ items suggested */}
-      {referenced.length >= 2 && !manifestUrl && (
-        <Link
-          href="/studio"
-          onClick={() => useAppStore.getState().setSelected(itemIds)}
-          className="btn-secondary"
-          style={{ padding: "0.4rem 0.8rem", marginTop: 10, display: "inline-flex", gap: 6 }}
-        >
-          <Wand2 size={13} /> Try look in Studio
-        </Link>
-      )}
-
-      {/* Manifest inline */}
-      {referenced.length > 0 && onManifest && (
+      {manifestUrl && (
         <div className="mt-3">
-          {manifestUrl ? (
-            <div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={manifestUrl}
-                alt="Your look"
-                className="rounded-sm"
-                style={{ width: "100%", maxWidth: 280, display: "block" }}
-              />
-              {onSaveOutfit && (
-                <button
-                  className="btn-secondary mt-2"
-                  onClick={onSaveOutfit}
-                  disabled={savedOutfit}
-                  style={{ padding: "0.4rem 0.8rem" }}
-                >
-                  {savedOutfit ? (<><Check size={13} /> Saved to Outfits</>) : (<><Bookmark size={13} /> Save to Outfits</>)}
-                </button>
-              )}
-            </div>
-          ) : (
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={manifestUrl}
+            alt="Your look"
+            className="rounded-sm"
+            style={{ width: "100%", maxWidth: 280, display: "block" }}
+          />
+          {onSaveOutfit && (
             <button
-              className="btn-primary"
-              onClick={onManifest}
-              disabled={manifesting}
-              style={{ padding: "0.5rem 0.9rem" }}
+              type="button"
+              className="btn-secondary mt-2"
+              onClick={onSaveOutfit}
+              disabled={savedOutfit}
+              style={{ padding: "0.4rem 0.8rem" }}
             >
-              {manifesting ? (
-                <><Loader2 size={14} className="spin" /> Manifesting your look…</>
-              ) : (
-                <><Sparkles size={14} /> Manifest this look</>
-              )}
+              {savedOutfit ? (<><Check size={13} /> Saved to Outfits</>) : (<><Bookmark size={13} /> Save to Outfits</>)}
             </button>
           )}
         </div>
