@@ -4,7 +4,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
 
-const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+import { getPostHogPublicKey } from "@/lib/posthog-key";
+
+const POSTHOG_KEY = getPostHogPublicKey();
 
 if (typeof window !== "undefined" && POSTHOG_KEY) {
   posthog.init(POSTHOG_KEY, {
