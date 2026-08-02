@@ -13,8 +13,10 @@ export function HeroVideo() {
   const { user, profile } = useAuth();
   const {
     avatarSelfieUrl,
+    stylizedAvatarUrl,
     stylizedVideoUrl,
     stylizedVideoStatus,
+    setStylized,
     setStylizedVideo,
     ariaVideoUrl,
     ariaImageUrl,
@@ -23,25 +25,45 @@ export function HeroVideo() {
     hydrated,
   } = useAppStore();
   const [triggering, setTriggering] = useState(false);
+  const [ariaLoading, setAriaLoading] = useState(!(ariaVideoUrl || ariaImageUrl));
   const [videoAspectRatio, setVideoAspectRatio] = useState<string>("16/9");
 
-  // Initialize stylized video from profile on auth load (avoid polling if already ready)
+  // Initialize stylized still + video from profile on auth load.
   useEffect(() => {
-    if (!profile || stylizedVideoUrl !== null) return; // already loaded
+    if (!profile) return;
+    if (stylizedAvatarUrl === null && profile.stylized_avatar_url) {
+      setStylized(profile.stylized_avatar_url, "ready");
+    }
+    if (stylizedVideoUrl !== null) return;
     if (profile.stylized_avatar_video_url && profile.stylized_avatar_video_status === "ready") {
       setStylizedVideo(profile.stylized_avatar_video_url, "ready");
     } else if (profile.stylized_avatar_video_status === "generating") {
       setStylizedVideo(null, "generating");
     }
-  }, [profile, stylizedVideoUrl, setStylizedVideo]);
+  }, [profile, stylizedAvatarUrl, stylizedVideoUrl, setStylized, setStylizedVideo]);
 
   // Only fetch Aria once — store persists it so subsequent visits are instant.
   useEffect(() => {
-    if (ariaVideoUrl !== null) return;
+    if (ariaVideoUrl || ariaImageUrl) {
+      setAriaLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAriaLoading(true);
     apiGet<{ hero_video_url: string | null; image_url: string | null; name: string | null }>(
       "/api/avatar/stylist"
-    ).then((d) => setAria(d.hero_video_url, d.image_url, d.name)).catch(() => {});
-  }, [ariaVideoUrl, setAria]);
+    )
+      .then((d) => {
+        if (!cancelled) setAria(d.hero_video_url, d.image_url, d.name);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAriaLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ariaVideoUrl, ariaImageUrl, setAria]);
 
   // Delegate polling to the shared tasks store (dedupes with any watch
   // already running, and surfaces progress/completion in Activity too).
@@ -54,7 +76,11 @@ export function HeroVideo() {
   const showUser = !!stylizedVideoUrl && stylizedVideoStatus === "ready";
   const generating = !!avatarSelfieUrl && stylizedVideoStatus === "generating";
   const canBackfill = !!avatarSelfieUrl && !stylizedVideoUrl && !generating && !triggering;
-  const showOnboarding = !avatarSelfieUrl && !ariaVideoUrl && !ariaImageUrl;
+  const showOnboarding = !avatarSelfieUrl && !ariaLoading && !ariaVideoUrl && !ariaImageUrl;
+  const userStillUrl =
+    stylizedAvatarUrl || profile?.stylized_avatar_url || avatarSelfieUrl || null;
+  const hasHeroMedia = showUser || !!ariaVideoUrl || !!ariaImageUrl;
+  const showHeroPlaceholder = !hasHeroMedia && (ariaLoading || !!userStillUrl);
 
   async function backfill() {
     setTriggering(true);
@@ -138,25 +164,49 @@ export function HeroVideo() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={ariaImageUrl} alt={ariaName || "Stylist"} className="h-full object-contain" />
           </motion.div>
+        ) : showHeroPlaceholder ? (
+          <motion.div
+            key="hero-placeholder"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="w-full h-full flex flex-col items-center justify-center gap-3 px-6"
+            style={{ background: "var(--surface2)" }}
+          >
+            {ariaLoading ? (
+              <>
+                <div className="hero-shimmer w-full max-w-xs h-2 rounded-full" />
+                <div className="hero-shimmer w-full max-w-sm h-40 sm:h-48 rounded-lg" />
+                <p className="text-xs text-muted flex items-center gap-2">
+                  <Loader2 size={14} className="spin" />
+                  Loading your runway...
+                </p>
+              </>
+            ) : userStillUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={userStillUrl}
+                  alt="Your avatar"
+                  className="max-h-[70%] max-w-[85%] object-contain rounded-lg"
+                  style={{ filter: stylizedAvatarUrl || profile?.stylized_avatar_url ? "none" : "brightness(0.92)" }}
+                />
+                <p className="text-xs text-muted text-center max-w-xs">
+                  {generating
+                    ? "Your ramp video is generating — Aria will step aside when it is ready."
+                    : canBackfill
+                      ? "Generate a ramp video to star on your dashboard."
+                      : "Your runway preview"}
+                </p>
+              </>
+            ) : null}
+          </motion.div>
         ) : null}
       </AnimatePresence>
 
       {/* Top-left badge: who is on screen */}
-      <div
-        className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 rounded-full flex items-center gap-1.5 sm:gap-2"
-        style={{
-          background: "rgba(8,8,13,0.7)",
-          border: "1px solid var(--border-hover)",
-          backdropFilter: "blur(8px)",
-        }}
-      >
-        <Sparkles size={10} className="sm:w-3" style={{ color: "var(--gold)" }} />
-        <span
-          className="text-2xs sm:text-xs font-semibold tracking-wide"
-          style={{ color: "var(--gold)", textTransform: "uppercase" }}
-        >
-          {showUser ? "You" : "Aria"}
-        </span>
+      <div className="hero-badge absolute top-3 left-3 sm:top-4 sm:left-4">
+        <Sparkles size={10} className="sm:w-3 text-gold" />
+        <span className="hero-badge-label">{showUser ? "You" : "Aria"}</span>
       </div>
 
       {/* Bottom-right pill: "creating yours..." while user video generates */}
@@ -166,17 +216,10 @@ export function HeroVideo() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2"
-            style={{
-              background: "rgba(8,8,13,0.75)",
-              border: "1px solid var(--border-hover)",
-              backdropFilter: "blur(8px)",
-            }}
+            className="status-pill status-pill-dark absolute bottom-3 right-3 sm:bottom-4 sm:right-4"
           >
-            <Loader2 size={11} className="sm:w-3 spin" style={{ color: "var(--gold)" }} />
-            <span className="text-2xs sm:text-xs font-medium" style={{ color: "var(--gold)" }}>
-              Generating... 60s
-            </span>
+            <Loader2 size={11} className="sm:w-3 spin text-gold" />
+            <span>Generating... 60s</span>
           </motion.div>
         )}
       </AnimatePresence>
