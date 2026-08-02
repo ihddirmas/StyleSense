@@ -1,60 +1,32 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Camera, Sparkles, Shirt, User } from "lucide-react";
+import { Camera, Sparkles } from "lucide-react";
 
 export function OnboardingHero() {
   return (
     <div
-      className="surface overflow-hidden relative flex items-center justify-center"
+      className="surface overflow-hidden relative flex items-center justify-center min-h-[220px]"
       style={{
         width: "100%",
-        aspectRatio: "16/9",
         background: "linear-gradient(135deg, var(--surface2) 0%, var(--bg) 100%)",
       }}
     >
-      <div className="text-center px-6 max-w-lg">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "var(--ink)" }}>
-            Welcome to StyleSense
+      <div className="text-center px-6 max-w-lg py-8">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <h2 className="font-display text-2xl md:text-3xl mb-2 text-foreground">
+            Know what flatters you
           </h2>
-          <p className="text-sm md:text-base mb-6" style={{ color: "var(--text-muted)" }}>
-            Upload your first selfie to unlock the full experience
+          <p className="text-sm text-muted mb-6">
+            Upload face + full-body photos in natural light. We&apos;ll read your color season and Kibbe type — then Aria judges every item you own or shop.
           </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <Link href="/settings" className="btn-primary inline-flex items-center gap-2 mb-8">
+          <Link href="/onboarding" className="btn-primary inline-flex items-center gap-2">
             <Camera size={16} />
-            Get Started
+            Start style profile
           </Link>
-        </motion.div>
-
-        <motion.div
-          className="grid grid-cols-3 gap-4 mt-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-        >
-          {[
-            { icon: User, label: "Studio", desc: "Try on clothes" },
-            { icon: Shirt, label: "Wardrobe", desc: "Your closet" },
-            { icon: Sparkles, label: "Stylist", desc: "AI advice" },
-          ].map((item, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 p-3 rounded" style={{ background: "var(--surface)" }}>
-              <item.icon size={20} style={{ color: "var(--text-muted)" }} />
-              <div className="text-xs font-medium" style={{ color: "var(--text)" }}>{item.label}</div>
-              <div className="text-2xs" style={{ color: "var(--text-dim)" }}>{item.desc}</div>
-            </div>
-          ))}
+          <p className="text-xs text-muted mt-4 flex items-center justify-center gap-1">
+            <Sparkles size={12} /> Try-on is optional proof — advice is free
+          </p>
         </motion.div>
       </div>
     </div>

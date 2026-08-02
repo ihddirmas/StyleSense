@@ -28,10 +28,10 @@ import ThinkingIndicator from "@/components/stylist/ThinkingIndicator";
 import TrainTasteModal from "@/components/stylist/TrainTasteModal";
 
 const SUGGESTION_PROMPTS = [
-  "Dinner date outfit from my closet",
-  "Try on your last suggestion",
-  "Beach wedding — what should I wear?",
-  "What goes with my white tee?",
+  "Does this suit my color season?",
+  "Paste a Myntra URL — verdict please",
+  "What colors should I avoid?",
+  "Outfit for a dinner date from my closet",
 ];
 
 export default function StylistPage() {

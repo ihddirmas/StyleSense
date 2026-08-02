@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTasks, selectRunningCount } from "@/store/tasks";
 import { useAppStore } from "@/store/app";
 import { apiGet } from "@/lib/api";
+import { FEATURES } from "@/lib/features";
 
 const PRIMARY_NAV = [
   { href: "/dashboard", label: "HOME" },
@@ -22,9 +23,11 @@ const MOBILE_NAV = [
   { href: "/stylist",   label: "Aria",     icon: MessageCircle },
   { href: "/wardrobe",  label: "Wardrobe", icon: Shirt },
   { href: "/outfits",   label: "Outfits",  icon: Layers },
-  { href: "/chat",      label: "Chat",     icon: Mail },
+  ...(FEATURES.social ? [
+    { href: "/chat",      label: "Chat",     icon: Mail },
+    { href: "/friends",   label: "Friends",  icon: Users },
+  ] : []),
   { href: "/activity",  label: "Activity", icon: Bell },
-  { href: "/friends",   label: "Friends",  icon: Users },
   { href: "/settings",  label: "Settings", icon: Settings },
 ];
 
