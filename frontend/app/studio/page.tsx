@@ -24,6 +24,7 @@ import { TRYON_MODELS, VIDEO_MODELS } from "@/lib/models";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { WardrobeItem, TryOnResult } from "@/types";
 import posthog from "posthog-js";
+import { FEATURES } from "@/lib/features";
 
 const MOTION_PRESETS = [
   { label: "Slow turn to camera", prompt: "The subject slowly turns toward the camera with a confident editorial pose, gentle hair movement." },
@@ -760,7 +761,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             </button>
           </div>
 
-          <>
+          {FEATURES.eventScene && (
             <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Place in event</div>
               <input className="input mb-2" placeholder="e.g. beach wedding"
@@ -789,7 +790,9 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 ))}
               </div>
             </div>
+          )}
 
+          {FEATURES.animateVideo && (
             <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Animate your current scene</div>
               {eventUrl && (
@@ -838,7 +841,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 </button>
               )}
             </div>
-          </>
+          )}
 
           {resultUrl && (
             <div className="surface p-4 space-y-2">
@@ -848,9 +851,11 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               <button className="btn-secondary w-full" onClick={saveTryOnOnly} disabled={!resultId}>
                 <Save size={14} /> Save to gallery
               </button>
+              {FEATURES.social && (
               <button className="btn-secondary w-full" onClick={() => setShowShare(true)} disabled={!resultId}>
                 <Share2 size={14} /> Share with friend
               </button>
+              )}
               <button
                 className="btn-secondary w-full"
                 onClick={() => downloadWithWatermark(eventUrl || resultUrl!)}
