@@ -25,14 +25,12 @@ import type {
 import { AddToWardrobeModal } from "@/components/stylist/AddToWardrobeModal";
 import posthog from "posthog-js";
 import { PendingActionCard, type PendingActionResult } from "@/components/stylist/PendingActionCard";
-import { AgentCapabilities } from "@/components/stylist/AgentCapabilities";
 
 const SUGGESTION_PROMPTS = [
-  "Plan a dinner-date look from my closet",
+  "Dinner date outfit from my closet",
   "Try on your last suggestion",
-  "What should I wear to a beach wedding?",
-  "Look up this product and style it",
-  "Add the clothes in this photo to my wardrobe",
+  "Beach wedding — what should I wear?",
+  "What goes with my white tee?",
 ];
 
 export default function StylistPage() {
@@ -55,8 +53,8 @@ export default function StylistPage() {
   const greeting = (): ChatMessage => ({
     role: "assistant",
     content: firstName
-      ? `Hey ${firstName} — I'm Aria, your style agent. I know every piece in your closet and can recommend outfits, look up products, add items from photos, or generate try-ons. You confirm before I spend any credits. What should we work on?`
-      : "Hey — I'm Aria, your style agent. I know your wardrobe and can recommend outfits, look up products, add items, or generate try-ons — you confirm every action. What should we work on?",
+      ? `Hey ${firstName} — what are we styling today? I can pick from your closet, try on a look, or add items from a photo (you confirm before anything runs).`
+      : "Hey — what are we styling today? I can pick from your closet, try on a look, or add items from a photo.",
   });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -337,10 +335,9 @@ export default function StylistPage() {
     <div className="h-full flex flex-col">
       <div className="shrink-0">
         <PageHeader
-          eyebrow="Style Agent"
           title="Aria"
           tutorialKey="stylist"
-          subtitle="Outfit picks, try-ons, closet adds, and product lookups — you confirm before anything runs."
+          subtitle="Outfit picks from your real wardrobe."
         />
 
         <div className="flex flex-wrap gap-2 mb-5">
@@ -349,7 +346,7 @@ export default function StylistPage() {
             className={`chip ${tab === "chat" ? "chip-active" : ""}`}
             onClick={() => setTab("chat")}
           >
-            <MessageCircle size={12} className="mr-1.5" /> Agent chat
+            <MessageCircle size={12} className="mr-1.5" /> Chat
           </button>
           <button
             type="button"
@@ -364,50 +361,41 @@ export default function StylistPage() {
       <div className="flex-1 min-h-0 flex flex-col">
         {tab === "chat" ? (
           <div className="surface flex flex-col flex-1 min-h-0">
-            {/* Aria header */}
-            <div className="flex items-center gap-3 px-5 py-3 border-b border-border">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gold-dim border border-border-gold">
-                <Sparkles size={14} className="text-gold" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-base leading-none text-ink">Aria</div>
-                <div className="section-label mt-1 normal-case tracking-widest text-2xs">
-                  Style agent · {items.length} items in context
-                </div>
-              </div>
-              
-              {/* Session picker dropdown */}
-              <div className="relative" data-session-picker>
-                <button
-                  type="button"
-                  onClick={() => setShowSessionPicker(!showSessionPicker)}
-                  className="icon-btn text-xs gap-1"
-                  title="Chat history"
-                >
-                  <MessageCircle size={14} />
-                  <ChevronDown size={12} />
-                </button>
-                {showSessionPicker && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute right-0 top-full mt-2 surface"
-                    style={{
-                      minWidth: 240,
-                      maxWidth: 320,
-                      maxHeight: 400,
-                      overflowY: "auto",
-                      border: "1px solid var(--border)",
-                      zIndex: 10,
-                    }}
+            {/* Chat toolbar */}
+            <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border text-xs text-muted">
+              <span className="font-mono">{items.length} items in wardrobe</span>
+              <div className="flex items-center gap-1">
+                <div className="relative" data-session-picker>
+                  <button
+                    type="button"
+                    onClick={() => setShowSessionPicker(!showSessionPicker)}
+                    className="icon-btn"
+                    title="Chat history"
                   >
-                    <div className="p-2 space-y-1">
-                      {sessions.length === 0 ? (
-                        <div className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
-                          No chat history yet
-                        </div>
-                      ) : (
-                        sessions.map((session) => (
+                    <MessageCircle size={14} />
+                    <ChevronDown size={12} />
+                  </button>
+                  {showSessionPicker && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute right-0 top-full mt-2 surface"
+                      style={{
+                        minWidth: 240,
+                        maxWidth: 320,
+                        maxHeight: 400,
+                        overflowY: "auto",
+                        border: "1px solid var(--border)",
+                        zIndex: 10,
+                      }}
+                    >
+                      <div className="p-2 space-y-1">
+                        {sessions.length === 0 ? (
+                          <div className="text-xs text-center py-4 text-muted">
+                            No chat history yet
+                          </div>
+                        ) : (
+                          sessions.map((session) => (
                             <div
                               key={session.id}
                               className="flex items-center gap-2 rounded-sm"
@@ -415,72 +403,58 @@ export default function StylistPage() {
                                 background: currentSessionId === session.id ? "var(--gold-dim)" : "transparent",
                               }}
                             >
-                            <button
-                              onClick={() => {
-                                setCurrentSession(session.id).catch((e) =>
-                                  toast.error(`Load failed: ${e instanceof Error ? e.message : "unknown"}`)
-                                );
-                                setShowSessionPicker(false);
-                              }}
-                              className="flex-1 text-left px-3 py-2 text-xs"
-                              style={{
-                                background: "transparent",
-                                border: "none",
-                                cursor: "pointer",
-                                color: "var(--text)",
-                              }}
-                            >
-                              <div className="font-medium truncate">
-                                {session.title || "Untitled chat"}
-                              </div>
-                              <div className="text-2xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                                {new Date(session.updated_at).toLocaleDateString()} ·{" "}
-                                {session.messages.length} msg{session.messages.length !== 1 ? "s" : ""}
-                              </div>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm("Delete this chat?")) {
-                                  deleteSession(session.id).catch((e) =>
-                                    toast.error(`Delete failed: ${e instanceof Error ? e.message : "unknown"}`)
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCurrentSession(session.id).catch((e) =>
+                                    toast.error(`Load failed: ${e instanceof Error ? e.message : "unknown"}`)
                                   );
-                                }
-                              }}
-                              className="px-2"
-                              style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                color: "var(--text-dim)",
-                              }}
-                              title="Delete chat"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
-                )}
+                                  setShowSessionPicker(false);
+                                }}
+                                className="flex-1 text-left px-3 py-2 text-xs bg-transparent border-0 cursor-pointer text-ink"
+                              >
+                                <div className="font-medium truncate">
+                                  {session.title || "Untitled chat"}
+                                </div>
+                                <div className="text-2xs mt-0.5 text-muted">
+                                  {new Date(session.updated_at).toLocaleDateString()} ·{" "}
+                                  {session.messages.length} msg{session.messages.length !== 1 ? "s" : ""}
+                                </div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("Delete this chat?")) {
+                                    deleteSession(session.id).catch((err) =>
+                                      toast.error(`Delete failed: ${err instanceof Error ? err.message : "unknown"}`)
+                                    );
+                                  }
+                                }}
+                                className="px-2 bg-transparent border-0 cursor-pointer text-dim"
+                                title="Delete chat"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  className="icon-btn"
+                  title="Start new chat"
+                >
+                  <Plus size={14} />
+                </button>
+                <Link href="/wardrobe" className="icon-btn text-muted no-underline" title="Wardrobe">
+                  <ChevronRight size={14} />
+                </Link>
               </div>
-
-              <button
-                onClick={startNewChat}
-                className="text-xs"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
-                title="Start new chat"
-              >
-                <Plus size={14} />
-              </button>
-              <Link href="/wardrobe" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
-                <ChevronRight size={14} />
-              </Link>
-            </div>
-
-            <div className="px-5 py-2.5 border-b border-border bg-surface2/40">
-              <AgentCapabilities />
             </div>
 
             {/* Messages */}
@@ -643,7 +617,7 @@ export default function StylistPage() {
 
                 <input
                   className="input"
-                  placeholder={photoPreview ? "Add a note about this photo..." : "Ask Aria for an outfit, paste a product URL, or request a try-on..."}
+                  placeholder={photoPreview ? "Add a note about this photo..." : "Ask for an outfit, paste a URL, or request a try-on..."}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && send(input)}
