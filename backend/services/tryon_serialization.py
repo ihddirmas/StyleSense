@@ -19,6 +19,14 @@ def serialize_tryon(row: Optional[dict]) -> Optional[dict]:
         return row
     out = dict(row)
     out["result_video_url"] = preferred_video_url(row)
+    if row.get("b2_image_url"):
+        out["b2_image_url"] = row["b2_image_url"]
+    if row.get("image_manifest_hash"):
+        out["image_manifest_hash"] = row["image_manifest_hash"]
+    if row.get("b2_video_url"):
+        out["b2_video_url"] = row["b2_video_url"]
+    if row.get("video_manifest_hash"):
+        out["video_manifest_hash"] = row["video_manifest_hash"]
     return out
 
 
