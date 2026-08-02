@@ -16,15 +16,15 @@ export const metadata: Metadata = {
       (process.env.NODE_ENV === "production" ? PRODUCTION_SITE_URL : "http://localhost:3000")
   ),
   title: {
-    default: "StyleSense — AI Wardrobe & Virtual Try-On",
+    default: "StyleSense — AI Style Agent & Virtual Try-On",
     template: "%s · StyleSense",
   },
   description:
-    "StyleSense is your AI-powered wardrobe and virtual try-on studio. Upload a selfie, add clothes, see yourself in any outfit, place yourself in any scene, animate the look as video, and chat with a stylist that knows your closet.",
+    "StyleSense is your AI style agent and virtual try-on studio. Aria knows your wardrobe, recommends outfits, and runs confirm-gated actions — add items, try on looks, look up products.",
   keywords: [
     "AI wardrobe",
     "virtual try-on",
-    "AI stylist",
+    "AI style agent",
     "outfit generator",
     "fashion AI",
     "StyleSense",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "StyleSense — AI Wardrobe & Virtual Try-On",
     description:
-      "Upload a selfie, try on outfits with AI, animate them as video, and chat with a stylist that knows your closet.",
+      "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
     type: "website",
     siteName: "StyleSense",
   },
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "StyleSense — AI Wardrobe & Virtual Try-On",
     description:
-      "Upload a selfie, try on outfits with AI, animate them as video, and chat with a stylist that knows your closet.",
+      "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
   },
 };
 

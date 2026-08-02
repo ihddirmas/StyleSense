@@ -9,31 +9,31 @@ gsap.registerPlugin(ScrollTrigger);
 const STEPS = [
   {
     number: "01",
-    title: "Upload a selfie",
+    title: "Talk to Aria",
     description:
-      "Take or upload a photo of yourself. StyleSense uses it to place you in every try-on and scene — once and forever.",
-    accent: "#8b6fe8",
+      "Your style agent knows your wardrobe. Ask for outfit picks, paste a product URL, or share a photo — she proposes actions and waits for your confirmation.",
+    accent: "#6b8e5f",
   },
   {
     number: "02",
-    title: "Add clothes from any URL",
+    title: "Upload a selfie",
     description:
-      "Paste a link from Amazon, ASOS, or any retailer. We extract the garment image automatically and clean the background.",
-    accent: "#5cb8b2",
+      "Take or upload a photo of yourself. Aria uses it for try-ons and to place you in every look — once and forever.",
+    accent: "#8b6fe8",
   },
   {
     number: "03",
-    title: "See yourself wearing it",
+    title: "Add clothes from any URL",
     description:
-      "Generate a photorealistic try-on in seconds — or drop yourself into any scene, from a beach wedding to a Parisian runway.",
-    accent: "#e87f8a",
+      "Paste a link from Amazon, ASOS, or any retailer. Aria can look up the product or you can save it to your closet.",
+    accent: "#5cb8b2",
   },
   {
     number: "04",
-    title: "Animate as a 5-second video",
+    title: "Confirm a try-on",
     description:
-      "Turn your try-on into a ramp-walk video clip powered by Runway AI. Download and share directly from the Studio.",
-    accent: "#c9a84c",
+      "When Aria suggests a look, approve the try-on and see yourself wearing it in seconds — credits only spend when you confirm.",
+    accent: "#e87f8a",
   },
 ];
 

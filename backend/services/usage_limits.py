@@ -42,6 +42,13 @@ def tryon_capped(user_id: str) -> bool:
     return supabase_service.count_tryons_this_month(user_id) >= FREE_TRYON_MONTHLY_LIMIT
 
 
+def tryon_cap_message() -> str:
+    return (
+        f"You've used all {FREE_TRYON_MONTHLY_LIMIT} free try-ons this month. "
+        "Upgrade for more (coming soon)."
+    )
+
+
 def check_tryon_cap(user_id: str) -> None:
     if user_id in UNLIMITED_TESTER_USER_IDS:
         return

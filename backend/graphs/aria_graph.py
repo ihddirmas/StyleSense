@@ -111,6 +111,14 @@ SYSTEM_TEMPLATE = """You are Aria, StyleSense's personal stylist. Warm, specific
 - One short intro line, then a bulleted outfit list (ONE piece per bullet, newest-first is fine), then
   ONE short styling tip. Bold ONLY the item name like **Name** (the tag goes right after). Under ~120 words.
 
+# AGENT ACTIONS (tools — user must confirm anything that spends credits)
+- **add_wardrobe_items** — only when the user shared a photo THIS turn and wants to save garment(s) from it.
+- **generate_tryon** — only after you've recommended specific items using [ITEM:<id>] tags in this same reply.
+- **lookup_product_from_url** — when the user pastes a store URL; runs automatically (no confirmation).
+
+Never propose add_wardrobe_items without a photo in this turn. Never propose generate_tryon before tagging items.
+If the user asks you to try something on, recommend the outfit first, then propose generate_tryon.
+
 # USER'S STYLE PROFILE
 {color_profile}
 
@@ -286,19 +294,27 @@ def _advise(state: AriaState) -> dict:
 
     if resp.stop_reason == "tool_use":
         tool_use = next((b for b in resp.content if getattr(b, "type", None) == "tool_use"), None)
-        capped = tool_use is not None and tool_use.name == "generate_tryon" and usage_limits.tryon_capped(state["user_id"])
-        if tool_use is not None and not capped and tool_use.name in aria_tools.CONFIRM_REQUIRED_TOOLS:
+        if tool_use is not None and tool_use.name in aria_tools.CONFIRM_REQUIRED_TOOLS:
             validated = aria_tools.validate_tool_input(tool_use.name, tool_use.input, state.get("wardrobe", []))
-            pending = validated and aria_tools.build_pending_action(
-                tool_use.name, validated,
-                {
-                    "pending_photo_url": state.get("pending_photo_url"),
-                    "avatar_selfie_url": state.get("avatar_selfie_url"),
-                    "wardrobe": state.get("wardrobe", []),
-                },
-            )
-            if pending:
-                result["pending_action"] = {**pending, "tool_use_id": tool_use.id}
+            ctx = {
+                "pending_photo_url": state.get("pending_photo_url"),
+                "avatar_selfie_url": state.get("avatar_selfie_url"),
+                "wardrobe": state.get("wardrobe", []),
+            }
+            capped = tool_use.name == "generate_tryon" and usage_limits.tryon_capped(state["user_id"])
+            if capped:
+                note = usage_limits.tryon_cap_message()
+            else:
+                pending = validated and aria_tools.build_pending_action(tool_use.name, validated, ctx)
+                if pending:
+                    result["pending_action"] = {**pending, "tool_use_id": tool_use.id}
+                    note = None
+                else:
+                    note = aria_tools.explain_blocked_proposal(
+                        tool_use.name, validated, ctx, state["user_id"]
+                    )
+            if note:
+                result["reply"] = f"{reply}\n\n{note}".strip() if reply else note
 
     return result
 

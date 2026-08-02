@@ -203,6 +203,27 @@ def build_pending_action(name: str, validated_input: dict, ctx: dict) -> Optiona
     return None
 
 
+def explain_blocked_proposal(
+    name: str,
+    validated_input: Optional[dict],
+    ctx: dict,
+    user_id: str,
+) -> Optional[str]:
+    """Plain-language note when the model requested a confirm tool we cannot propose."""
+    del user_id  # reserved for future per-user messaging
+    if name not in CONFIRM_REQUIRED_TOOLS:
+        return None
+    if not validated_input:
+        return None
+    if build_pending_action(name, validated_input, ctx):
+        return None
+    if name == "add_wardrobe_items" and not ctx.get("pending_photo_url"):
+        return "Attach a photo in this message if you'd like me to save items to your wardrobe."
+    if name == "generate_tryon" and not ctx.get("avatar_selfie_url"):
+        return "Add a selfie in Settings and I can generate try-ons for you."
+    return None
+
+
 async def _execute_add_wardrobe_items(tool_input: dict, user_id: str) -> dict:
     from models.schemas import DetectedItem
     from services.wardrobe_add_service import confirm_and_add_items
