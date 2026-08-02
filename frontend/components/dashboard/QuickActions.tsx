@@ -17,8 +17,8 @@ const ACTIONS = [
   {
     href: "/stylist",
     icon: <MessageCircle size={18} strokeWidth={2} />,
-    title: "Ask your stylist",
-    desc: "Get item picks for your next event.",
+    title: "Talk to Aria",
+    desc: "Your agent picks outfits and runs actions you confirm.",
   },
 ] as const;
 

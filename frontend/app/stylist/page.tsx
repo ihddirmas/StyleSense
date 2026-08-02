@@ -25,13 +25,14 @@ import type {
 import { AddToWardrobeModal } from "@/components/stylist/AddToWardrobeModal";
 import posthog from "posthog-js";
 import { PendingActionCard, type PendingActionResult } from "@/components/stylist/PendingActionCard";
+import { AgentCapabilities } from "@/components/stylist/AgentCapabilities";
 
 const SUGGESTION_PROMPTS = [
-  "Dinner date that says 'I have taste'",
-  "Main character energy for brunch",
-  "Boardroom but make it fashion",
-  "What goes well with my white t-shirt?",
-  "Beach-day outfit from what I own",
+  "Plan a dinner-date look from my closet",
+  "Try on your last suggestion",
+  "What should I wear to a beach wedding?",
+  "Look up this product and style it",
+  "Add the clothes in this photo to my wardrobe",
 ];
 
 export default function StylistPage() {
@@ -54,8 +55,8 @@ export default function StylistPage() {
   const greeting = (): ChatMessage => ({
     role: "assistant",
     content: firstName
-      ? `Hey ${firstName}, I've studied every piece in your closet. What vibe are we creating today?`
-      : "Hey — I've studied every piece in your closet. What vibe are we creating today?",
+      ? `Hey ${firstName} — I'm Aria, your style agent. I know every piece in your closet and can recommend outfits, look up products, add items from photos, or generate try-ons. You confirm before I spend any credits. What should we work on?`
+      : "Hey — I'm Aria, your style agent. I know your wardrobe and can recommend outfits, look up products, add items, or generate try-ons — you confirm every action. What should we work on?",
   });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -336,10 +337,10 @@ export default function StylistPage() {
     <div className="h-full flex flex-col">
       <div className="shrink-0">
         <PageHeader
-          eyebrow="AI Stylist"
+          eyebrow="Style Agent"
           title="Aria"
           tutorialKey="stylist"
-          subtitle="Ask anything — I know your full wardrobe and pick specific items."
+          subtitle="Outfit picks, try-ons, closet adds, and product lookups — you confirm before anything runs."
         />
 
         <div className="flex flex-wrap gap-2 mb-5">
@@ -348,7 +349,7 @@ export default function StylistPage() {
             className={`chip ${tab === "chat" ? "chip-active" : ""}`}
             onClick={() => setTab("chat")}
           >
-            <MessageCircle size={12} className="mr-1.5" /> Text chat
+            <MessageCircle size={12} className="mr-1.5" /> Agent chat
           </button>
           <button
             type="button"
@@ -371,7 +372,7 @@ export default function StylistPage() {
               <div className="flex-1 min-w-0">
                 <div className="font-display text-base leading-none text-ink">Aria</div>
                 <div className="section-label mt-1 normal-case tracking-widest text-2xs">
-                  {items.length} items in context
+                  Style agent · {items.length} items in context
                 </div>
               </div>
               
@@ -476,6 +477,10 @@ export default function StylistPage() {
               <Link href="/wardrobe" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 <ChevronRight size={14} />
               </Link>
+            </div>
+
+            <div className="px-5 py-2.5 border-b border-border bg-surface2/40">
+              <AgentCapabilities />
             </div>
 
             {/* Messages */}
@@ -638,7 +643,7 @@ export default function StylistPage() {
 
                 <input
                   className="input"
-                  placeholder={photoPreview ? "Add a note... (or press send)" : "Ask about an event, outfit, or color combo..."}
+                  placeholder={photoPreview ? "Add a note about this photo..." : "Ask Aria for an outfit, paste a product URL, or request a try-on..."}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && send(input)}

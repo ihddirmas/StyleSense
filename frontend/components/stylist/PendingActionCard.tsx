@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Check, Loader2, Sparkles, X } from "lucide-react";
+import { Check, Loader2, Sparkles, Wand2, X } from "lucide-react";
 import { apiPost } from "@/lib/api";
 import type { PendingAction } from "@/types";
 
@@ -23,10 +23,17 @@ interface Props {
   onResolve: (result: PendingActionResult) => void;
 }
 
+const TOOL_LABELS: Record<string, string> = {
+  add_wardrobe_items: "Add to wardrobe",
+  generate_tryon: "Generate try-on",
+};
+
 export function PendingActionCard({ action, onResolve }: Props) {
   const [busy, setBusy] = useState<"confirm" | "cancel" | null>(null);
 
   if (action.status !== "pending") return null;
+
+  const toolLabel = TOOL_LABELS[action.toolName] ?? "Agent action";
 
   async function respond(decision: "confirm" | "cancel") {
     setBusy(decision);
@@ -53,23 +60,27 @@ export function PendingActionCard({ action, onResolve }: Props) {
   }
 
   return (
-    <div
-      className="mt-2 px-3 py-2.5"
-      style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}
-    >
-      <div className="flex items-center gap-2 text-xs" style={{ color: "var(--ink)" }}>
-        <Sparkles size={13} style={{ color: "var(--gold)", flexShrink: 0 }} />
-        <span>{action.summary}</span>
-      </div>
-      {typeof action.costCredits === "number" && (
-        <div className="text-2xs uppercase tracking-widest mt-1" style={{ color: "var(--text-muted)" }}>
-          ~{action.costCredits} credits
+    <div className="agent-action-card mt-3">
+      <div className="flex items-start gap-2.5">
+        <div className="agent-action-card-icon shrink-0" aria-hidden>
+          {action.toolName === "generate_tryon" ? <Wand2 size={14} /> : <Sparkles size={14} />}
         </div>
-      )}
-      <div className="flex gap-2 mt-2">
+        <div className="min-w-0 flex-1">
+          <div className="section-label normal-case tracking-widest text-2xs mb-1">
+            Aria wants to · {toolLabel}
+          </div>
+          <p className="text-sm leading-snug text-ink m-0">{action.summary}</p>
+          {typeof action.costCredits === "number" && (
+            <p className="text-2xs font-mono uppercase tracking-widest text-muted mt-1.5 mb-0">
+              ~{action.costCredits} credits · you confirm before anything runs
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-3">
         <button
-          className="btn-primary"
-          style={{ padding: "0.4rem 0.8rem", fontSize: "0.75rem" }}
+          type="button"
+          className="btn-primary btn-sm"
           onClick={() => respond("confirm")}
           disabled={busy !== null}
         >
@@ -77,8 +88,8 @@ export function PendingActionCard({ action, onResolve }: Props) {
           Confirm
         </button>
         <button
-          className="btn-secondary"
-          style={{ padding: "0.4rem 0.8rem", fontSize: "0.75rem" }}
+          type="button"
+          className="btn-secondary btn-sm"
           onClick={() => respond("cancel")}
           disabled={busy !== null}
         >

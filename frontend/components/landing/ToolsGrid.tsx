@@ -8,10 +8,10 @@ import { Shirt, Globe, Video, MessageCircle, BookOpen, Heart } from "lucide-reac
 gsap.registerPlugin(ScrollTrigger);
 
 const TOOLS = [
+  { icon: MessageCircle, title: "Aria Style Agent",    description: "Chat, confirm actions, add items, try on looks", color: "#6b8e5f" },
   { icon: Shirt,         title: "Virtual Try-On",    description: "See yourself in any outfit in seconds",           color: "#8b6fe8" },
   { icon: Globe,         title: "Event Scenes",       description: "Drop yourself into any world — beach, runway, city", color: "#5cb8b2" },
   { icon: Video,         title: "Ramp Walk Video",    description: "Animate your look as a 5-second runway clip",    color: "#e87f8a" },
-  { icon: MessageCircle, title: "AI Stylist Chat",    description: "A stylist that knows your full wardrobe",         color: "#6b8e5f" },
   { icon: BookOpen,      title: "Smart Wardrobe",     description: "Add from any URL. Organize everything.",          color: "#c9a84c" },
   { icon: Heart,         title: "Outfit Builder",     description: "Save and share complete looks instantly",         color: "#e85c5c" },
 ];
@@ -101,7 +101,7 @@ export default function ToolsGrid() {
             className="font-display"
             style={{ fontSize: "clamp(32px, 4vw, 52px)", color: "var(--text)", margin: 0, fontWeight: 500 }}
           >
-            Six tools, one wardrobe
+            Six tools, one agent-powered wardrobe
           </h2>
         </div>
 

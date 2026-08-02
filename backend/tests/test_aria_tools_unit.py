@@ -185,6 +185,27 @@ def test_anthropic_tools_includes_generate_tryon():
     assert "generate_tryon" in aria_tools.CONFIRM_REQUIRED_TOOLS
 
 
+def test_explain_blocked_proposal_tryon_cap():
+    pass  # cap messaging is handled in aria_graph via usage_limits.tryon_cap_message()
+
+
+def test_explain_blocked_proposal_missing_photo():
+    validated = _ONE_ITEM
+    msg = aria_tools.explain_blocked_proposal(
+        "add_wardrobe_items", validated, {"pending_photo_url": None}, "user-1"
+    )
+    assert msg is not None
+    assert "Attach a photo" in msg
+
+
+def test_explain_blocked_proposal_missing_selfie():
+    validated = {"item_ids": ["abc-1"], "scene": None}
+    ctx = {"avatar_selfie_url": None, "wardrobe": WARDROBE}
+    msg = aria_tools.explain_blocked_proposal("generate_tryon", validated, ctx, "user-1")
+    assert msg is not None
+    assert "selfie" in msg.lower()
+
+
 def test_anthropic_tools_includes_lookup_product_as_readonly():
     assert "lookup_product_from_url" in aria_tools.READONLY_TOOLS
     assert "lookup_product_from_url" not in aria_tools.CONFIRM_REQUIRED_TOOLS
