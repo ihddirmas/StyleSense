@@ -19,6 +19,10 @@ const config: Config = {
         dim: "var(--text-dim)",
         gold: "var(--gold)",
         "gold-light": "var(--gold-light)",
+        "gold-dim": "var(--gold-dim)",
+        "border-gold": "var(--border-gold)",
+        ink: "var(--ink)",
+        parchment: "var(--parchment)",
         purple: "var(--purple)",
         teal: "var(--teal)",
         rose: "var(--rose)",
@@ -28,6 +32,10 @@ const config: Config = {
       fontFamily: {
         sans: ["Public Sans", "sans-serif"],
         display: ["Cormorant Garamond", "serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      maxWidth: {
+        page: "var(--page-max-width)",
       },
       fontSize: {
         "2xs": ["0.625rem", { lineHeight: "0.875rem" }], // 10px
