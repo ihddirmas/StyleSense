@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { StyleInsightCard } from "@/components/dashboard/StyleInsightCard";
 import { UsageMeter } from "@/components/dashboard/UsageMeter";
 import { ContinueCard } from "@/components/dashboard/ContinueCard";
+import { QuickActions } from "@/components/dashboard/QuickActions";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { TryOnResult } from "@/types";
 import { HeroVideo } from "@/components/dashboard/HeroVideo";
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const [loading, setLoading] = useState(() => cachedWardrobe.length === 0);
   const [retryKey, setRetryKey] = useState(0);
   const [insight, setInsight] = useState<string | null>(null);
   const [atCap, setAtCap] = useState(false);
@@ -48,18 +50,29 @@ export default function DashboardPage() {
     } catch {}
 
     setFetchError(false);
+    if (!cachedWardrobe.length) setLoading(true);
+
     Promise.allSettled([
       apiGet<WardrobeItem[]>(`/api/wardrobe`),
       apiGet<TryOnResult[]>(`/api/tryon/recent?all=true&limit=100`),
     ]).then(([wardrobeRes, recentRes]) => {
+      const wardrobeCache = useAppStore.getState().cachedWardrobe;
+
       if (wardrobeRes.status === "fulfilled") {
         setItems(wardrobeRes.value);
         setCachedWardrobe(wardrobeRes.value);
-      } else setFetchError(true);
+      } else if (!wardrobeCache.length) {
+        setFetchError(true);
+      }
+
       if (recentRes.status === "fulfilled") {
         setRecent(recentRes.value);
         setCachedRecent(recentRes.value);
-      } else setFetchError(true);
+      } else if (!useAppStore.getState().cachedRecent.length && wardrobeRes.status !== "fulfilled" && !wardrobeCache.length) {
+        setFetchError(true);
+      }
+
+      setLoading(false);
     });
 
     apiGet<{ tryon: { used: number; limit: number } }>(`/api/tryon/usage-status`)
@@ -85,6 +98,9 @@ export default function DashboardPage() {
   const continueItem = [...items]
     .filter(i => !triedItemIds.has(i.id))
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+
+  const showQuickActions = !loading && items.length === 0;
+  const showSidebarQuickActions = items.length > 0 || !!insight;
 
   const statsAction =
     items.length > 0 || displayRecent.length > 0 ? (
@@ -118,6 +134,19 @@ export default function DashboardPage() {
         action={statsAction}
       />
 
+      {fetchError && (
+        <div className="alert-banner alert-banner-error" role="alert">
+          <span>Couldn&apos;t load your wardrobe.</span>
+          <button
+            type="button"
+            onClick={() => setRetryKey(k => k + 1)}
+            className="btn-ghost btn-sm"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {!hintSeen && !hintDismissed && (
         <motion.div
           initial={{ opacity: 0, y: -6 }}
@@ -147,21 +176,18 @@ export default function DashboardPage() {
           <StyleInsightCard insight={insight} items={items} recent={recent} />
           <UsageMeter />
           {continueItem && !atCap && <ContinueCard item={continueItem} />}
+          {showSidebarQuickActions && <QuickActions compact />}
         </div>
       </div>
 
-      {fetchError ? (
-        <div className="text-xs sm:text-sm text-muted">
-          Couldn&apos;t load your wardrobe.{" "}
-          <button
-            type="button"
-            onClick={() => setRetryKey(k => k + 1)}
-            className="underline bg-transparent border-0 cursor-pointer text-inherit p-0"
-          >
-            Retry
-          </button>
+      {showQuickActions && (
+        <div>
+          <h2 className="section-label mb-3">Get started</h2>
+          <QuickActions />
         </div>
-      ) : displayRecent.length > 0 ? (
+      )}
+
+      {!fetchError && displayRecent.length > 0 && (
         <div className="w-full sm:max-w-lg">
           <h2 className="section-label mb-3">Recent Try-Ons</h2>
           <TryOnCarousel
@@ -170,7 +196,7 @@ export default function DashboardPage() {
             onOpen={(r) => setLightboxUrl(r.event_scene_url || r.result_image_url)}
           />
         </div>
-      ) : null}
+      )}
 
       <AnimatePresence>
         {lightboxUrl && (
