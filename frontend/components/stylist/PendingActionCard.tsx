@@ -7,6 +7,8 @@ import type { PendingAction } from "@/types";
 interface ToolConfirmResponse {
   executed: boolean;
   summary: string;
+  created?: { id: string; name: string; image_url?: string; cutout_url?: string | null }[];
+  failed?: { name: string; error: string }[];
   result_image_url?: string | null;
   result_id?: string | null;
 }
@@ -14,6 +16,8 @@ interface ToolConfirmResponse {
 export interface PendingActionResult {
   status: "confirmed" | "cancelled";
   summary: string;
+  toolName?: string;
+  created?: ToolConfirmResponse["created"];
   resultImageUrl?: string;
   resultId?: string;
 }
@@ -26,7 +30,8 @@ interface Props {
 function estimateSeconds(toolName: string, costCredits?: number | null): number {
   if (toolName === "generate_tryon") return 45;
   const itemCount = costCredits ? Math.max(1, Math.round(costCredits / 2)) : 1;
-  return Math.max(20, itemCount * 12);
+  // Items isolate in parallel — wall clock is closer to one Runway pass + overhead.
+  return Math.max(14, 12 + Math.max(0, itemCount - 1) * 3);
 }
 
 function processingSteps(toolName: string): string[] {
@@ -106,6 +111,8 @@ export function PendingActionCard({ action, onResolve }: Props) {
       onResolve({
         status: decision === "confirm" ? "confirmed" : "cancelled",
         summary: res.summary,
+        toolName: action.toolName,
+        created: res.created,
         resultImageUrl: res.result_image_url ?? undefined,
         resultId: res.result_id ?? undefined,
       });
