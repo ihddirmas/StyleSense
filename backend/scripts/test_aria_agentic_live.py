@@ -26,9 +26,9 @@ if not all([PASSWORD, SUPABASE_URL, ANON]):
 
 def sign_in() -> str:
     client = create_client(SUPABASE_URL, ANON)
-    res = client.auth.sign_in_with_password({"email": EMAIL, "password": PASSWORD})
+    res = client.auth.sign_in_with_password({"email": _test_email(), "password": PASSWORD})
     token = res.session.access_token
-    print(f"[OK] signed in as {EMAIL}")
+    print("[OK] signed in")
     return token
 
 

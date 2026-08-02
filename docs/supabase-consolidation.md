@@ -11,6 +11,18 @@ Verify: `SELECT table_name FROM information_schema.tables WHERE table_name IN ('
 
 **Render still needs `DATABASE_URL`** (Supabase pooler URI) before the backend uses this DB instead of Aurora.
 
+### Live verification (Supabase MCP, 2026-08-02)
+
+| Check | Result |
+|-------|--------|
+| Migrations applied | `consolidate_core_v2j`, `stylist_tool_calls` |
+| `usage_events` + `stylist_tool_calls` tables | present |
+| B2 cols on `try_on_results` | `b2_image_url`, `b2_video_url`, manifest hashes |
+| Test user wardrobe in Supabase | **53** items (seed account) |
+| Production API wardrobe (still Aurora) | **39** items — split-DB confirmed |
+
+Render `DATABASE_URL`: Supabase Dashboard → Database → Connect → transaction pooler on port 6543 (ap-northeast-1).
+
 
 ## Cutover steps (production)
 

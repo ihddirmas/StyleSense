@@ -3,9 +3,7 @@ One-time data copy: legacy SQL database -> Supabase for core tables.
 
 Preserves original id + created_at. Idempotent: ON CONFLICT (id) DO NOTHING.
 
-Run from backend/ with both connection strings in .env:
-    LEGACY_DATABASE_URL=...   # source (old split-DB cluster)
-    DATABASE_URL=...          # destination (Supabase)
+Run from backend/ with LEGACY_DATABASE_URL (source) and DATABASE_URL (destination) in .env.
 
 Apply supabase_schema_v2j_consolidate_core.sql on Supabase first.
 
