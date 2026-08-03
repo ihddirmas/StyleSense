@@ -167,8 +167,8 @@ backend/supabase_schema_v2j_consolidate_core.sql
 
 Verify connectivity: `cd backend && ./venv/bin/python -m scripts.check_db`
 
-**Migrating from a split-DB setup:** apply `v2j`, set `LEGACY_DATABASE_URL` and `DATABASE_URL`, run
-`python -m scripts.migrate_legacy_db_to_supabase`, then remove legacy env vars on Render.
+**Migrating from a split-DB setup:** apply `v2j` + `v2l`, audit with `python -m scripts.compare_aurora_supabase --ids`, run
+`python -m scripts.migrate_legacy_db_to_supabase` (add `--dest api` if the pooler is unreachable), then set Render `DATABASE_URL` and remove Aurora env vars. See `docs/supabase-consolidation.md`.
 
 ### Frontend
 
