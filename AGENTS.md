@@ -147,7 +147,11 @@ cd backend && ./venv/bin/python -m scripts.ensure_test_user
 cd backend && ./venv/bin/python -m scripts.ensure_seed_users   # sync TEST_SEED_*_PASSWORD
 cd backend && ./venv/bin/python -m scripts.cleanup_test_users          # dry-run
 cd backend && ./venv/bin/python -m scripts.cleanup_test_users --apply  # delete junk
+cd backend && ./venv/bin/python -m scripts.compare_aurora_supabase --ids   # Aurora vs Supabase audit
+cd backend && ./venv/bin/python -m scripts.migrate_legacy_db_to_supabase --dest api  # copy Aurora rows
 ```
+
+**Aurora → Supabase cutover:** Data copy is insert-only (`ON CONFLICT DO NOTHING`). All Aurora row IDs should appear on Supabase after migrate; Supabase-only rows are kept. Images stay on Supabase Storage/B2 (URLs in columns). Render must use Supabase `DATABASE_URL` pooler and drop Aurora IAM env vars — see `docs/supabase-consolidation.md`.
 
 Optional: `TEST_USER_PROTECTED_EMAILS=admin@stylesense.com` — extra emails cleanup must never touch.
 
