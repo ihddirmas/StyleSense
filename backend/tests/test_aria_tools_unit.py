@@ -209,3 +209,50 @@ def test_explain_blocked_proposal_missing_selfie():
 def test_anthropic_tools_includes_lookup_product_as_readonly():
     assert "lookup_product_from_url" in aria_tools.READONLY_TOOLS
     assert "lookup_product_from_url" not in aria_tools.CONFIRM_REQUIRED_TOOLS
+
+
+def test_anthropic_tools_includes_search_wardrobe_as_readonly():
+    assert "search_wardrobe" in aria_tools.READONLY_TOOLS
+    assert "search_wardrobe" not in aria_tools.CONFIRM_REQUIRED_TOOLS
+
+
+def test_anthropic_tools_includes_save_outfit_as_confirm():
+    assert "save_outfit" in aria_tools.CONFIRM_REQUIRED_TOOLS
+
+
+def test_validate_search_wardrobe_filters():
+    result = aria_tools.validate_tool_input(
+        "search_wardrobe",
+        {"query": "Cream", "category": "tops", "limit": 3},
+        WARDROBE,
+    )
+    assert result["query"] == "cream"
+    assert result["category"] == "tops"
+    assert result["limit"] == 3
+
+
+def test_search_wardrobe_matches_name():
+    validated = {"query": "cream", "limit": 8}
+    out = aria_tools._search_wardrobe_items(validated, WARDROBE)
+    assert out["count"] == 1
+    assert out["items"][0]["id"] == "abc-1"
+
+
+def test_validate_save_outfit_happy_path():
+    raw = {"name": "Date night", "item_ids": ["abc-1", "abc-2"], "occasion": "evening"}
+    result = aria_tools.validate_tool_input("save_outfit", raw, WARDROBE)
+    assert result["name"] == "Date night"
+    assert result["item_ids"] == ["abc-1", "abc-2"]
+
+
+def test_validate_save_outfit_unknown_ids_returns_none():
+    raw = {"name": "Nope", "item_ids": ["missing"]}
+    assert aria_tools.validate_tool_input("save_outfit", raw, WARDROBE) is None
+
+
+def test_build_pending_action_save_outfit():
+    validated = {"name": "Brunch", "item_ids": ["abc-1"], "occasion": "casual", "preview_image_url": None, "notes": None}
+    pending = aria_tools.build_pending_action("save_outfit", validated, {"wardrobe": WARDROBE})
+    assert pending["tool_name"] == "save_outfit"
+    assert pending["cost_credits"] == 0
+    assert "Brunch" in pending["summary"]

@@ -38,20 +38,15 @@ Many submissions will be one-shot demos without durable storage or multi-step pi
 
 ## Production checklist (do before submit)
 
-- [ ] **Render:** `B2_BUCKET`, `B2_KEY_ID`, `B2_APP_KEY`, `B2_PUBLIC_URL_BASE` set  
-- [ ] **Vercel:** `NEXT_PUBLIC_HACKATHON_MODE=true` (default — keeps animate + provenance UI)  
+- [x] **Render:** `B2_BUCKET`, `B2_KEY_ID`, `B2_APP_KEY`, `B2_PUBLIC_URL_BASE` set  
+- [x] **Render:** `DATABASE_URL` uses `aws-1-…pooler.supabase.com:6543` (not `db.*.supabase.co:6543`)  
+- [x] **Vercel:** `NEXT_PUBLIC_HACKATHON_MODE=true` (default — keeps animate + provenance UI)  
 - [ ] Run `python -m scripts.test_genblaze_smoke` against production bucket  
 - [ ] Seed judge account: selfies, full-body, 10+ wardrobe items  
 - [ ] Grant **https://github.com/b2genblaze** on repo if private  
 - [ ] 3-min demo video uploaded (script below)  
-- [ ] Devpost: B2 + Genblaze paragraph from this doc  
-| Criterion | How StyleSense scores |
-|-----------|----------------------|
-| **Real-world utility** | Virtual try-on + event scenes + shareable looks; Aria picks real wardrobe items (`[ITEM:uuid]`) for a stated occasion. |
-| **Production readiness** | Live Vercel + Render deploy, auth, usage caps, rate limits, Aurora + Supabase, keep-alive on backend. |
-| **Production readiness** | Live Vercel + Render deploy, auth, usage caps, rate limits, Supabase DB, keep-alive on backend. |
-| **B2 storage & orchestration** | B2 bucket stores ingested try-ons + Genblaze-run videos; hierarchical keys per user; public or signed URLs via `B2_PUBLIC_URL_BASE`. |
-| **Genblaze** | `Pipeline` + `RunwayProvider` for animate; `Pipeline.ingest` for try-on archive; manifests verified with `manifest.verify()`. |
+- [ ] Devpost: paste `docs/hackathons/DEVPOST_SUBMISSION_DRAFT.md`  
+- [ ] Follow `docs/hackathons/FINAL_5H_BATTLE_PLAN.md` for timed focus blocks
 
 ---
 

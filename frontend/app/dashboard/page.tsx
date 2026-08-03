@@ -129,7 +129,7 @@ export default function DashboardPage() {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="Dashboard"
+        eyebrow="Home"
         title="Your Style Intelligence"
         titleSize="responsive"
         action={statsAction}

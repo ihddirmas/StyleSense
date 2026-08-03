@@ -22,14 +22,20 @@ StyleSense is submitted to the **Backblaze + Genblaze** hackathon as an **agenti
 
 - **Genblaze** orchestrates Runway image-to-video (`Pipeline` + `RunwayProvider`) and ingests try-on stills with SHA-256 provenance manifests.
 - **Backblaze B2** durably stores generated images, videos, and manifests (beyond short-lived Runway URLs).
+- **Aria** is a LangGraph agent with tools: URL lookup, wardrobe search, confirm-gated try-on / wardrobe add / save outfit.
 
-Full Devpost copy, judging alignment, demo script, and env setup: **[docs/hackathons/BACKBLAZE_GEN_MEDIA_2026.md](docs/hackathons/BACKBLAZE_GEN_MEDIA_2026.md)**
+| Doc | Purpose |
+|-----|---------|
+| [FINAL_5H_BATTLE_PLAN.md](docs/hackathons/FINAL_5H_BATTLE_PLAN.md) | Timed ADHD-friendly schedule + kill list |
+| [DEVPOST_SUBMISSION_DRAFT.md](docs/hackathons/DEVPOST_SUBMISSION_DRAFT.md) | Copy-paste for all Devpost form fields |
+| [BACKBLAZE_GEN_MEDIA_2026.md](docs/hackathons/BACKBLAZE_GEN_MEDIA_2026.md) | Judging map, demo script, B2/Genblaze detail |
 
 ```bash
 # Optional B2 + Genblaze (see backend/.env.example)
 cd backend && ./venv/bin/python -m scripts.test_genblaze_smoke
 ```
 
+Live proof: `GET https://styleai-backend-5vk9.onrender.com/health` → `b2_configured: true` · `GET /api/media/status`
 ## The Wow Moment
 
 Upload a selfie → add clothes from Amazon URLs → see yourself wearing them via Runway → place yourself at a "beach wedding" → animate as a 5-second runway video → talk to an AI stylist that knows your entire wardrobe.

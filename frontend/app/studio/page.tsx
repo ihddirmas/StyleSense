@@ -806,10 +806,10 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           {FEATURES.animateVideo && (
             <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
-                Proof video (Genblaze → B2)
+                Animate look
               </div>
               <p className="text-2xs text-muted mb-3 m-0">
-                Runway image-to-video via Genblaze Pipeline; output + SHA-256 manifest land in Backblaze B2.
+                Turn this still into a short runway clip. Output is archived to durable storage with a provenance manifest.
               </p>
               {eventUrl && (
                 <div className="text-xs mb-2" style={{ color: "var(--gold)" }}>
