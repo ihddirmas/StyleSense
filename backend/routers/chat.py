@@ -86,9 +86,7 @@ async def get_thread(other_id: str, limit: int = 100, user = Depends(current_use
     if unread_ids:
         supabase.table("messages").update({"read_at": "now()"}).in_("id", unread_ids).execute()
 
-    # Hydrate shared attachments. outfits + try_on_results now live in Aurora, so
-    # fetch them via the supabase_service helpers (not the Supabase client, which
-    # still owns messages/profiles/friendships).
+    # Hydrate shared attachments from Supabase (services.db).
     outfit_ids = {m["shared_outfit_id"] for m in rows if m.get("shared_outfit_id")}
     tryon_ids = {m["shared_tryon_id"] for m in rows if m.get("shared_tryon_id")}
     outfits_map = {o["id"]: o for o in supabase_service.get_outfits_by_ids(outfit_ids)}
@@ -115,8 +113,7 @@ async def send_message(req: SendMessageRequest, user = Depends(current_user)):
     if not (req.shared_outfit_id or req.shared_tryon_id or req.shared_image_url):
         raise HTTPException(400, "Messages must include a shared outfit, try-on, or image.")
 
-    # outfits/try_on_results live in Aurora now, so Postgres can no longer enforce
-    # this via FK - check existence + ownership here instead.
+    # Core tables in Supabase; existence + ownership checked here.
     if req.shared_outfit_id:
         outfit = supabase_service.get_outfit(req.shared_outfit_id)
         if not outfit or outfit["user_id"] != user["id"]:
