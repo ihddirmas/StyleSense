@@ -55,31 +55,46 @@ app = FastAPI(
     description="StyleAI backend (Runway + Anthropic + Supabase). Auth required on most routes.",
 )
 
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-_CORS_ORIGIN_REGEX = r"https://.*\.vercel\.app"
+def _parse_cors_origins() -> list[str]:
+    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    for env_key in ("FRONTEND_URL", "ADDITIONAL_CORS_ORIGINS"):
+        raw = os.getenv(env_key, "")
+        for part in raw.split(","):
+            p = part.strip().rstrip("/")
+            if p and p not in origins:
+                origins.append(p)
+    return origins
+
+
+# Vercel previews (*.vercel.app) + production custom domain (*.stylesense.ai)
+_CORS_ORIGIN_REGEX = (
+    r"https://([a-z0-9-]+\.)*vercel\.app"
+    r"|https://([a-z0-9-]+\.)*stylesense\.ai"
+)
+
+
+def _origin_allowed(origin: str) -> bool:
+    import re
+
+    if origin in _parse_cors_origins():
+        return True
+    return bool(re.fullmatch(_CORS_ORIGIN_REGEX, origin))
 
 
 def _cors_headers_for_request(request: Request) -> dict[str, str]:
     """Mirror CORSMiddleware allowlist so JSON error responses are not blocked by browsers."""
-    import re
-
     origin = request.headers.get("origin")
-    if not origin:
+    if not origin or not _origin_allowed(origin):
         return {}
-    allowed = {frontend_url, "http://localhost:3000", "http://127.0.0.1:3000"}
-    if origin in allowed or re.fullmatch(_CORS_ORIGIN_REGEX, origin):
-        return {
-            "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": "true",
-        }
-    return {}
+    return {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Credentials": "true",
+    }
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:3000", "http://127.0.0.1:3000"],
-    # Allow the production domain plus every Vercel preview deploy
-    # (each preview gets its own *.vercel.app subdomain).
+    allow_origins=_parse_cors_origins(),
     allow_origin_regex=_CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
