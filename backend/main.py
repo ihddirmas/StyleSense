@@ -56,12 +56,31 @@ app = FastAPI(
 )
 
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+_CORS_ORIGIN_REGEX = r"https://.*\.vercel\.app"
+
+
+def _cors_headers_for_request(request: Request) -> dict[str, str]:
+    """Mirror CORSMiddleware allowlist so JSON error responses are not blocked by browsers."""
+    import re
+
+    origin = request.headers.get("origin")
+    if not origin:
+        return {}
+    allowed = {frontend_url, "http://localhost:3000", "http://127.0.0.1:3000"}
+    if origin in allowed or re.fullmatch(_CORS_ORIGIN_REGEX, origin):
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+        }
+    return {}
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[frontend_url, "http://localhost:3000", "http://127.0.0.1:3000"],
     # Allow the production domain plus every Vercel preview deploy
     # (each preview gets its own *.vercel.app subdomain).
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=_CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -101,10 +120,19 @@ async def posthog_exception_middleware(request: Request, call_next):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    """Return JSON 500s so CORSMiddleware can attach headers (plain 500s show as 'Failed to fetch' in browsers)."""
-    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    """Return JSON 500s with CORS headers (otherwise browsers show 'Failed to fetch')."""
+    from fastapi import HTTPException
     from fastapi.responses import JSONResponse
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+    if isinstance(exc, HTTPException):
+        raise exc
+
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        headers=_cors_headers_for_request(request),
+    )
 
 
 app.include_router(avatar.router,    prefix="/api/avatar",    tags=["Avatar"])
@@ -139,6 +167,10 @@ def health():
     }
     if db_error:
         out["db_error"] = db_error
+        out["db_hint"] = (
+            "Set DATABASE_URL to Supabase transaction pooler URI (port 6543, host aws-0-*.pooler.supabase.com). "
+            "URL-encode special characters in the password. Or remove DATABASE_URL and restore Aurora IAM env vars."
+        )
     return out
 
 

@@ -1,7 +1,6 @@
 """Wardrobe CRUD: upload items, list, delete, and add-from-URL.
 
 Garment cleaning:
-    Direct uploads default to clean='auto' (Runway if credits, else rembg).
     URL-based items default to clean='none' (retailer images are usually already clean).
     Both can be overridden via the `clean` query/form parameter.
 """
@@ -54,7 +53,14 @@ async def list_items(
     occasion: Optional[str] = None,
     user = Depends(current_user),
 ):
-    return supabase_service.get_wardrobe_items(user["id"], category, occasion)
+    try:
+        return supabase_service.get_wardrobe_items(user["id"], category, occasion)
+    except Exception as exc:
+        logger.exception("wardrobe list failed for user %s", user["id"])
+        raise HTTPException(
+            503,
+            "Wardrobe database is unavailable. Check Render DATABASE_URL (Supabase pooler, port 6543).",
+        ) from exc
 
 
 @router.post("/upload")
