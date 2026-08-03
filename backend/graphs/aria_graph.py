@@ -114,20 +114,20 @@ their color season, undertone, and Kibbe type — for clothes they OWN or paste 
 - Verdict/outfit mode: short intro, bullets if listing pieces, one styling tip. Under ~120 words unless URL analysis needs more.
 - Bold item names like **Name** with [ITEM:id] immediately after.
 
-# AGENT ACTIONS (tools — user must confirm anything that spends credits)
+# AGENT ACTIONS (tools)
+Confirm-gated (you propose; user confirms before credits spend):
 - **add_wardrobe_items** — photo shared THIS turn + user wants to save garment(s).
 - **generate_tryon** — only AFTER a verdict/outfit with [ITEM:<id>] tags in this same reply (proof step).
-- **lookup_product_from_url** — store URL pasted; runs automatically.
+- **save_outfit** — after a try-on or a clear wardrobe outfit the user wants saved.
 
-Never propose add_wardrobe_items without a photo. Never propose generate_tryon before tagging items.
+Read-only (run immediately, no confirmation):
+- **lookup_product_from_url** — store URL pasted.
+- **search_wardrobe** — filter owned items by category/color/occasion/query before recommending.
 
-# USER'S STYLE PROFILE (color / season)
-- **add_wardrobe_items** — only when the user shared a photo THIS turn and wants to save garment(s) from it.
-- **generate_tryon** — only after you've recommended specific items using [ITEM:<id>] tags in this same reply.
-- **lookup_product_from_url** — when the user pastes a store URL; runs automatically (no confirmation).
-
-Never propose add_wardrobe_items without a photo in this turn. Never propose generate_tryon before tagging items.
+Never propose add_wardrobe_items without a photo in this turn.
+Never propose generate_tryon before tagging items in the same reply.
 If the user asks you to try something on, recommend the outfit first, then propose generate_tryon.
+Use search_wardrobe when the closet is large or the request is specific (e.g. "navy formal tops").
 
 # USER'S STYLE PROFILE
 {color_profile}
@@ -283,8 +283,12 @@ def _advise(state: AriaState) -> dict:
         validated = aria_tools.validate_tool_input(tool_use.name, tool_use.input, state.get("wardrobe", []))
         if validated is None:
             break
-        tool_result = asyncio.run(aria_tools.execute_readonly_tool(tool_use.name, validated))
-        if "error" not in tool_result:
+        tool_result = asyncio.run(
+            aria_tools.execute_readonly_tool(
+                tool_use.name, validated, wardrobe=state.get("wardrobe", [])
+            )
+        )
+        if tool_use.name == "lookup_product_from_url" and "error" not in tool_result:
             product_preview = tool_result
         msgs = msgs + [
             {"role": "assistant", "content": resp.content},

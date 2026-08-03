@@ -36,12 +36,43 @@ def _truthy(val: Optional[str]) -> bool:
 
 
 def _normalize_database_url(url: str) -> str:
-    """Ensure SQLAlchemy + psycopg2 driver prefix."""
+    """Ensure SQLAlchemy + psycopg2 driver prefix.
+
+    Also rewrite a common misconfig: direct `db.<ref>.supabase.co:6543` (IPv6-only
+    host + pooler port) → `aws-1-<region>.pooler.supabase.com:6543` with
+    `user.<ref>` tenant form so Render/IPv4 environments can connect.
+    """
     pg = "post" + "gres"
     if url.startswith(f"{pg}://"):
-        return url.replace(f"{pg}://", f"{pg}ql+psycopg2://", 1)
-    if url.startswith(f"{pg}ql://") and "+psycopg2" not in url:
-        return url.replace(f"{pg}ql://", f"{pg}ql+psycopg2://", 1)
+        url = url.replace(f"{pg}://", f"{pg}ql+psycopg2://", 1)
+    elif url.startswith(f"{pg}ql://") and "+psycopg2" not in url:
+        url = url.replace(f"{pg}ql://", f"{pg}ql+psycopg2://", 1)
+
+    try:
+        from urllib.parse import urlparse, urlunparse, quote_plus
+
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower()
+        if host.startswith("db.") and host.endswith(".supabase.co") and (parsed.port == 6543):
+            ref = host[len("db.") : -len(".supabase.co")]
+            user = parsed.username or pg
+            if "." not in user:
+                user = f"{user}.{ref}"
+            pwd = quote_plus(parsed.password or "")
+            # Prefer aws-1 pooler (aws-0 often rejects this project's tenant).
+            region = (os.getenv("SUPABASE_POOLER_REGION") or "ap-northeast-1").strip()
+            new_netloc = f"{user}:{pwd}@aws-1-{region}.pooler.supabase.com:6543"
+            query = parsed.query or ""
+            if "sslmode=" not in query:
+                query = (query + "&" if query else "") + "sslmode=require"
+            url = urlunparse((parsed.scheme, new_netloc, parsed.path or f"/{pg}", "", query, ""))
+            logger.warning(
+                "DATABASE_URL used db.*.supabase.co:6543 (IPv6 direct+pooler port); "
+                "rewrote to aws-1 pooler for connectivity"
+            )
+    except Exception as exc:
+        logger.warning("DATABASE_URL pooler rewrite skipped: %s", exc)
+
     return url
 
 

@@ -90,10 +90,69 @@ ANTHROPIC_TOOLS = [
             "required": ["url"],
         },
     },
+    {
+        "name": "search_wardrobe",
+        "description": (
+            "Filter the user's wardrobe by category, color, occasion, or free-text query. "
+            "Free, read-only, runs immediately. Use when the closet is large or the user "
+            "asks for a specific type of piece before you recommend an outfit."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Free-text match against name/color/brand, e.g. 'linen', 'navy'.",
+                },
+                "category": {
+                    "type": "string",
+                    "enum": sorted(VALID_CATEGORIES),
+                },
+                "color": {"type": "string"},
+                "occasion": {
+                    "type": "string",
+                    "enum": sorted(VALID_OCCASIONS),
+                },
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12,
+                    "description": "Max matches to return (default 8).",
+                },
+            },
+        },
+    },
+    {
+        "name": "save_outfit",
+        "description": (
+            "Save a named outfit made of wardrobe items the user liked (optionally with a "
+            "try-on preview URL). Free (no Runway credits) but writes to the database, so "
+            "it always requires explicit confirmation. Call after the user asks to save a look."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Short outfit name, e.g. 'Beach wedding guest'."},
+                "item_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 1,
+                    "maxItems": 8,
+                },
+                "occasion": {"type": "string"},
+                "preview_image_url": {
+                    "type": "string",
+                    "description": "Optional try-on image URL to attach as the outfit cover.",
+                },
+                "notes": {"type": "string"},
+            },
+            "required": ["name", "item_ids"],
+        },
+    },
 ]
 
-CONFIRM_REQUIRED_TOOLS = {"add_wardrobe_items", "generate_tryon"}
-READONLY_TOOLS = {"lookup_product_from_url"}
+CONFIRM_REQUIRED_TOOLS = {"add_wardrobe_items", "generate_tryon", "save_outfit"}
+READONLY_TOOLS = {"lookup_product_from_url", "search_wardrobe"}
 
 
 def _clean_item(raw: dict) -> Optional[dict]:
@@ -145,6 +204,55 @@ def _validate_lookup_product(raw_input: dict) -> Optional[dict]:
     return {"url": url.strip()}
 
 
+def _validate_search_wardrobe(raw_input: dict) -> Optional[dict]:
+    raw = raw_input or {}
+    out: dict = {}
+    query = raw.get("query")
+    if isinstance(query, str) and query.strip():
+        out["query"] = query.strip().lower()
+    category = (raw.get("category") or "").strip().lower()
+    if category in VALID_CATEGORIES:
+        out["category"] = category
+    color = raw.get("color")
+    if isinstance(color, str) and color.strip():
+        out["color"] = color.strip().lower()
+    occasion = (raw.get("occasion") or "").strip().lower()
+    if occasion in VALID_OCCASIONS:
+        out["occasion"] = occasion
+    limit = raw.get("limit", 8)
+    try:
+        limit_i = int(limit)
+    except (TypeError, ValueError):
+        limit_i = 8
+    out["limit"] = max(1, min(12, limit_i))
+    # Need at least one filter or a query; bare search of whole closet is ok with empty filters
+    return out
+
+
+def _validate_save_outfit(raw_input: dict, wardrobe: list) -> Optional[dict]:
+    raw = raw_input or {}
+    name = (raw.get("name") or "").strip()
+    if not name:
+        return None
+    item_ids = raw.get("item_ids")
+    if not isinstance(item_ids, list):
+        return None
+    wardrobe_ids = {w["id"] for w in (wardrobe or []) if w.get("id")}
+    valid_ids = [i for i in item_ids if isinstance(i, str) and i in wardrobe_ids]
+    if not valid_ids:
+        return None
+    preview = raw.get("preview_image_url")
+    notes = raw.get("notes")
+    occasion = raw.get("occasion")
+    return {
+        "name": name[:80],
+        "item_ids": valid_ids[:8],
+        "occasion": occasion.strip() if isinstance(occasion, str) and occasion.strip() else None,
+        "preview_image_url": preview.strip() if isinstance(preview, str) and preview.strip() else None,
+        "notes": notes.strip() if isinstance(notes, str) and notes.strip() else None,
+    }
+
+
 def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[dict]:
     """Re-validate Claude's tool_use input server-side before it's ever shown to the
     user (confirm-required tools) or executed (read-only tools). Returns a cleaned
@@ -155,6 +263,10 @@ def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[
         return _validate_generate_tryon(raw_input, wardrobe)
     if name == "lookup_product_from_url":
         return _validate_lookup_product(raw_input)
+    if name == "search_wardrobe":
+        return _validate_search_wardrobe(raw_input)
+    if name == "save_outfit":
+        return _validate_save_outfit(raw_input, wardrobe)
     return None
 
 
@@ -193,6 +305,20 @@ def _build_generate_tryon_action(validated_input: dict, ctx: dict) -> Optional[d
     }
 
 
+def _build_save_outfit_action(validated_input: dict, ctx: dict) -> Optional[dict]:
+    wardrobe = ctx.get("wardrobe") or []
+    picked = [w for w in wardrobe if w.get("id") in validated_input["item_ids"]]
+    if not picked:
+        return None
+    names = ", ".join(w["name"] for w in picked)
+    return {
+        "tool_name": "save_outfit",
+        "tool_input": validated_input,
+        "summary": f'Save outfit "{validated_input["name"]}" ({names})?',
+        "cost_credits": 0,
+    }
+
+
 def build_pending_action(name: str, validated_input: dict, ctx: dict) -> Optional[dict]:
     """Inject server-known context (photo URL, avatar selfie) and produce the
     human-readable summary + credit cost the frontend shows on the confirm card."""
@@ -200,6 +326,8 @@ def build_pending_action(name: str, validated_input: dict, ctx: dict) -> Optiona
         return _build_add_wardrobe_items_action(validated_input, ctx)
     if name == "generate_tryon":
         return _build_generate_tryon_action(validated_input, ctx)
+    if name == "save_outfit":
+        return _build_save_outfit_action(validated_input, ctx)
     return None
 
 
@@ -266,31 +394,88 @@ async def _execute_generate_tryon(tool_input: dict, user_id: str) -> dict:
     }
 
 
+async def _execute_save_outfit(tool_input: dict, user_id: str) -> dict:
+    from services import supabase_service
+
+    outfit = supabase_service.save_outfit(
+        user_id=user_id,
+        name=tool_input["name"],
+        item_ids=tool_input["item_ids"],
+        occasion=tool_input.get("occasion"),
+        preview_image_url=tool_input.get("preview_image_url"),
+        notes=tool_input.get("notes"),
+    )
+    return {
+        "summary": f'Saved outfit "{tool_input["name"]}".',
+        "created": [outfit],
+        "failed": [],
+        "outfit_id": outfit.get("id") if isinstance(outfit, dict) else None,
+    }
+
+
+def _search_wardrobe_items(tool_input: dict, wardrobe: list) -> dict:
+    query = tool_input.get("query") or ""
+    category = tool_input.get("category")
+    color = tool_input.get("color") or ""
+    occasion = tool_input.get("occasion")
+    limit = tool_input.get("limit") or 8
+
+    matches = []
+    for w in wardrobe or []:
+        if category and (w.get("category") or "").lower() != category:
+            continue
+        if occasion and occasion != "any":
+            w_occ = (w.get("occasion") or "").lower()
+            if w_occ and w_occ != occasion and occasion not in w_occ:
+                continue
+        blob = " ".join(
+            str(w.get(k) or "") for k in ("name", "color", "brand", "category", "occasion")
+        ).lower()
+        if query and query not in blob:
+            continue
+        if color and color not in (w.get("color") or "").lower() and color not in blob:
+            continue
+        matches.append({
+            "id": w.get("id"),
+            "name": w.get("name"),
+            "category": w.get("category"),
+            "color": w.get("color"),
+            "occasion": w.get("occasion"),
+            "brand": w.get("brand"),
+        })
+        if len(matches) >= limit:
+            break
+    return {"count": len(matches), "items": matches}
+
+
 async def execute_confirmed_tool(name: str, tool_input: dict, user_id: str) -> dict:
     """Execute a user-confirmed tool call via the same service the manual UI uses."""
     if name == "add_wardrobe_items":
         return await _execute_add_wardrobe_items(tool_input, user_id)
     if name == "generate_tryon":
         return await _execute_generate_tryon(tool_input, user_id)
+    if name == "save_outfit":
+        return await _execute_save_outfit(tool_input, user_id)
     raise ValueError(f"Unknown or not-yet-supported tool: {name}")
 
 
-async def execute_readonly_tool(name: str, tool_input: dict) -> dict:
+async def execute_readonly_tool(name: str, tool_input: dict, wardrobe: Optional[list] = None) -> dict:
     """Execute a read-only tool immediately, inside the tool-use loop in
     aria_graph._advise -- it costs nothing and mutates nothing, so unlike
     CONFIRM_REQUIRED_TOOLS it never needs a user confirmation round-trip."""
-    if name != "lookup_product_from_url":
-        raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")
+    if name == "lookup_product_from_url":
+        from services.scrape_service import scrape_product
 
-    from services.scrape_service import scrape_product
-
-    try:
-        result = await scrape_product(tool_input["url"])
-    except Exception as e:
-        return {"error": f"Could not fetch that URL: {e}"}
-    return {
-        "image_url": result.image_url,
-        "name": result.name,
-        "source_url": result.source_url,
-        "suggested_category": result.suggested_category,
-    }
+        try:
+            result = await scrape_product(tool_input["url"])
+        except Exception as e:
+            return {"error": f"Could not fetch that URL: {e}"}
+        return {
+            "image_url": result.image_url,
+            "name": result.name,
+            "source_url": result.source_url,
+            "suggested_category": result.suggested_category,
+        }
+    if name == "search_wardrobe":
+        return _search_wardrobe_items(tool_input, wardrobe or [])
+    raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")

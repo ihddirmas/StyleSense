@@ -72,15 +72,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Toaster />
           </AuthProvider>
         </PostHogProvider>
-        <AuthProvider initialUser={user} initialProfile={profile}>
-          {user ? (
-            <LayoutClient>{children}</LayoutClient>
-          ) : (
-            // Public pages (landing / login / signup) render their own full-height layout
-            <>{children}</>
-          )}
-          <Toaster />
-        </AuthProvider>
         <SpeedInsights />
         <Analytics />
       </body>
