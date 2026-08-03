@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Calendar, Sparkles, Share2, Film, Download, Plus, UserPlus, Loader2 } from "lucide-react";
+import { X, Calendar, Sparkles, Share2, Film, Download, Plus, UserPlus, Loader2, Archive } from "lucide-react";
 import type { TryOnResult } from "@/types";
 import { ShareToFriendModal } from "@/components/ShareToFriendModal";
 import { apiPost } from "@/lib/api";
@@ -22,6 +22,8 @@ export function TryOnDetailModal({
   const router = useRouter();
   const display = result.event_scene_url || result.result_image_url;
   const hasVideo = !!result.result_video_url;
+  const archived = !!(result.b2_image_url || result.image_manifest_hash);
+  const manifestShort = result.image_manifest_hash?.slice(0, 12);
 
   async function extractToWardrobe(name: string) {
     setExtracting(true);
@@ -104,6 +106,12 @@ export function TryOnDetailModal({
               )}
               {result.model_used && <span className="chip">{result.model_used}</span>}
               {hasVideo && <span className="chip"><Film size={11} style={{ marginRight: 4 }} /> Video</span>}
+              {archived && (
+                <span className="chip" title={result.image_manifest_hash || undefined}>
+                  <Archive size={11} style={{ marginRight: 4 }} />
+                  B2 archive{manifestShort ? ` · ${manifestShort}…` : ""}
+                </span>
+              )}
               <span className="chip">
                 <Calendar size={11} style={{ marginRight: 4 }} />
                 {new Date(result.created_at).toLocaleString(undefined, {

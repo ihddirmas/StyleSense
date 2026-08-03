@@ -121,63 +121,24 @@ export default function LandingNav() {
           {NAV_LINKS.map(({ id, label }) => (
             <button
               key={id}
+              type="button"
               onClick={() => scrollToSection(id)}
-              style={{
-                fontSize: 14,
-                color: "var(--text-muted)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                letterSpacing: "0.04em",
-                fontFamily: "Public Sans, sans-serif",
-                transition: "color 0.2s",
-                padding: 0,
-              }}
-              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "var(--text)")}
-              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "var(--text-muted)")}
+              className="landing-nav-link bg-transparent border-0 cursor-pointer p-0 tracking-wide"
             >
               {label}
             </button>
           ))}
-          <Link
-            href="/pricing"
-            style={{
-              fontSize: 14,
-              color: "var(--text-muted)",
-              textDecoration: "none",
-              letterSpacing: "0.04em",
-              fontFamily: "Public Sans, sans-serif",
-              transition: "color 0.2s",
-            }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text)")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text-muted)")}
-          >
+          <Link href="/pricing" className="landing-nav-link tracking-wide">
             Pricing
           </Link>
         </div>
 
         {/* CTAs */}
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Link
-            href="/login"
-            className="landing-nav-signin"
-            style={{
-              fontSize: 14,
-              color: "var(--ink)",
-              textDecoration: "none",
-              padding: "8px 20px",
-              border: "1px solid var(--border-hover)",
-              letterSpacing: "0.04em",
-              transition: "all 0.2s",
-            }}
-          >
+          <Link href="/login" className="landing-nav-signin btn-secondary btn-sm tracking-wide">
             Sign in
           </Link>
-          <Link
-            href="/signup"
-            className="btn-primary"
-            style={{ fontSize: 14, padding: "8px 20px", letterSpacing: "0.04em" }}
-          >
+          <Link href="/signup" className="btn-primary btn-sm tracking-wide">
             Get started
           </Link>
 

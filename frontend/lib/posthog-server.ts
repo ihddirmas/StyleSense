@@ -1,12 +1,14 @@
 import { PostHog } from "posthog-node";
 
+import { getPostHogPublicKey } from "./posthog-key";
+
 export function getPostHogClient(): PostHog {
-  const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+  const token = getPostHogPublicKey();
   if (!token) {
     if (process.env.NODE_ENV !== "production") {
       console.error(
-        "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, " +
-        "this causes events to be silently missed. This error stops appearing once NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN is configured"
+        "PostHog project token is missing (set NEXT_PUBLIC_POSTHOG_KEY or NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN). " +
+        "Events will be silently missed until configured."
       );
     }
   }

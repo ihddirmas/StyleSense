@@ -1,0 +1,590 @@
+# Instincts generated from https://github.com/ihddirmas/StyleSense
+# Generated: 2026-07-30T15:39:37.862Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: StyleSense-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Commit Length
+
+## Action
+
+Write moderate-length commit messages (~64 characters)
+
+## Evidence
+
+- Average commit message length: 64 chars
+- Based on 22 commits
+
+---
+id: StyleSense-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: StyleSense-import-alias
+trigger: "when importing modules"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Import Alias
+
+## Action
+
+Use path aliases (@/, ~/) instead of relative imports
+
+## Evidence
+
+- Import analysis shows alias pattern
+- Example: import { x } from '@/lib/x'
+
+---
+id: StyleSense-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Export Style
+
+## Action
+
+Prefer default exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: default
+
+---
+id: StyleSense-test-framework
+trigger: "when writing tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Test Framework
+
+## Action
+
+Use playwright as the test framework
+
+## Evidence
+
+- Test framework detected: playwright
+- File pattern: *.spec.ts
+
+---
+id: StyleSense-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Test Naming
+
+## Action
+
+Name test files using the pattern: *.spec.ts
+
+## Evidence
+
+- File pattern: *.spec.ts
+- Consistent across test files
+
+---
+id: StyleSense-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Test Types
+
+## Action
+
+Write unit, e2e tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, e2e
+- Coverage config: no
+
+---
+id: StyleSense-workflow-database-migration
+trigger: "when modifying the database schema or adding tables"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Workflow Database Migration
+
+## Action
+
+Follow the database-migration workflow:
+1. Create migration file
+2. Update schema definitions
+3. Generate/update types
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~7x per month
+- Files: **/schema.*, migrations/*
+
+---
+id: StyleSense-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~19x per month
+- Files: frontend/app/studio/*, frontend/components/studio/*, frontend/app/dashboard/*
+
+---
+id: StyleSense-workflow-add-or-update-usage-cap-or-meter
+trigger: "when doing add or update usage cap or meter"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Workflow Add Or Update Usage Cap Or Meter
+
+## Action
+
+Follow the add-or-update-usage-cap-or-meter workflow:
+1. Update backend logic to enforce or modify usage caps (e.g., usage_limits.py, tryon.py).
+2. Update or create database schema/migration files for new tracking (e.g., aurora_schema.sql, migration files).
+3. Update frontend components to display usage (e.g., UsageMeter.tsx, dashboard/page.tsx).
+4. Add or update tests for usage limits (e.g., test_usage_scalability.py).
+5. Optionally, instrument analytics or notifications (e.g., analytics_service.py, email_service.py).
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: backend/services/usage_limits.py, backend/routers/tryon.py, backend/aurora_schema.sql
+
+---
+id: StyleSense-workflow-instrument-or-swap-analytics-or-error-monitoring
+trigger: "when doing instrument or swap analytics or error monitoring"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Workflow Instrument Or Swap Analytics Or Error Monitoring
+
+## Action
+
+Follow the instrument-or-swap-analytics-or-error-monitoring workflow:
+1. Update or replace instrumentation entry points (e.g., instrumentation.ts, instrumentation-client.ts).
+2. Update or remove provider-specific config files (e.g., sentry.edge.config.ts, sentry.server.config.ts).
+3. Update package.json and package-lock.json to add/remove dependencies.
+4. Update environment variable examples (.env.example) as needed.
+5. Update backend middleware or service files for analytics/error tracking.
+6. Update frontend global error boundaries or analytics providers.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: frontend/instrumentation.ts, frontend/instrumentation-client.ts, frontend/app/global-error.tsx
+
+---
+id: StyleSense-workflow-feature-development-frontend-implementation
+trigger: "when doing feature development frontend implementation"
+confidence: 0.7
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Workflow Feature Development Frontend Implementation
+
+## Action
+
+Follow the feature-development-frontend-implementation workflow:
+1. Create or update frontend page/component files (e.g., page.tsx, ComponentName.tsx).
+2. If needed, update or create supporting backend endpoints (e.g., routers/*.py).
+3. Update or create frontend store/state files if state management is involved.
+4. Optionally, update or add tests and documentation.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~4x per month
+- Files: frontend/app/dashboard/page.tsx, frontend/components/dashboard/UsageMeter.tsx, frontend/components/dashboard/ContinueCard.tsx
+
+---
+id: StyleSense-workflow-apply-design-system-consistency-fixes
+trigger: "when doing apply design system consistency fixes"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ihddirmas/StyleSense
+---
+
+# StyleSense Workflow Apply Design System Consistency Fixes
+
+## Action
+
+Follow the apply-design-system-consistency-fixes workflow:
+1. Identify and replace non-standard styles (e.g., font sizes, border radius) with design system utility classes.
+2. Update multiple frontend component and page files.
+3. Update design system config files (e.g., tailwind.config.ts) if new classes or tokens are needed.
+4. Optionally, update e2e or visual tests to reflect style changes.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: frontend/components/**/*.tsx, frontend/app/**/*.tsx, frontend/tailwind.config.ts
+
+---
+id: stylesense-instinct-file-naming-camelcase
+trigger: "When creating new TypeScript files"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct File Naming Camelcase
+
+## Action
+
+Name files using camelCase (e.g., usageMeter.tsx)
+
+## Evidence
+
+- Pattern in namingConventions.files: camelCase
+- frontend/components/dashboard/UsageMeter.tsx
+
+---
+id: stylesense-instinct-function-naming-camelcase
+trigger: "When defining functions in TypeScript"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Function Naming Camelcase
+
+## Action
+
+Name functions using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: stylesense-instinct-class-naming-pascalcase
+trigger: "When defining classes in TypeScript"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Class Naming Pascalcase
+
+## Action
+
+Name classes using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: stylesense-instinct-constant-naming-screaming-snake-case
+trigger: "When defining constants in TypeScript"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Constant Naming Screaming Snake Case
+
+## Action
+
+Name constants using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: stylesense-instinct-import-alias
+trigger: "When importing modules in TypeScript"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Import Alias
+
+## Action
+
+Use import aliases for module paths
+
+## Evidence
+
+- Pattern in importStyle: alias
+
+---
+id: stylesense-instinct-default-export
+trigger: "When exporting modules in TypeScript"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Default Export
+
+## Action
+
+Use default exports
+
+## Evidence
+
+- Pattern in exportStyle: default
+
+---
+id: stylesense-instinct-playwright-test-pattern
+trigger: "When adding new tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Playwright Test Pattern
+
+## Action
+
+Name test files with the .spec.ts suffix
+
+## Evidence
+
+- Pattern in testing.filePattern: *.spec.ts
+- frontend/tests/test_usage_scalability.py
+
+---
+id: stylesense-instinct-playwright-framework
+trigger: "When writing end-to-end or unit tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Playwright Framework
+
+## Action
+
+Use Playwright as the testing framework
+
+## Evidence
+
+- Pattern in testing.framework: playwright
+
+---
+id: stylesense-instinct-add-tests-for-features
+trigger: "When implementing a new feature"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Add Tests For Features
+
+## Action
+
+Add or update tests for the feature
+
+## Evidence
+
+- feature-development workflow: Add tests for feature
+- add-or-update-usage-cap-or-meter: Add or update tests for usage limits
+
+---
+id: stylesense-instinct-git-commit-prefix
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Git Commit Prefix
+
+## Action
+
+Prefix the commit message with feat, fix, or docs as appropriate
+
+## Evidence
+
+- Pattern in commits.prefixes
+- Examples: 'feat: add GET /api/tryon/usage-status endpoint', 'fix: guard usage meter against zero/negative limit'
+
+---
+id: stylesense-instinct-git-commit-length
+trigger: "When writing a commit message"
+confidence: 0.8
+domain: git
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Git Commit Length
+
+## Action
+
+Keep the commit message concise (around 64 characters on average)
+
+## Evidence
+
+- Pattern in commits.averageLength: 64
+
+---
+id: stylesense-instinct-add-usage-cap-or-meter
+trigger: "When someone wants to introduce or adjust usage limits, display usage meters, or notify users about cap hits"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Add Usage Cap Or Meter
+
+## Action
+
+Update backend logic, database schema, frontend components, and tests related to usage caps/meters; optionally update analytics/notifications
+
+## Evidence
+
+- Workflow: add-or-update-usage-cap-or-meter
+- Commits and files: backend/services/usage_limits.py, frontend/components/dashboard/UsageMeter.tsx, etc.
+
+---
+id: stylesense-instinct-instrument-or-swap-analytics
+trigger: "When someone wants to add, replace, or update analytics or error monitoring providers"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Instrument Or Swap Analytics
+
+## Action
+
+Update instrumentation entry points, provider configs, dependencies, environment variables, and backend/ frontend analytics/error tracking code
+
+## Evidence
+
+- Workflow: instrument-or-swap-analytics-or-error-monitoring
+- Commits: Replace Sentry with Highlight.io for frontend error monitoring
+
+---
+id: stylesense-instinct-feature-development-frontend
+trigger: "When someone wants to add a new user-facing feature or UI element"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Feature Development Frontend
+
+## Action
+
+Create or update frontend components/pages, update backend endpoints if needed, update state management, and optionally add tests/docs
+
+## Evidence
+
+- Workflow: feature-development-frontend-implementation
+- Files: frontend/app/dashboard/page.tsx, backend/routers/tryon.py
+
+---
+id: stylesense-instinct-apply-design-system-consistency
+trigger: "When someone wants to enforce or update design system standards across the frontend"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: ihddirmas/StyleSense
+---
+
+# Stylesense Instinct Apply Design System Consistency
+
+## Action
+
+Replace non-standard styles with design system utility classes, update config files, and optionally update tests
+
+## Evidence
+
+- Workflow: apply-design-system-consistency-fixes
+- Files: frontend/tailwind.config.ts, frontend/components/**/*.tsx
+

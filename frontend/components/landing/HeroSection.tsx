@@ -169,30 +169,23 @@ export default function HeroSection() {
 
         <p
           ref={subtextRef}
-          style={{
-            fontSize: "clamp(16px, 1.5vw, 20px)",
-            lineHeight: 1.7,
-            color: "var(--text-muted)",
-            margin: "0 auto 44px",
-            maxWidth: 520,
-            opacity: 0,
-          }}
+          className="text-muted opacity-0 mx-auto mb-11 max-w-[520px] text-base sm:text-lg leading-relaxed"
         >
           Upload a selfie. Add clothes from any URL. See yourself in them — in any scene, any world, in seconds.
         </p>
 
         <div
           ref={ctasRef}
-          style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", opacity: 0 }}
+          className="flex flex-wrap justify-center gap-3.5 opacity-0"
         >
           <Link
             href="/signup"
-            className="btn-primary"
-            style={{ fontSize: 14, padding: "14px 36px", letterSpacing: "0.06em" }}
+            className="btn-primary tracking-wide px-9 py-3.5 text-sm"
           >
             Get started free
           </Link>
           <button
+            type="button"
             onClick={() => {
               const scroller = document.querySelector(".landing-scroll");
               const target = document.getElementById("product-demo");
@@ -201,25 +194,7 @@ export default function HeroSection() {
                 scroller.scrollTo({ top, behavior: "smooth" });
               }
             }}
-            style={{
-              fontSize: 14,
-              padding: "14px 36px",
-              color: "var(--text-muted)",
-              background: "none",
-              border: "1px solid var(--border)",
-              letterSpacing: "0.06em",
-              cursor: "pointer",
-              fontFamily: "Public Sans, sans-serif",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--text)";
-              e.currentTarget.style.borderColor = "var(--border-hover)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--text-muted)";
-              e.currentTarget.style.borderColor = "var(--border)";
-            }}
+            className="btn-secondary tracking-wide px-9 py-3.5 text-sm"
           >
             See how it works ↓
           </button>
