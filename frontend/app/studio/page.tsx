@@ -24,6 +24,8 @@ import { TRYON_MODELS, VIDEO_MODELS } from "@/lib/models";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { WardrobeItem, TryOnResult } from "@/types";
 import posthog from "posthog-js";
+import { FEATURES } from "@/lib/features";
+import { MediaProvenanceBanner } from "@/components/studio/MediaProvenanceBanner";
 
 const MOTION_PRESETS = [
   { label: "Slow turn to camera", prompt: "The subject slowly turns toward the camera with a confident editorial pose, gentle hair movement." },
@@ -758,9 +760,19 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             <button className="btn-secondary w-full mt-2" onClick={() => setShowCompare((v) => !v)} disabled={!resultUrl || !avatarSelfieUrl}>
               <ArrowLeftRight size={14} /> {showCompare ? "Hide before/after" : "Before / After"}
             </button>
+            {FEATURES.mediaProvenance && activeTryOn && (activeTryOn.imageManifestHash || activeTryOn.videoManifestHash) && (
+              <div className="mt-3">
+                <MediaProvenanceBanner
+                  imageManifestHash={activeTryOn.imageManifestHash}
+                  videoManifestHash={activeTryOn.videoManifestHash}
+                  b2ImageUrl={activeTryOn.b2ImageUrl}
+                  b2VideoUrl={activeTryOn.b2VideoUrl}
+                />
+              </div>
+            )}
           </div>
 
-          <>
+          {FEATURES.eventScene && (
             <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Place in event</div>
               <input className="input mb-2" placeholder="e.g. beach wedding"
@@ -789,9 +801,16 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 ))}
               </div>
             </div>
+          )}
 
+          {FEATURES.animateVideo && (
             <div className="surface p-4">
-              <div className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Animate your current scene</div>
+              <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+                Proof video (Genblaze → B2)
+              </div>
+              <p className="text-2xs text-muted mb-3 m-0">
+                Runway image-to-video via Genblaze Pipeline; output + SHA-256 manifest land in Backblaze B2.
+              </p>
               {eventUrl && (
                 <div className="text-xs mb-2" style={{ color: "var(--gold)" }}>
                   Using placed scene: {eventInput || "current scene"}
@@ -838,7 +857,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 </button>
               )}
             </div>
-          </>
+          )}
 
           {resultUrl && (
             <div className="surface p-4 space-y-2">
@@ -848,9 +867,11 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               <button className="btn-secondary w-full" onClick={saveTryOnOnly} disabled={!resultId}>
                 <Save size={14} /> Save to gallery
               </button>
+              {FEATURES.social && (
               <button className="btn-secondary w-full" onClick={() => setShowShare(true)} disabled={!resultId}>
                 <Share2 size={14} /> Share with friend
               </button>
+              )}
               <button
                 className="btn-secondary w-full"
                 onClick={() => downloadWithWatermark(eventUrl || resultUrl!)}

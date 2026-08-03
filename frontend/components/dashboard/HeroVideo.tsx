@@ -1,4 +1,6 @@
 "use client";
+import { FEATURES } from "@/lib/features";
+import { ProfileHero } from "./ProfileHero";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
@@ -10,6 +12,10 @@ import { toast } from "@/components/ui/Toast";
 import { OnboardingHero } from "./OnboardingHero";
 
 export function HeroVideo() {
+  if (!FEATURES.heroVideo) {
+    return <ProfileHero />;
+  }
+
   const { user, profile } = useAuth();
   const {
     avatarSelfieUrl,

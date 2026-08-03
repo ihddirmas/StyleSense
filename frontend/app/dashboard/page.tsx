@@ -130,7 +130,7 @@ export default function DashboardPage() {
     <PageContainer>
       <PageHeader
         eyebrow="Dashboard"
-        title="Your Digital Runway"
+        title="Your Style Intelligence"
         titleSize="responsive"
         action={statsAction}
       />
@@ -148,8 +148,8 @@ export default function DashboardPage() {
         >
           <p className="flex-1 text-xs sm:text-sm leading-relaxed text-muted">
             {avatarSelfieUrl
-              ? "Add items to your Wardrobe, then head to Studio to try them on your avatar."
-              : "Start by uploading a selfie in Settings, then add clothes to your Wardrobe."}
+              ? "Add items or paste a URL in Aria — get a verdict grounded in your color season and Kibbe type."
+              : "Start onboarding: face + full-body photos for your color season and Kibbe profile."}
           </p>
           <button
             type="button"

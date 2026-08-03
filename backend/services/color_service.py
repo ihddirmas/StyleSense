@@ -37,10 +37,25 @@ _UNDERTONE_SEASON_MAP = {
     "neutral": ["spring", "summer", "autumn", "winter"]
 }
 
-COLOR_PROMPT = """Analyze the person in this photo for personal styling (color analysis + body-aware fashion advice).
+COLOR_PROMPT = """Analyze the person in this photo for personal styling (seasonal color analysis).
 
-Reply with ONLY a JSON object of this exact shape (no prose, no markdown fences):
+STEP 1 — Observe traits BEFORE labeling (do not skip):
+- Skin undertone cues (veins if visible, golden vs pink cast in natural light)
+- Hair color and depth; eye color
+- Overall contrast (hair vs skin vs eyes)
+- Photo quality: lighting_quality "good" | "fair" | "poor" (warm lamps, heavy filters, backlit = poor)
+
+STEP 2 — Reason step by step in reasoning_steps (2-4 short strings), then assign labels.
+
+Reply with ONLY a JSON object (no prose, no markdown fences):
 {
+  "observed_traits": {
+    "skin_undertone_cues": "brief",
+    "hair": "brief",
+    "eyes": "brief",
+    "lighting_quality": "good" | "fair" | "poor"
+  },
+  "reasoning_steps": ["step 1", "step 2"],
   "undertone": "warm" | "cool" | "neutral",
   "season": "spring" | "summer" | "autumn" | "winter",
   "contrast": "low" | "medium" | "high",
@@ -48,15 +63,15 @@ Reply with ONLY a JSON object of this exact shape (no prose, no markdown fences)
   "avoid_colors": ["3-6 colors that wash them out or clash"],
   "body_type": "rectangle" | "hourglass" | "pear" | "inverted_triangle" | "apple" | "unknown",
   "face_shape": "oval" | "round" | "square" | "heart" | "oblong" | "diamond" | "unknown",
-  "hair": "short phrase: length, color, texture (e.g. 'short black curly')",
+  "hair": "short phrase: length, color, texture",
   "photo_scope": "face" | "upper_body" | "full_body",
-  "notes": "one short sentence of styling guidance for their coloring + body"
+  "confidence": 0.0-1.0,
+  "limitations": ["e.g. warm indoor lighting may skew undertone"],
+  "notes": "one short sentence of styling guidance for their coloring"
 }
 
-Base coloring on visible skin undertone, hair, and eye color. Judge body_type ONLY if the
-torso/full body is visible; if only the face/head is visible, set body_type and face guidance
-to "unknown" and photo_scope to "face". If lighting is poor, make your best reasonable
-estimate. Return ONLY the JSON."""
+Judge body_type ONLY if torso/full body is visible; else body_type "unknown" and photo_scope "face".
+If lighting_quality is poor, lower confidence below 0.65. Return ONLY the JSON."""
 
 VALID_UNDERTONE = {"warm", "cool", "neutral"}
 VALID_SEASON = {"spring", "summer", "autumn", "winter"}
@@ -118,7 +133,24 @@ def _normalize(data: dict) -> dict:
     contrast = contrast if contrast in VALID_CONTRAST else "medium"
     
     corrected_season, corrected_contrast, was_corrected = _validate_coherence(undertone, season, contrast)
-    
+
+    lighting = str((data.get("observed_traits") or {}).get("lighting_quality", "fair")).lower()
+    if lighting not in ("good", "fair", "poor"):
+        lighting = "fair"
+    try:
+        confidence = float(data.get("confidence", 0.75))
+    except (TypeError, ValueError):
+        confidence = 0.75
+    confidence = max(0.0, min(1.0, confidence))
+    if lighting == "poor":
+        confidence = min(confidence, 0.6)
+    elif lighting == "fair":
+        confidence = min(confidence, 0.85)
+
+    reasoning = [str(s).strip() for s in (data.get("reasoning_steps") or []) if str(s).strip()][:5]
+    limitations = [str(s).strip() for s in (data.get("limitations") or []) if str(s).strip()][:4]
+    observed = data.get("observed_traits") if isinstance(data.get("observed_traits"), dict) else {}
+
     return {
         "undertone": undertone,
         "season": corrected_season,
@@ -131,6 +163,11 @@ def _normalize(data: dict) -> dict:
         "photo_scope": scope if scope in VALID_SCOPE else "face",
         "notes": str(data.get("notes", "")).strip()[:300],
         "validation_corrected": was_corrected,
+        "confidence": confidence,
+        "lighting_quality": lighting,
+        "reasoning_steps": reasoning,
+        "limitations": limitations,
+        "observed_traits": observed,
     }
 
 
@@ -204,11 +241,19 @@ def format_color_profile(profile: Optional[dict]) -> str:
     body = profile.get("body_type") or "unknown"
     face = profile.get("face_shape") or "unknown"
     hair = profile.get("hair") or "?"
+    conf = profile.get("confidence")
+    conf_str = f" Confidence: {conf:.0%}." if isinstance(conf, (int, float)) else ""
+    limits = profile.get("limitations") or []
+    limit_str = f" Caveats: {'; '.join(limits)}." if limits else ""
+    reasoning = profile.get("reasoning_steps") or []
+    reason_str = f" Reasoning: {' → '.join(reasoning)}." if reasoning else ""
+    lighting = profile.get("lighting_quality")
+    light_str = f" Photo lighting: {lighting}." if lighting else ""
     return (
         f"Undertone: {profile.get('undertone', '?')}; "
         f"Season: {profile.get('season') or '?'}; "
-        f"Contrast: {profile.get('contrast', '?')}. "
+        f"Contrast: {profile.get('contrast', '?')}.{conf_str}{light_str}{reason_str} "
         f"Flattering colors: {flattering}. Avoid: {avoid}. "
         f"Body type: {body}; Face shape: {face}; Hair: {hair}. "
-        f"{profile.get('notes', '')}"
+        f"{profile.get('notes', '')}{limit_str}"
     ).strip()

@@ -20,9 +20,10 @@ export function TryOnDetailModal({
   const [extracting, setExtracting] = useState(false);
   const [showExtractDialog, setShowExtractDialog] = useState(false);
   const router = useRouter();
-  const display = result.event_scene_url || result.result_image_url;
-  const hasVideo = !!result.result_video_url;
-  const archived = !!(result.b2_image_url || result.image_manifest_hash);
+  const display = result.b2_image_url || result.event_scene_url || result.result_image_url;
+  const hasVideo = !!(result.b2_video_url || result.result_video_url);
+  const videoSrc = result.b2_video_url || result.result_video_url;
+  const archived = !!(result.b2_image_url || result.image_manifest_hash || result.b2_video_url || result.video_manifest_hash);
   const manifestShort = result.image_manifest_hash?.slice(0, 12);
 
   async function extractToWardrobe(name: string) {
@@ -69,7 +70,7 @@ export function TryOnDetailModal({
           {/* LEFT: full-size image / video */}
           <div className="relative" style={{ background: "var(--bg)", minHeight: 400 }}>
             {hasVideo ? (
-              <video src={result.result_video_url!} controls autoPlay loop
+              <video src={videoSrc!} controls autoPlay loop
                      className="w-full h-full object-contain"
                      style={{ maxHeight: "90vh" }} />
             ) : (

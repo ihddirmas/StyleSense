@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useTasks } from "@/store/tasks";
 import { apiGet } from "@/lib/api";
+import { FEATURES } from "@/lib/features";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -64,9 +65,13 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const navItems = [
     { href: "/wardrobe", icon: Shirt,         label: "Wardrobe", badge: 0                },
     { href: "/outfits",  icon: Layers,        label: "Outfits",  badge: 0                },
-    { href: "/chat",     icon: MessageCircle, label: "Chat",     badge: unreadMessages   },
+    ...(FEATURES.social ? [
+      { href: "/chat",     icon: MessageCircle, label: "Chat",     badge: unreadMessages   },
+    ] : []),
     { href: "/activity", icon: Bell,          label: "Activity", badge: finishedTaskCount },
-    { href: "/friends",  icon: Users,         label: "Friends",  badge: pendingFriends    },
+    ...(FEATURES.social ? [
+      { href: "/friends",  icon: Users,         label: "Friends",  badge: pendingFriends    },
+    ] : []),
   ];
 
   // Collapsed strip — just the chevron to re-open

@@ -41,6 +41,10 @@ export interface TryOnTask extends BaseTask {
   resultUrl?: string;
   resultId?: string;
   nobgUrl?: string;
+  b2ImageUrl?: string;
+  imageManifestHash?: string;
+  b2VideoUrl?: string;
+  videoManifestHash?: string;
   // Derived
   eventUrl?: string;
   videoUrl?: string;
@@ -134,7 +138,13 @@ export const useTasks = create<State>((set, get) => ({
     const model = input.model ?? (input.quality === "pro" ? "gen4_image" : "gen4_image_turbo");
     const setting = input.setting?.trim() || undefined;
     const promise = input.items.length === 1
-      ? apiPost<{ result_image_url: string; result_id: string; result_nobg_url?: string }>("/api/tryon/generate", {
+      ? apiPost<{
+          result_image_url: string;
+          result_id: string;
+          result_nobg_url?: string;
+          b2_image_url?: string;
+          image_manifest_hash?: string;
+        }>("/api/tryon/generate", {
           wardrobe_item_id: input.items[0].id,
           item_image_url: input.items[0].image_url,
           avatar_selfie_url: input.avatarSelfieUrl,
@@ -144,7 +154,13 @@ export const useTasks = create<State>((set, get) => ({
           enhance_prompt: input.enhancePrompt,
           reference_selfie_urls: input.referenceSelfieUrls,
         })
-      : apiPost<{ result_image_url: string; result_id: string; result_nobg_url?: string }>("/api/tryon/generate-multi", {
+      : apiPost<{
+          result_image_url: string;
+          result_id: string;
+          result_nobg_url?: string;
+          b2_image_url?: string;
+          image_manifest_hash?: string;
+        }>("/api/tryon/generate-multi", {
           avatar_selfie_url: input.avatarSelfieUrl,
           items: input.items.map((i) => ({ image_url: i.image_url, name: i.name, category: i.category })),
           model, setting,
@@ -162,8 +178,14 @@ export const useTasks = create<State>((set, get) => ({
           resultUrl: res.result_image_url,
           resultId: res.result_id,
           nobgUrl: res.result_nobg_url ?? undefined,
+          b2ImageUrl: res.b2_image_url,
+          imageManifestHash: res.image_manifest_hash,
         });
-        toast.success(`Try-on ready: ${task.label.slice(0, 40)}`);
+        if (res.image_manifest_hash) {
+          toast.success("Try-on ready — archived to B2 (Genblaze manifest)", { duration: 5000 });
+        } else {
+          toast.success(`Try-on ready: ${task.label.slice(0, 40)}`);
+        }
       })
       .catch((e) => {
         if (!get().tasks.some((t) => t.id === id)) return;
@@ -226,7 +248,11 @@ export const useTasks = create<State>((set, get) => ({
     };
     set((s) => ({ tasks: [...s.tasks, task] }));
 
-    apiPost<{ video_url: string }>("/api/tryon/animate", {
+    apiPost<{
+      video_url: string;
+      b2_video_url?: string;
+      video_manifest_hash?: string;
+    }>("/api/tryon/animate", {
       image_url: input.sourceUrl,
       tryon_result_id: input.parentTryOnDbId,
       model: input.model,
@@ -242,12 +268,21 @@ export const useTasks = create<State>((set, get) => ({
           set((s) => ({
             tasks: s.tasks.map((t) =>
               t.id === input.parentTaskId && t.kind === "tryon"
-                ? ({ ...t, videoUrl: res.video_url } as TryOnTask)
+                ? ({
+                    ...t,
+                    videoUrl: res.video_url,
+                    b2VideoUrl: res.b2_video_url,
+                    videoManifestHash: res.video_manifest_hash,
+                  } as TryOnTask)
                 : t
             ),
           }));
         }
-        toast.success("Video ready!");
+        if (res.video_manifest_hash) {
+          toast.success("Video ready — Genblaze pipeline → Backblaze B2", { duration: 5000 });
+        } else {
+          toast.success("Video ready!");
+        }
       })
       .catch((e) => {
         const msg = e instanceof Error ? e.message : String(e);

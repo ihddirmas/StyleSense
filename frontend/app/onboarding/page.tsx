@@ -1,14 +1,40 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Loader2, Plus } from "lucide-react";
-import { apiUpload } from "@/lib/api";
+import { Camera, Loader2, Plus, Sun } from "lucide-react";
+import { apiGet, apiUpload } from "@/lib/api";
 import { useAppStore } from "@/store/app";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
 import type { WardrobeItem } from "@/types";
 import posthog from "posthog-js";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4 | 5;
+
+const PHOTO_TIPS = [
+  "Stand near a window — natural daylight, not warm lamps",
+  "No heavy filters or beauty mode",
+  "Face the camera directly",
+];
+
+const BODY_TIPS = [
+  "Full body visible head to toe",
+  "Stand straight, arms slightly away from body",
+  "Fitted clothes help us read your proportions",
+];
+
+interface ColorProfile {
+  season?: string;
+  undertone?: string;
+  confidence?: number;
+  flattering_colors?: string[];
+  notes?: string;
+}
+
+interface KibbeAnalysis {
+  kibbe_type?: string;
+  confidence?: number;
+  notes?: string;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -17,19 +43,48 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>(1);
   const [uploading, setUploading] = useState(false);
   const [selfieThumb, setSelfieThumb] = useState<string | null>(null);
+  const [bodyThumb, setBodyThumb] = useState<string | null>(null);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [colorProfile, setColorProfile] = useState<ColorProfile | null>(null);
+  const [kibbeProfile, setKibbeProfile] = useState<KibbeAnalysis | null>(null);
   const [addedItem, setAddedItem] = useState<WardrobeItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const faceRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_started", { step });
   }, [step]);
 
   useEffect(() => {
-    if (step === 3 && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      posthog.capture("onboarding_completed", { has_item: !!addedItem });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (step !== 3) return;
+    setProfilesLoading(true);
+    let attempts = 0;
+    const poll = () => {
+      apiGet<{
+        color_profile: ColorProfile | null;
+        kibbe_analysis: KibbeAnalysis | null;
+        ready: boolean;
+      }>("/api/stylist/profiles")
+        .then((d) => {
+          setColorProfile(d.color_profile);
+          setKibbeProfile(d.kibbe_analysis);
+          if (d.ready || attempts >= 12) {
+            setProfilesLoading(false);
+            if (d.ready && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+              posthog.capture("profiles_generated", {
+                color_confidence: d.color_profile?.confidence,
+                kibbe_confidence: d.kibbe_analysis?.confidence,
+              });
+            }
+            return;
+          }
+          attempts += 1;
+          setTimeout(poll, 2500);
+        })
+        .catch(() => setProfilesLoading(false));
+    };
+    poll();
   }, [step]);
 
   async function handleSelfie(file: File) {
@@ -39,12 +94,28 @@ export default function OnboardingPage() {
       const fd = new FormData();
       fd.append("file", file);
       await apiUpload("/api/avatar/upload-selfie", fd);
-    } catch {
-      // non-fatal — thumbnail still shown, user continues
-    } finally {
-      setUploading(false);
       if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 1 });
       setStep(2);
+    } catch {
+      setStep(2);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleFullBody(file: File) {
+    setBodyThumb(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await apiUpload("/api/avatar/upload-full-body", fd);
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 2 });
+      setStep(3);
+    } catch {
+      setStep(3);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -52,8 +123,8 @@ export default function OnboardingPage() {
     setModalOpen(false);
     setAddedItem(item);
     setSelected([item.id]);
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 2 });
-    setStep(3);
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 4 });
+    setStep(5);
   }
 
   function handleAddedMany(items: WardrobeItem[]) {
@@ -62,79 +133,112 @@ export default function OnboardingPage() {
       setAddedItem(items[0]);
       setSelected(items.map((i) => i.id));
     }
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 2 });
-    setStep(3);
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 4 });
+    setStep(5);
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{ background: "var(--parchment)" }}
-    >
-      <div
-        style={{
-          maxWidth: 480,
-          width: "100%",
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          padding: 24,
-        }}
-        className="rounded-sm"
-      >
-        {/* Progress dots */}
-        <ProgressDots current={step} total={3} />
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-bg">
+      <div className="w-full max-w-md surface border border-border rounded-sm p-6">
+        <ProgressDots current={step} total={5} />
 
         {step === 1 && (
-          <StepSelfie
+          <PhotoStep
+            title="Face selfie for your color season"
+            tips={PHOTO_TIPS}
             uploading={uploading}
-            selfieThumb={selfieThumb}
-            fileRef={fileRef}
+            thumb={selfieThumb}
+            fileRef={faceRef}
             onFile={handleSelfie}
-            onSkip={() => {
-              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_skipped", { step: 1 });
-              setStep(2);
-            }}
+            onSkip={() => setStep(2)}
+            skipLabel="Skip (lower accuracy)"
           />
         )}
 
         {step === 2 && (
-          <StepWardrobe
-            onOpenModal={() => setModalOpen(true)}
-            onSkip={() => {
-              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_skipped", { step: 2 });
-              setStep(3);
-            }}
+          <PhotoStep
+            title="Full-body photo for Kibbe typing"
+            tips={BODY_TIPS}
+            uploading={uploading}
+            thumb={bodyThumb}
+            fileRef={bodyRef}
+            onFile={handleFullBody}
+            onSkip={() => setStep(3)}
+            skipLabel="Skip Kibbe for now"
           />
         )}
 
         {step === 3 && (
-          <StepReady
-            hasItem={!!addedItem}
-            onStudio={() => {
-              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_exit_clicked", { destination: "studio" });
-              router.push("/studio");
-            }}
-            onDashboard={() => {
-              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_exit_clicked", { destination: "dashboard" });
-              router.push("/dashboard");
-            }}
+          <ProfileReveal
+            loading={profilesLoading}
+            color={colorProfile}
+            kibbe={kibbeProfile}
+            onContinue={() => setStep(4)}
           />
+        )}
+
+        {step === 4 && (
+          <div>
+            <h1 className="font-display text-3xl mb-2 text-foreground">Add something to evaluate</h1>
+            <p className="text-sm text-muted mb-6">
+              Paste a Myntra/Amazon URL or upload a photo — Aria will tell you if it suits your profile.
+            </p>
+            <button
+              type="button"
+              className="btn-primary w-full flex items-center justify-center gap-2"
+              onClick={() => setModalOpen(true)}
+            >
+              <Plus size={16} /> Add an item
+            </button>
+            <div className="flex justify-center mt-5">
+              <button type="button" className="text-sm text-muted underline" onClick={() => setStep(5)}>
+                Skip for now
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="text-center py-4">
+            <h1 className="font-display text-3xl mb-3 text-foreground">You&apos;re ready</h1>
+            <p className="text-sm text-muted mb-6">
+              {addedItem
+                ? `Ask Aria whether "${addedItem.name}" suits your ${colorProfile?.season || "color"} palette.`
+                : "Head to Aria and paste any product URL for a grounded verdict."}
+            </p>
+            <button
+              type="button"
+              className="btn-primary w-full mb-3"
+              onClick={() => {
+                if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+                  posthog.capture("onboarding_completed", { has_item: !!addedItem, destination: "stylist" });
+                }
+                router.push(addedItem ? "/stylist" : "/stylist");
+              }}
+            >
+              Talk to Aria
+            </button>
+            <button
+              type="button"
+              className="btn-ghost w-full text-sm"
+              onClick={() => router.push("/dashboard")}
+            >
+              Go to Dashboard
+            </button>
+          </div>
         )}
       </div>
 
-      {/* AddItemModal rendered at root level so its fixed overlay works correctly */}
       <AddItemModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onAdded={handleAdded}
         onAddedMany={handleAddedMany}
-        compact={true}
+        compact
       />
     </div>
   );
 }
-
-// ── Progress dots ────────────────────────────────────────────────────────────
 
 function ProgressDots({ current, total }: { current: number; total: number }) {
   return (
@@ -142,45 +246,44 @@ function ProgressDots({ current, total }: { current: number; total: number }) {
       {Array.from({ length: total }, (_, i) => i + 1).map((s) => (
         <span
           key={s}
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            display: "inline-block",
-            background: s <= current ? "var(--ink)" : "transparent",
-            border: "1.5px solid var(--ink)",
-            transition: "background 0.2s",
-          }}
+          className="inline-block h-2 w-2 rounded-full border border-ink transition-colors"
+          style={{ background: s <= current ? "var(--ink)" : "transparent" }}
         />
       ))}
     </div>
   );
 }
 
-// ── Step 1 — Upload selfie ────────────────────────────────────────────────────
-
-function StepSelfie({
+function PhotoStep({
+  title,
+  tips,
   uploading,
-  selfieThumb,
+  thumb,
   fileRef,
   onFile,
   onSkip,
+  skipLabel,
 }: {
+  title: string;
+  tips: string[];
   uploading: boolean;
-  selfieThumb: string | null;
+  thumb: string | null;
   fileRef: React.RefObject<HTMLInputElement>;
   onFile: (f: File) => void;
   onSkip: () => void;
+  skipLabel: string;
 }) {
   return (
     <div>
-      <h1 className="font-display text-4xl mb-2" style={{ color: "var(--ink)" }}>
-        First, let&apos;s set up your avatar.
-      </h1>
-      <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
-        Upload a front-facing photo. We&apos;ll use it to show outfits on you.
-      </p>
-
+      <h1 className="font-display text-3xl mb-2 text-foreground">{title}</h1>
+      <ul className="text-sm text-muted mb-4 space-y-1 list-none p-0 m-0">
+        {tips.map((t) => (
+          <li key={t} className="flex items-start gap-2">
+            <Sun size={14} className="shrink-0 mt-0.5 opacity-60" />
+            <span>{t}</span>
+          </li>
+        ))}
+      </ul>
       <input
         ref={fileRef}
         type="file"
@@ -191,151 +294,96 @@ function StepSelfie({
           if (f) onFile(f);
         }}
       />
-
-       <button
+      <button
+        type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="rounded-sm"
-        style={{
-          width: "100%",
-          height: 200,
-          border: "1.5px dashed var(--border)",
-          background: "var(--surface2)",
-          cursor: uploading ? "default" : "pointer",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          overflow: "hidden",
-          padding: 0,
-          position: "relative",
-        }}
-        aria-label="Upload selfie"
+        className="w-full h-48 border border-dashed border-border bg-surface-2 rounded-sm flex flex-col items-center justify-center gap-2 overflow-hidden"
       >
         {uploading ? (
           <>
-            <Loader2 size={28} className="spin" style={{ color: "var(--text-muted)" }} />
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Uploading...
-            </span>
+            <Loader2 size={28} className="spin text-muted" />
+            <span className="text-sm text-muted">Analyzing…</span>
           </>
-        ) : selfieThumb ? (
-          <img
-            src={selfieThumb}
-            alt="Selfie preview"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+        ) : thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumb} alt="Preview" className="w-full h-full object-cover" />
         ) : (
           <>
-            <Camera size={28} style={{ color: "var(--text-dim)" }} />
-            <span className="text-sm" style={{ color: "var(--text-dim)" }}>
-              Click to upload a photo
-            </span>
+            <Camera size={28} className="text-muted" />
+            <span className="text-sm text-muted">Tap to upload</span>
           </>
         )}
       </button>
-
       <div className="flex justify-center mt-5">
-        <button
-          onClick={onSkip}
-          className="text-sm"
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--text-muted)",
-            cursor: "pointer",
-            textDecoration: "underline",
-          }}
-        >
-          Skip for now
+        <button type="button" className="text-sm text-muted underline" onClick={onSkip}>
+          {skipLabel}
         </button>
       </div>
     </div>
   );
 }
 
-// ── Step 2 — Add wardrobe item ────────────────────────────────────────────────
-
-function StepWardrobe({
-  onOpenModal,
-  onSkip,
+function ProfileReveal({
+  loading,
+  color,
+  kibbe,
+  onContinue,
 }: {
-  onOpenModal: () => void;
-  onSkip: () => void;
+  loading: boolean;
+  color: ColorProfile | null;
+  kibbe: KibbeAnalysis | null;
+  onContinue: () => void;
 }) {
+  const season = color?.season
+    ? String(color.season).replace(/^./, (c) => c.toUpperCase())
+    : null;
+  const kibbeName = kibbe?.kibbe_type
+    ? String(kibbe.kibbe_type).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : null;
+
   return (
     <div>
-      <h1 className="font-display text-4xl mb-2" style={{ color: "var(--ink)" }}>
-        Now add something from your wardrobe.
-      </h1>
-      <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
-        Paste a product URL or upload a photo.
-      </p>
-
-      <button
-        className="btn-primary"
-        onClick={onOpenModal}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-      >
-        <Plus size={16} />
-        Add an item
-      </button>
-
-      <div className="flex justify-center mt-5">
-        <button
-          onClick={onSkip}
-          className="text-sm"
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--text-muted)",
-            cursor: "pointer",
-            textDecoration: "underline",
-          }}
-        >
-          Skip for now
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Step 3 — You're ready ─────────────────────────────────────────────────────
-
-function StepReady({
-  hasItem,
-  onStudio,
-  onDashboard,
-}: {
-  hasItem: boolean;
-  onStudio: () => void;
-  onDashboard: () => void;
-}) {
-  return (
-    <div className="text-center py-6">
-      <h1 className="font-display text-4xl mb-4" style={{ color: "var(--ink)" }}>
-        You&apos;re all set.
-      </h1>
-      {hasItem ? (
-        <>
-          <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
-            Head to Studio to try on your first look.
-          </p>
-          <button className="btn-primary" onClick={onStudio}>
-            Try it on &rarr;
-          </button>
-        </>
+      <h1 className="font-display text-3xl mb-2 text-foreground">Your style profile</h1>
+      {loading ? (
+        <div className="flex items-center gap-2 py-10 text-muted text-sm justify-center">
+          <Loader2 size={18} className="spin" /> Reading your coloring and proportions…
+        </div>
       ) : (
-        <>
-          <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
-            Explore your wardrobe and add items anytime.
-          </p>
-          <button className="btn-primary" onClick={onDashboard}>
-            Go to Dashboard &rarr;
-          </button>
-        </>
+        <div className="space-y-3 mb-6">
+          {season ? (
+            <div className="border border-border rounded-lg p-4 bg-surface-2">
+              <p className="text-xs uppercase tracking-wider text-muted mb-1">Color season</p>
+              <p className="font-display text-xl">{season}</p>
+              <p className="text-sm text-muted mt-1">
+                {color?.undertone} undertone
+                {color?.confidence != null && color.confidence < 0.7
+                  ? " · medium confidence — natural light helps"
+                  : ""}
+              </p>
+              {color?.flattering_colors && color.flattering_colors.length > 0 && (
+                <p className="text-xs mt-2 text-muted">
+                  Flattering: {color.flattering_colors.slice(0, 4).join(", ")}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Color analysis still processing — you can continue and check Settings later.</p>
+          )}
+          {kibbeName ? (
+            <div className="border border-border rounded-lg p-4 bg-surface-2">
+              <p className="text-xs uppercase tracking-wider text-muted mb-1">Kibbe type</p>
+              <p className="font-display text-xl">{kibbeName}</p>
+              {kibbe?.notes && <p className="text-sm text-muted mt-1">{kibbe.notes}</p>}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Add a full-body photo later in Settings for Kibbe typing.</p>
+          )}
+        </div>
       )}
+      <button type="button" className="btn-primary w-full" onClick={onContinue} disabled={loading}>
+        Continue
+      </button>
     </div>
   );
 }
