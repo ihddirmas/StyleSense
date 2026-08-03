@@ -99,6 +99,14 @@ async def posthog_exception_middleware(request: Request, call_next):
         raise
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Return JSON 500s so CORSMiddleware can attach headers (plain 500s show as 'Failed to fetch' in browsers)."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
 app.include_router(avatar.router,    prefix="/api/avatar",    tags=["Avatar"])
 app.include_router(tryon.router,     prefix="/api/tryon",     tags=["Try-On"])
 app.include_router(wardrobe.router,  prefix="/api/wardrobe",  tags=["Wardrobe"])
@@ -113,11 +121,25 @@ app.include_router(media.router,     prefix="/api/media",     tags=["Media"])
 @app.get("/health")
 def health():
     from services import genblaze_media_service
-    return {
-        "status": "ok",
+    from services import db
+
+    db_ok = False
+    db_error: str | None = None
+    try:
+        row = db.query("SELECT 1 AS ok", fetch="one")
+        db_ok = bool(row and row.get("ok") == 1)
+    except Exception as exc:
+        db_error = type(exc).__name__
+
+    out = {
+        "status": "ok" if db_ok else "degraded",
+        "db_ok": db_ok,
         "b2_configured": genblaze_media_service.is_configured(),
         "genblaze_media": genblaze_media_service.is_configured(),
     }
+    if db_error:
+        out["db_error"] = db_error
+    return out
 
 
 @app.get("/")
