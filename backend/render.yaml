@@ -50,6 +50,7 @@ services:
       - key: STYLIST_HERO_VIDEO_URL
         sync: false
 
-      # Your Vercel frontend URL -- drives CORS in main.py. Set after frontend deploy.
+      # Production Vercel URL (master) — drives primary CORS origin in main.py
       - key: FRONTEND_URL
         sync: false
+        # Set in Render dashboard: https://style-sense-beryl.vercel.app

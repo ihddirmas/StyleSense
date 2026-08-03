@@ -22,22 +22,24 @@ cluster's port 5432, and enough IAM permission to call `rds:GenerateDBAuthToken`
 
 ---
 
-## Part 0 — Repo/branch topology (two remotes, one deploy target for you)
+## Live deployment (`master`)
 
-This repo has two GitHub remotes with different jobs:
+| Service | URL |
+|---------|-----|
+| Frontend (Vercel) | https://style-sense-beryl.vercel.app |
+| Backend (Render) | https://styleai-backend-5vk9.onrender.com |
 
-- **`upstream` → `github.com/ihddirmas/StyleSense`, branch `feature/ui-on-aurora`** — the live
-  app. **This is the one you deploy, on your own Render + Vercel accounts.** Push here for
-  anything meant to reach real users; Render and Vercel both track this repo/branch and
-  auto-deploy on every push once connected.
-- **`origin` → `github.com/yashthenuia/StyleSense`** — the hackathon-submission fork. Your
-  teammate already deploys this independently on their own personal Render/Vercel accounts.
-  Nothing here needs your setup or attention — noted for context only, not an action item.
+Push to **`master`** on `github.com/ihddirmas/StyleSense` — Vercel (`frontend/`) and Render (`backend/`) auto-deploy.
 
-(Future consideration, not needed now: both Vercel projects — yours and your teammate's — could
-in principle point at the same Render backend, since CORS already allows every `*.vercel.app`
-domain via `allow_origin_regex` in `backend/main.py`. Worth thinking about later if the two
-deployments ever need to converge; irrelevant to getting your own deploy live today.)
+> Do not use `style-sense.vercel.app` — that alias serves an old Next.js starter. Production is **style-sense-beryl**.
+
+---
+
+## Part 0 — Repo/branch topology
+
+**Single live target:** `github.com/ihddirmas/StyleSense` branch **`master`**.
+
+CORS in `backend/main.py` allows every `https://*.vercel.app` preview via `allow_origin_regex`; set `FRONTEND_URL` on Render to the production Vercel URL above for the primary origin.
 
 ---
 
@@ -47,7 +49,7 @@ The repo already ships [`frontend/vercel.json`](../frontend/vercel.json) with th
 security headers, and function config wired up.
 
 1. **Import the repo** in the Vercel dashboard → New Project → point at
-   `github.com/ihddirmas/StyleSense`, branch `feature/ui-on-aurora` → set **Root Directory** to
+   `github.com/ihddirmas/StyleSense`, branch **`master`** → set **Root Directory** to
    `frontend` (the monorepo has `backend/` alongside it, so Vercel must not build from repo root).
 2. **Add environment variables** (Project Settings → Environment Variables — plain dashboard
    values, `vercel.json` no longer declares `@secret` references; an earlier attempt used
@@ -55,11 +57,12 @@ security headers, and function config wired up.
    `vercel secrets add` — fixed by dropping the `env` block from `vercel.json` entirely):
    | Variable | Value |
    |---|---|
-   | `NEXT_PUBLIC_API_URL` | Your backend's public URL (e.g. `https://styleai-backend.onrender.com`) |
+   | `NEXT_PUBLIC_API_URL` | `https://styleai-backend-5vk9.onrender.com` |
+   | `NEXT_PUBLIC_SITE_URL` | `https://style-sense-beryl.vercel.app` |
    | `NEXT_PUBLIC_SUPABASE_URL` | Same as `backend/.env`'s `SUPABASE_URL` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key (not the service role key) |
    | `RUNWAYML_API_SECRET` | Same Runway key used by the backend (used by the Next.js API route that mints realtime avatar sessions) |
-   | `NEXT_PUBLIC_SITE_URL` | Your Vercel project's production URL — drives `metadataBase` so Open Graph images/canonical links resolve correctly instead of localhost. |
+   | `NEXT_PUBLIC_SITE_URL` | `https://style-sense-beryl.vercel.app` — drives `metadataBase` so Open Graph images/canonical links resolve correctly instead of localhost. |
    | `NEXT_PUBLIC_DEMO_USER_ID` | Optional — demo account UUID if you keep one |
    | `NEXT_PUBLIC_STYLIST_CHARACTER_ID` / `NEXT_PUBLIC_STYLIST_HERO_VIDEO_URL` | From the one-time admin stylist setup scripts (see CLAUDE.md) |
    | `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` | Optional — leave unset to keep Sentry fully disabled |
@@ -82,14 +85,13 @@ backend builds a link back to the frontend).
 The repo already has [`backend/render.yaml`](../backend/render.yaml) as a Blueprint. Steps:
 
 1. Render Dashboard → **New → Blueprint** → point at `github.com/ihddirmas/StyleSense`, branch
-   `feature/ui-on-aurora` (see Part 0 — this is the live-app repo/branch, not the hackathon-submission
-   fork). Render reads `backend/render.yaml` automatically (`rootDir: backend`).
+   **`master`**. Render reads `backend/render.yaml` automatically (`rootDir: backend`).
 2. Render will ask you to fill in every `sync: false` secret from the blueprint. Paste values from
    `backend/.env`:
    - `RUNWAY_API_KEY`, `ANTHROPIC_API_KEY`
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`
    - `RUNWAY_DEFAULT_VOICE_ID`, `STYLIST_CHARACTER_ID`, `STYLIST_HERO_VIDEO_URL`
-   - `FRONTEND_URL` — your production Vercel URL (e.g. `https://stylesensei.vercel.app`)
+   - `FRONTEND_URL` — `https://style-sense-beryl.vercel.app`
 3. **Add the Aurora variables manually** (not in `render.yaml` yet — add them as extra env vars in
    the Render service settings):
    - `AURORA_IAM_AUTH=true`
@@ -165,9 +167,8 @@ free, with no paid Render plan and no third-party uptime service:
   does a plain `curl` GET against the backend's `/health` endpoint.
 - Fails the job (non-zero exit) if the response isn't a 2xx, so a dead backend shows up as a red
   X in the repo's Actions tab.
-- Reads the target URL from the repo variable `${{ vars.BACKEND_HEALTH_URL }}`, falling back to
-  `https://styleai-backend.onrender.com/health` (the URL implied by `backend/render.yaml`'s
-  service name) if the variable isn't set.
+- Reads the target URL from the repo variable `${{ vars.BACKEND_HEALTH_URL }}`,   falling back to
+  `https://styleai-backend-5vk9.onrender.com/health` if the variable isn't set.
 
 **To set/override the URL:** repo → Settings → Secrets and variables → Actions → Variables tab →
 New repository variable → name `BACKEND_HEALTH_URL`, value `https://<your-service>.onrender.com/health`.
