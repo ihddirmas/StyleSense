@@ -17,25 +17,45 @@ StyleSense is a monorepo: **FastAPI backend** (`backend/`, port 8000) + **Next.j
 
 **Backend will not import** without `DATABASE_URL` (Supabase DB URI) and Supabase service role (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`). `services/db.py` and `services/supabase_service.py` raise at import time if missing.
 
-When Cursor Cloud injects secrets as env vars, write both files once per session (strip trailing whitespace — injected `ANTHROPIC_API_KEY` may include a `\n` that breaks HTTP headers):
+When Cursor Cloud injects secrets as env vars, write both files once per session (strip trailing whitespace — injected `ANTHROPIC_API_KEY` may include a `\n` that breaks HTTP headers). If `DATABASE_URL` is unset in the shell but present in `backend/.env` as Aurora fallback, the script preserves Aurora lines until the Supabase secret is injected (new agent session after adding the secret).
 
 ```bash
 python3 - <<'PY'
 import os
 from pathlib import Path
 
-def g(k, d=""): return os.environ.get(k, d).strip()
+def g(k, d=""): return (os.environ.get(k, d) or "").strip()
 
-backend = "\n".join([
+lines = [
     f"RUNWAYML_API_SECRET={g('RUNWAYML_API_SECRET')}",
     f"SUPABASE_URL={g('SUPABASE_URL')}",
     f"SUPABASE_SERVICE_ROLE_KEY={g('SUPABASE_SERVICE_ROLE_KEY')}",
     f"SUPABASE_ANON_KEY={g('SUPABASE_ANON_KEY')}",
-    f"DATABASE_URL={g('DATABASE_URL')}",
     f"ANTHROPIC_API_KEY={g('ANTHROPIC_API_KEY')}",
     f"FRONTEND_URL={g('FRONTEND_URL', 'http://localhost:3000')}",
-]) + "\n"
-Path("backend/.env").write_text(backend)
+]
+db = g("DATABASE_URL") or g("SUPABASE_DATABASE_URL")
+if db:
+    lines.append(f"DATABASE_URL={db}")
+else:
+    existing = Path("backend/.env").read_text() if Path("backend/.env").exists() else ""
+    for key in ("AURORA_IAM_AUTH", "AURORA_HOST", "AURORA_PORT", "AURORA_DB", "AURORA_USER",
+                "AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
+        for line in existing.splitlines():
+            if line.startswith(key + "="):
+                lines.append(line)
+                break
+for key in ("B2_BUCKET", "B2_REGION", "B2_KEY_ID", "B2_APP_KEY", "B2_PUBLIC_URL_BASE", "B2_ENDPOINT"):
+    v = g(key)
+    if v:
+        lines.append(f"{key}={v}")
+if g("B2_BUCKET") and g("B2_KEY_ID") and g("B2_APP_KEY"):
+    lines.append("GENBLAZE_MEDIA=1")
+for key in ("TEST_USER_EMAIL", "TEST_USER_PASSWORD", "TEST_USER_PASSWOR"):
+    v = g(key)
+    if v:
+        lines.append(f"TEST_USER_PASSWORD={v}" if key == "TEST_USER_PASSWOR" else f"{key}={v}")
+Path("backend/.env").write_text("\n".join(lines) + "\n")
 
 frontend = "\n".join([
     "NEXT_PUBLIC_API_URL=http://localhost:8000",
@@ -59,7 +79,7 @@ cd backend && ./venv/bin/uvicorn main:app --port 8000 --log-level warning
 cd frontend && npm run dev
 ```
 
-Health check (backend only): `curl http://localhost:8000/health` → `{"status":"ok"}`.
+Health check (backend only): `curl http://localhost:8000/health` → `{"status":"ok","b2_configured":true,...}` when B2 secrets are set. If you only see `{"status":"ok"}`, an old uvicorn process may still own port 8000 — `fuser -k 8000/tcp` then restart backend.
 
 ### Lint / test / build
 
