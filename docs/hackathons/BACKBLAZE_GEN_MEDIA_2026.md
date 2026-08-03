@@ -45,6 +45,13 @@ Many submissions will be one-shot demos without durable storage or multi-step pi
 - [ ] Grant **https://github.com/b2genblaze** on repo if private  
 - [ ] 3-min demo video uploaded (script below)  
 - [ ] Devpost: B2 + Genblaze paragraph from this doc  
+| Criterion | How StyleSense scores |
+|-----------|----------------------|
+| **Real-world utility** | Virtual try-on + event scenes + shareable looks; Aria picks real wardrobe items (`[ITEM:uuid]`) for a stated occasion. |
+| **Production readiness** | Live Vercel + Render deploy, auth, usage caps, rate limits, Aurora + Supabase, keep-alive on backend. |
+| **Production readiness** | Live Vercel + Render deploy, auth, usage caps, rate limits, Supabase DB, keep-alive on backend. |
+| **B2 storage & orchestration** | B2 bucket stores ingested try-ons + Genblaze-run videos; hierarchical keys per user; public or signed URLs via `B2_PUBLIC_URL_BASE`. |
+| **Genblaze** | `Pipeline` + `RunwayProvider` for animate; `Pipeline.ingest` for try-on archive; manifests verified with `manifest.verify()`. |
 
 ---
 

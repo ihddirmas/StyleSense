@@ -99,6 +99,9 @@ With `frontend/.env.local` containing `NEXT_PUBLIC_SUPABASE_*` from `.env.produc
 
 ### External services
 
+Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthropic are all cloud-hosted. No Docker Compose in repo.
+
+**Live (master):** frontend [style-sense-beryl.vercel.app](https://style-sense-beryl.vercel.app) · backend [styleai-backend-5vk9.onrender.com/health](https://styleai-backend-5vk9.onrender.com/health)
 Supabase (auth + storage + social + core DB), Runway, and Anthropic are cloud-hosted. No Docker Compose in repo.
 
 ### Gotchas
@@ -114,18 +117,34 @@ Supabase (auth + storage + social + core DB), Runway, and Anthropic are cloud-ho
 
 ### QA vs real users (Supabase Auth)
 
-**Canonical QA account** (reuse forever): `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` in Cursor secrets / `backend/.env`. Agents and Playwright log in at `/login` — **do not sign up new users in the UI**.
+**Canonical QA account**: `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` in Cursor secrets. Prefer a **seed account with wardrobe data** (below) as `TEST_USER_EMAIL` so Studio/wardrobe E2E has real items. Log in at `/login` — **do not sign up new users in the UI**.
 
 | Account type | How to identify | Cleanup |
 |--------------|-----------------|---------|
 | **Canonical QA** | `TEST_USER_EMAIL` | Protected — never deleted |
+| **Seed wardrobes** | ellbit / anawebs / judge seeds (`SEED_ACCOUNTS` in `scripts/test_users.py`) | Protected — never deleted |
 | **Disposable** | `@example.com`, `@stylesense-test.local`, `@styleai.test`, test prefixes, or `user_metadata.is_test=true` | `cleanup_test_users --apply` |
-| **Real users** | Gmail, real domains, `judge@stylesense.demo` | Never delete |
+| **Other real users** | Gmail, etc. | Never delete |
+
+#### Seed accounts (wardrobe / demo data)
+
+Add passwords in **Cursor Cloud secrets** (do not paste in chat or commit):
+
+| Secret | Default email | Use |
+|--------|---------------|-----|
+| `TEST_SEED_ELLBIT_PASSWORD` | ellbit seed user (default in `scripts/test_users.py`) | Primary E2E (~53 wardrobe items) — good default for `TEST_USER_EMAIL` |
+| `TEST_SEED_ANAWEBS_PASSWORD` | anawebs seed user (default in `scripts/test_users.py`) | Alternate wardrobe (~46 items) |
+| `TEST_SEED_JUDGE_PASSWORD` | judge demo user (default in `scripts/test_users.py`) | Demo / judge walkthrough |
+
+Optional overrides: `TEST_SEED_ELLBIT_EMAIL`, `TEST_SEED_ANAWEBS_EMAIL`, `TEST_SEED_JUDGE_EMAIL`.
+
+Set `TEST_USER_EMAIL` to the ellbit seed address and `TEST_USER_PASSWORD` to the matching seed password.
 
 #### Scripts (service role in `backend/.env`)
 
 ```bash
 cd backend && ./venv/bin/python -m scripts.ensure_test_user
+cd backend && ./venv/bin/python -m scripts.ensure_seed_users   # sync TEST_SEED_*_PASSWORD
 cd backend && ./venv/bin/python -m scripts.cleanup_test_users          # dry-run
 cd backend && ./venv/bin/python -m scripts.cleanup_test_users --apply  # delete junk
 ```

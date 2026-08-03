@@ -1,6 +1,7 @@
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { resolveApiBase } from "@/lib/api-base";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = resolveApiBase();
 
 async function authHeader(): Promise<Record<string, string>> {
   // Browser-side only. Server components shouldn't call these helpers.
