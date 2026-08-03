@@ -8,6 +8,8 @@ from services import runway_service, supabase_service, analytics_service, usage_
 from services.auth_service import current_user
 from services.rate_limit import check_cooldown
 from services.usage_limits import check_tryon_cap, check_event_scene_cap, check_animate_cap
+from services import genblaze_media_service
+from services.tryon_serialization import archive_fields, preferred_video_url, serialize_tryon, video_archive_fields
 from services.tryon_service import (
     run_blocking as _run_blocking,
     maybe_restore_face as _maybe_restore_face,
@@ -76,10 +78,19 @@ async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
         "model_used": result["model_used"], "endpoint": "generate",
     })
 
+    prov = await tryon_service.archive_tryon_image_to_b2(
+        user["id"],
+        saved["id"],
+        image_url,
+        model_used=result["model_used"],
+        item_ids=[req.wardrobe_item_id] if req.wardrobe_item_id else [],
+    )
+
     return {
         "result_image_url": image_url,
         "result_id": saved["id"],
         "model_used": result["model_used"],
+        **archive_fields(prov),
     }
 
 
@@ -137,21 +148,45 @@ async def animate(req: AnimateRequest, user = Depends(current_user)):
 
     try:
         result = await _run_blocking(
-            runway_service.runway_animate,
+            genblaze_media_service.animate_with_genblaze,
             image_url=req.image_url,
-            motion_prompt=motion,
+            motion_prompt=motion or "",
             model=runway_service.valid_video_model(req.model),
             scene=scene,
+            duration=6,
+            user_id=user["id"],
         )
+        if not result:
+            result = await _run_blocking(
+                runway_service.runway_animate,
+                image_url=req.image_url,
+                motion_prompt=motion,
+                model=runway_service.valid_video_model(req.model),
+                scene=scene,
+            )
     except RuntimeError as e:
         raise HTTPException(500, str(e))
     supabase_service.record_usage_event(user["id"], "animate")
     analytics_service.capture(user["id"], "video_animated", {"model_used": result.get("model_used")})
 
-    if req.tryon_result_id:
-        supabase_service.update_tryon_video(req.tryon_result_id, result["video_url"], result["task_id"])
+    b2_video = result.get("video_url") if result.get("b2_archived") else None
+    manifest = result.get("manifest_hash")
+    playback_url = preferred_video_url({"b2_video_url": b2_video, "result_video_url": result["video_url"]})
 
-    return {"video_url": result["video_url"], "task_id": result["task_id"]}
+    if req.tryon_result_id:
+        supabase_service.update_tryon_video(
+            req.tryon_result_id,
+            result["video_url"],
+            result["task_id"],
+            b2_video_url=b2_video,
+            video_manifest_hash=manifest,
+        )
+
+    return {
+        "video_url": playback_url,
+        "task_id": result["task_id"],
+        **video_archive_fields(result),
+    }
 
 
 @router.post("/save")
@@ -159,7 +194,7 @@ async def save_tryon(req: SaveTryOnRequest, user = Depends(current_user)):
     row = supabase_service.get_tryon(req.tryon_id)
     if not row or row["user_id"] != user["id"]:
         raise HTTPException(404, "Try-on not found.")
-    return supabase_service.mark_tryon_saved(req.tryon_id)
+    return serialize_tryon(supabase_service.mark_tryon_saved(req.tryon_id))
 
 
 @router.get("/recent")

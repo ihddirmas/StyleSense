@@ -12,7 +12,8 @@ from typing import Optional
 import httpx
 from PIL import Image
 
-from services import runway_service, supabase_service, analytics_service, usage_limits
+from services import runway_service, supabase_service, analytics_service, usage_limits, genblaze_media_service
+from services.tryon_serialization import archive_fields
 from services.rate_limit import check_cooldown
 from graphs import prompt_graph
 
@@ -22,6 +23,44 @@ _executor = ThreadPoolExecutor(max_workers=4)
 # Optional identity-reinforcement pass after a try-on. Off by default (adds ~5cr +
 # ~30s per generation). Enable with FACE_RESTORE=1 in the backend env.
 FACE_RESTORE = os.getenv("FACE_RESTORE", "0") == "1"
+
+
+async def archive_tryon_image_to_b2(
+    user_id: str,
+    tryon_id: str,
+    image_url: str,
+    *,
+    model_used: str,
+    item_ids: Optional[list] = None,
+) -> dict:
+    """Cold-archive try-on still to B2 with Genblaze ingest provenance (non-fatal)."""
+    if not genblaze_media_service.is_configured():
+        return {}
+    try:
+        prov = await run_blocking(
+            genblaze_media_service.ingest_tryon_image,
+            user_id,
+            image_url,
+            tryon_id=tryon_id,
+            model_used=model_used,
+            item_ids=item_ids or [],
+        )
+        if prov.get("manifest_hash") and prov.get("b2_url"):
+            await run_blocking(
+                supabase_service.update_tryon_b2_archive,
+                tryon_id,
+                b2_image_url=prov["b2_url"],
+                image_manifest_hash=prov["manifest_hash"],
+            )
+            analytics_service.capture(user_id, "media_provenance_archived", {
+                "kind": "tryon",
+                "manifest_hash": prov["manifest_hash"],
+                "b2_url": prov.get("b2_url"),
+            })
+        return prov
+    except Exception as exc:
+        logger.warning("B2 try-on ingest failed (non-fatal): %s", exc)
+        return {}
 
 
 async def run_blocking(fn, *args, **kwargs):
@@ -159,8 +198,17 @@ async def run_multi_tryon(
         "model_used": result["model_used"], "endpoint": "generate-multi", "item_count": len(items),
     })
 
+    prov = await archive_tryon_image_to_b2(
+        user_id,
+        saved["id"],
+        image_url,
+        model_used=result["model_used"],
+        item_ids=[i.get("id") for i in items if i.get("id")],
+    )
+
     return {
         "result_image_url": image_url,
         "result_id": saved["id"],
         "model_used": result["model_used"],
+        **archive_fields(prov),
     }

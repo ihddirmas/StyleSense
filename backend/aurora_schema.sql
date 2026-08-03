@@ -82,6 +82,10 @@ CREATE TABLE IF NOT EXISTS try_on_results (
   status                TEXT DEFAULT 'pending' CHECK (status IN ('pending','processing','done','failed')),
   credits_used          INTEGER,
   saved                 BOOLEAN DEFAULT FALSE,
+  b2_image_url          TEXT,        -- cold archive (Backblaze B2) of try-on still
+  image_manifest_hash   TEXT,        -- Genblaze ingest manifest (SHA-256)
+  b2_video_url          TEXT,        -- durable B2 URL for animated runway clip
+  video_manifest_hash   TEXT,        -- Genblaze animate pipeline manifest
   created_at            TIMESTAMPTZ DEFAULT NOW()
 );
 
