@@ -9,6 +9,10 @@
 | **Frontend** (Vercel, `master`) | [https://style-sense-beryl.vercel.app](https://style-sense-beryl.vercel.app) |
 | **Backend** (Render, `master`) | [https://styleai-backend-5vk9.onrender.com](https://styleai-backend-5vk9.onrender.com) |
 | **API health** | `GET /health` → `{"status":"ok"}` |
+| **API docs** | [https://styleai-backend-5vk9.onrender.com/docs](https://styleai-backend-5vk9.onrender.com/docs) |
+
+Vercel project **style-sense** tracks `github.com/ihddirmas/StyleSense` branch **`master`** with root directory `frontend/`.  
+Set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SITE_URL` in Vercel if you override defaults; otherwise `frontend/.env.production` and `lib/api-base.ts` point at the URLs above.
 
 Vercel project **style-sense** tracks `github.com/ihddirmas/StyleSense` branch **`master`** with root directory `frontend/`.
 

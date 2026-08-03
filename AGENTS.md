@@ -78,6 +78,9 @@ With `frontend/.env.local` containing `NEXT_PUBLIC_SUPABASE_*` from `.env.produc
 
 ### External services
 
+Supabase (auth + storage + social), AWS Aurora (core tables), Runway, and Anthropic are all cloud-hosted. No Docker Compose in repo.
+
+**Live (master):** frontend [style-sense-beryl.vercel.app](https://style-sense-beryl.vercel.app) · backend [styleai-backend-5vk9.onrender.com/health](https://styleai-backend-5vk9.onrender.com/health)
 Supabase (auth + storage + social + core DB), Runway, and Anthropic are cloud-hosted. No Docker Compose in repo.
 
 ### Gotchas

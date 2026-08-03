@@ -8,9 +8,13 @@ import { PostHogProvider } from "@/components/PostHogProvider";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { PRODUCTION_SITE_URL } from "@/lib/api-base";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.NODE_ENV === "production" ? PRODUCTION_SITE_URL : "http://localhost:3000")
+  ),
   title: {
     default: "StyleSense — AI Wardrobe & Virtual Try-On",
     template: "%s · StyleSense",
