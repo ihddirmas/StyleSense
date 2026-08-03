@@ -13,6 +13,9 @@ from services.image_service import validate_image_bytes
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+# MVP cut list: skip expensive stylized avatar/video generation on upload (analysis only).
+MVP_MODE = os.getenv("MVP_MODE", "1").lower() not in ("0", "false", "no")
+
 
 def _analyze_body_photo(image_url: str) -> dict:
     import httpx, base64, json, re
@@ -72,8 +75,52 @@ async def _bg_refresh_profile(user_id: str, source_url: str):
                 user_id, color_profile=profile, color_profile_source_selfie=source_url
             )
             logger.info(f"Profile refreshed for user {user_id}")
+            from services import analytics_service
+            analytics_service.capture(user_id, "color_profile_generated", {
+                "season": profile.get("season"),
+                "confidence": profile.get("confidence"),
+                "lighting_quality": profile.get("lighting_quality"),
+            })
+            row = supabase_service.get_user(user_id) or {}
+            if row.get("kibbe_analysis"):
+                analytics_service.capture(user_id, "profiles_generated", {
+                    "has_color": True,
+                    "has_kibbe": True,
+                    "color_confidence": profile.get("confidence"),
+                    "kibbe_confidence": (row.get("kibbe_analysis") or {}).get("confidence"),
+                })
     except Exception as e:
         logger.warning(f"Profile refresh failed for {user_id}: {e}")
+
+
+async def _bg_refresh_kibbe(user_id: str, full_body_url: str):
+    """Kibbe analysis from full-body photo — cached for Aria."""
+    try:
+        from services import kibbe_service
+        analysis = kibbe_service.analyze_kibbe_type(full_body_url)
+        if analysis:
+            supabase_service.upsert_user(
+                user_id,
+                kibbe_type=analysis.get("kibbe_type"),
+                kibbe_analysis=analysis,
+                kibbe_source_photo=full_body_url,
+            )
+            logger.info(f"Kibbe profile refreshed for user {user_id}")
+            from services import analytics_service
+            analytics_service.capture(user_id, "kibbe_profile_generated", {
+                "kibbe_type": analysis.get("kibbe_type"),
+                "confidence": analysis.get("confidence"),
+            })
+            row = supabase_service.get_user(user_id) or {}
+            if row.get("color_profile") and analysis:
+                analytics_service.capture(user_id, "profiles_generated", {
+                    "has_color": True,
+                    "has_kibbe": True,
+                    "color_confidence": (row.get("color_profile") or {}).get("confidence"),
+                    "kibbe_confidence": analysis.get("confidence"),
+                })
+    except Exception as e:
+        logger.warning(f"Kibbe refresh failed for {user_id}: {e}")
 
 
 async def _bg_generate_stylized(user_id: str, selfie_url: str, still_only: bool = True, model: str = "gemini_2.5_flash"):
@@ -168,10 +215,10 @@ async def upload_selfie(
             user["id"], avatar_selfie_url=public_url, email=user["email"]
         )
 
-    # First photo ever -> build the avatar automatically (~2cr, still only) so the
-    # Studio shows it without a manual Refresh. If they already have an avatar, just
-    # do the cheap profile refresh (avatar changes stay on the "Refresh my avatar" button).
-    if not current.get("stylized_avatar_url"):
+    # MVP: analysis only (no Runway stylized hero). Legacy: first photo triggers still gen.
+    if MVP_MODE:
+        background_tasks.add_task(_bg_refresh_profile, user["id"], public_url)
+    elif not current.get("stylized_avatar_url"):
         background_tasks.add_task(_bg_generate_stylized, user["id"], public_url, still_only=True)
     elif becomes_primary:
         background_tasks.add_task(_bg_refresh_profile, user["id"], public_url)
@@ -211,14 +258,12 @@ async def upload_full_body(
         content_type=file.content_type or "image/jpeg",
     )
     supabase_service.upsert_user(user["id"], full_body_url=public_url, email=user["email"])
-    # First photo ever -> auto-build the avatar (uses the best face source). Otherwise
-    # just refresh the cheap profile from the new full-body photo.
     row = supabase_service.get_user(user["id"]) or {}
-    if not row.get("stylized_avatar_url"):
+    background_tasks.add_task(_bg_refresh_profile, user["id"], public_url)
+    background_tasks.add_task(_bg_refresh_kibbe, user["id"], public_url)
+    if not MVP_MODE and not row.get("stylized_avatar_url"):
         face = color_service.best_face_source(row) or public_url
         background_tasks.add_task(_bg_generate_stylized, user["id"], face, still_only=True)
-    else:
-        background_tasks.add_task(_bg_refresh_profile, user["id"], public_url)
     return {"full_body_url": public_url}
 
 

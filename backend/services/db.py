@@ -48,6 +48,11 @@ def _normalize_database_url(url: str) -> str:
 def _resolve_database_url() -> str:
     url = (os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DATABASE_URL") or "").strip()
     if url:
+        if url.startswith("https://") or url.startswith("http://"):
+            raise RuntimeError(
+                "DATABASE_URL must be the database connection string from the Database settings page, "
+                "not the Supabase project HTTPS URL. Use the transaction pooler (port 6543) on Render."
+            )
         return _normalize_database_url(url)
     legacy = (
         os.getenv("LEGACY_DATABASE_URL")

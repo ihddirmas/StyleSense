@@ -170,7 +170,21 @@ def analyze_kibbe_type(full_body_url: str) -> Optional[dict]:
         facial = str(data.get("facial_features", "")).strip()[:200]
         
         corrected_type, was_corrected = _validate_coherence(kibbe_type, yin_yang, vertical, bone, flesh)
-        
+
+        lighting = str(data.get("lighting_quality", "fair")).lower()
+        if lighting not in ("good", "fair", "poor"):
+            lighting = "fair"
+        try:
+            confidence = float(data.get("confidence", 0.7))
+        except (TypeError, ValueError):
+            confidence = 0.7
+        confidence = max(0.0, min(1.0, confidence))
+        if lighting == "poor":
+            confidence = min(confidence, 0.55)
+
+        reasoning = [str(s).strip() for s in (data.get("reasoning_steps") or []) if str(s).strip()][:5]
+        limitations = [str(s).strip() for s in (data.get("limitations") or []) if str(s).strip()][:4]
+
         return {
             "kibbe_type": corrected_type,
             "yin_yang_balance": yin_yang,
@@ -178,7 +192,10 @@ def analyze_kibbe_type(full_body_url: str) -> Optional[dict]:
             "bone_structure": bone,
             "flesh": flesh,
             "facial_features": facial,
-            "confidence": float(data.get("confidence", 0.7)),
+            "confidence": confidence,
+            "lighting_quality": lighting,
+            "reasoning_steps": reasoning,
+            "limitations": limitations,
             "notes": str(data.get("notes", "")).strip()[:300],
             "validation_corrected": was_corrected,
         }
@@ -205,14 +222,21 @@ def format_kibbe_profile(analysis: Optional[dict]) -> str:
     best_fabrics = type_data.get("best_fabrics", "")
     avoid = type_data.get("avoid", "")
     
+    conf = analysis.get("confidence")
+    conf_str = f" Confidence: {conf:.0%}." if isinstance(conf, (int, float)) else ""
+    limits = analysis.get("limitations") or []
+    limit_str = f" Caveats: {'; '.join(limits)}." if limits else ""
+    reasoning = analysis.get("reasoning_steps") or []
+    reason_str = f" Reasoning: {' → '.join(reasoning)}." if reasoning else ""
+
     return (
         f"Kibbe Type: {type_display} ({analysis.get('yin_yang_balance', '?')}). "
-        f"Vertical: {analysis.get('vertical_line', '?')}. "
+        f"Vertical: {analysis.get('vertical_line', '?')}.{conf_str}{reason_str} "
         f"Bone: {analysis.get('bone_structure', '?')}. "
         f"Flesh: {analysis.get('flesh', '?')}. "
         f"Style essence: {essence}. "
         f"Best lines: {best_lines}. "
         f"Best fabrics: {best_fabrics}. "
         f"Avoid: {avoid}. "
-        f"{analysis.get('notes', '')}"
+        f"{analysis.get('notes', '')}{limit_str}"
     ).strip()

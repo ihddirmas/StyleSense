@@ -21,7 +21,7 @@ from models.schemas import (
     ToolConfirmResponse,
     DetectedItem,
 )
-from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools
+from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service
 from services.auth_service import current_user
 from services.wardrobe_add_service import confirm_and_add_items
 from graphs import aria_graph
@@ -106,9 +106,26 @@ async def chat(req: StylistChatRequest, user = Depends(current_user)):
             tool_input=pending_action["tool_input"],
         )
 
+    reply = result["reply"]
+    item_ids = result.get("item_ids") or []
+    if reply and (item_ids or result.get("product_preview")):
+        analytics_service.capture(user["id"], "stylist_recommendation_delivered", {
+            "item_count": len(item_ids),
+            "has_product_preview": bool(result.get("product_preview")),
+            "has_pending_action": bool(pending_action),
+        })
+        last_user = next((m.content for m in reversed(req.messages) if m.role == "user"), "")
+        if isinstance(last_user, str) and (
+            "http" in last_user.lower() or "suit" in last_user.lower() or "url" in last_user.lower()
+        ):
+            analytics_service.capture(user["id"], "first_grounded_recommendation", {
+                "item_count": len(item_ids),
+                "had_url": "http" in last_user.lower(),
+            })
+
     return StylistChatResponse(
-        reply=result["reply"],
-        suggested_item_ids=result["item_ids"],
+        reply=reply,
+        suggested_item_ids=item_ids,
         occasion=result.get("occasion"),
         scene=result.get("scene"),
         pending_action=pending_action,
@@ -158,6 +175,22 @@ async def get_style_insight(user = Depends(current_user)):
     except Exception as e:
         raise HTTPException(500, f"Insight failed: {e}")
     return {"insight": insight}
+
+
+@router.get("/profiles")
+async def get_style_profiles(user = Depends(current_user)):
+    """Combined color + Kibbe profiles for onboarding reveal and dashboard."""
+    row = supabase_service.get_user(user["id"]) or {}
+    color = row.get("color_profile")
+    kibbe = row.get("kibbe_analysis")
+    return {
+        "color_profile": color,
+        "kibbe_analysis": kibbe,
+        "kibbe_type": row.get("kibbe_type"),
+        "ready": bool(color and kibbe),
+        "has_color": bool(color),
+        "has_kibbe": bool(kibbe),
+    }
 
 
 @router.get("/color-profile")
