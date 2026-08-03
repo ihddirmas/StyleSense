@@ -133,6 +133,9 @@ export default function StylistPage() {
     if (names?.length) {
       return `Added to your wardrobe: ${names.join(", ")}.`;
     }
+    if (result.failed?.length) {
+      return `Couldn't add that to your wardrobe: ${result.failed.map((f) => f.reason).join("; ")}`;
+    }
     return result.summary || "Added to your wardrobe.";
   }
 
@@ -199,11 +202,12 @@ export default function StylistPage() {
 
     if (result.status === "confirmed") {
       if (result.toolName === "add_wardrobe_items") {
-        const label = result.created?.length
-          ? `Added ${result.created.length} item${result.created.length === 1 ? "" : "s"} to wardrobe`
-          : "Added to wardrobe";
-        toast.success(label);
-        refreshWardrobe().catch(() => {});
+        if (result.created?.length) {
+          toast.success(`Added ${result.created.length} item${result.created.length === 1 ? "" : "s"} to wardrobe`);
+          refreshWardrobe().catch(() => {});
+        } else {
+          toast.error(result.failed?.length ? `Couldn't add that: ${result.failed[0].reason}` : "Couldn't add that to your wardrobe");
+        }
       } else if (result.resultImageUrl) {
         toast.success("Try-on ready");
       }
@@ -279,18 +283,24 @@ export default function StylistPage() {
       source_image_url: wardrobeModal.sourceImageUrl,
       items,
     });
+    const added = res.created.length > 0;
     // Inject a synthetic Aria message
     setMessages((prev) => [
       ...prev,
       {
         role: "assistant",
-        content: `Done! I added ${res.summary} to your wardrobe.`,
+        content: added
+          ? `Done! I added ${res.summary} to your wardrobe.`
+          : `Couldn't add that to your wardrobe: ${res.failed.map((f) => f.reason).join("; ") || "unknown error"}`,
         createdAt: new Date().toISOString(),
       },
     ]);
-    toast.success(`Added ${res.summary} to wardrobe`);
-    // Refresh wardrobe list
-    refreshWardrobe().catch(() => {});
+    if (added) {
+      toast.success(`Added ${res.summary} to wardrobe`);
+      refreshWardrobe().catch(() => {});
+    } else {
+      toast.error("Couldn't add that to your wardrobe");
+    }
     // Clear photo preview and close modal
     setPhotoPreview(null);
     setWardrobeModal(null);

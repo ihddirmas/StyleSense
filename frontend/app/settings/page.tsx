@@ -144,7 +144,7 @@ export default function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <PageHeader eyebrow="Preferences" tutorialKey="settings" subtitle="Generation quality, avatar photos, and account." />
+      <PageHeader eyebrow="Preferences" title="Settings" tutorialKey="settings" subtitle="Generation quality, avatar photos, and account." />
 
       {avatarTask && (
         <div

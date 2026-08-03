@@ -391,7 +391,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           <button
             type="button"
             onClick={() => setShowFilterMenu((v) => !v)}
-            className="text-2xs flex items-center gap-1 px-2 py-0.5 rounded-sm bg-surface2 border border-border text-muted cursor-pointer"
+            className="btn-secondary btn-sm"
           >
             {filterCategory === "all" ? "All" : filterCategory} <ChevronDown size={10} />
           </button>
@@ -570,11 +570,12 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                    style={{ height: "min(100%, 72vh)", aspectRatio: "3/4" }}>
                 {hasPhoto !== false && (stylizedAvatarUrl || effectiveSelfieUrl) ? (
                   <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={stylizedAvatarUrl || effectiveSelfieUrl!}
                       alt="Your starting point"
-                      className="w-full h-full object-contain"
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-contain"
                       style={{ filter: stylizedAvatarUrl ? "brightness(0.7)" : "brightness(0.6) saturate(0.9)" }}
                     />
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 px-4 text-center">

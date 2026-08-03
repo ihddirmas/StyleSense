@@ -319,8 +319,13 @@ async def _execute_add_wardrobe_items(tool_input: dict, user_id: str) -> dict:
         source_image_url=tool_input["source_image_url"],
         items=items,
     )
+    if created:
+        result_summary = f"Added {summary} to your wardrobe."
+    else:
+        reasons = "; ".join(f.reason for f in failed) if failed else "unknown error"
+        result_summary = f"Couldn't add any items: {reasons}"
     return {
-        "summary": f"Added {summary} to your wardrobe.",
+        "summary": result_summary,
         "created": created,
         "failed": failed,
     }

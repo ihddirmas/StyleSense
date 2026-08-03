@@ -51,3 +51,16 @@ frontend/start_frontend.ps1
 backend/_cutout_test/
 backend/_diag/
 backend/_verify/
+
+backend/agentic_qa/logs/
+
+# GTM / marketing context docs (not for public repo)
+gtm-context/
+
+# NOTE: frontend/.env.production is intentionally tracked -- it holds only
+# NEXT_PUBLIC_* values (compiled into the client bundle anyway) and Vercel's
+# production build depends on it. Never put real secrets there.
+
+# Playwright test artifacts
+frontend/playwright-report/
+frontend/test-results/

@@ -8,7 +8,7 @@ interface ToolConfirmResponse {
   executed: boolean;
   summary: string;
   created?: { id: string; name: string; image_url?: string; cutout_url?: string | null }[];
-  failed?: { name: string; error: string }[];
+  failed?: { name: string; reason: string }[];
   result_image_url?: string | null;
   result_id?: string | null;
 }
@@ -18,6 +18,7 @@ export interface PendingActionResult {
   summary: string;
   toolName?: string;
   created?: ToolConfirmResponse["created"];
+  failed?: ToolConfirmResponse["failed"];
   resultImageUrl?: string;
   resultId?: string;
 }
@@ -113,6 +114,7 @@ export function PendingActionCard({ action, onResolve }: Props) {
         summary: res.summary,
         toolName: action.toolName,
         created: res.created,
+        failed: res.failed,
         resultImageUrl: res.result_image_url ?? undefined,
         resultId: res.result_id ?? undefined,
       });

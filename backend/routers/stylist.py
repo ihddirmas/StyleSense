@@ -94,7 +94,8 @@ async def chat(req: StylistChatRequest, user = Depends(current_user)):
             pending_photo_url=photo_url,
         )
     except Exception as e:
-        raise HTTPException(500, f"Stylist failed: {e}")
+        logger.exception("Aria chat turn failed")
+        raise HTTPException(500, str(e))
 
     pending_action = result.get("pending_action")
     if pending_action:
@@ -159,8 +160,9 @@ async def tool_confirm(req: ToolConfirmRequest, user = Depends(current_user)):
     try:
         result = await aria_tools.execute_confirmed_tool(row["tool_name"], row["tool_input"], user["id"])
     except Exception as e:
+        logger.exception("Tool confirm execution failed for %s", row["tool_name"])
         supabase_service.update_stylist_tool_call(req.tool_use_id, status="failed")
-        raise HTTPException(500, f"Action failed: {e}")
+        raise HTTPException(500, str(e))
 
     supabase_service.update_stylist_tool_call(req.tool_use_id, status="done", result_summary=result["summary"])
     return ToolConfirmResponse(executed=True, **result)

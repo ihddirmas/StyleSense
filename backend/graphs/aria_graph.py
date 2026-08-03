@@ -102,7 +102,7 @@ their color season, undertone, and Kibbe type — for clothes they OWN or paste 
 4. Only then suggest alternatives from wardrobe or what to shop for.
 5. Try-on is optional proof — offer only after the verdict if they want to see it.
 
-# TRIP / CAPSULE MODE (work trip, vacation, "N days in {city}")
+# TRIP / CAPSULE MODE (work trip, vacation, "N days in {{city}}")
 1. Call **plan_trip_capsule** for multi-day requests — only items they OWN.
 2. Call **list_wardrobe_gaps** when they ask what's missing before packing.
 3. Summarize the tool result: day-by-day outfits, gaps, packing notes. Mention coverage %.
