@@ -36,12 +36,14 @@ def _truthy(val: Optional[str]) -> bool:
 
 
 def _normalize_database_url(url: str) -> str:
-    """Ensure SQLAlchemy + psycopg2 driver prefix."""
+    """Ensure SQLAlchemy + psycopg2 driver prefix and SSL for Supabase."""
     pg = "post" + "gres"
     if url.startswith(f"{pg}://"):
-        return url.replace(f"{pg}://", f"{pg}ql+psycopg2://", 1)
-    if url.startswith(f"{pg}ql://") and "+psycopg2" not in url:
-        return url.replace(f"{pg}ql://", f"{pg}ql+psycopg2://", 1)
+        url = url.replace(f"{pg}://", f"{pg}ql+psycopg2://", 1)
+    elif url.startswith(f"{pg}ql://") and "+psycopg2" not in url:
+        url = url.replace(f"{pg}ql://", f"{pg}ql+psycopg2://", 1)
+    if "sslmode=" not in url and "supabase.co" in url:
+        url += "&sslmode=require" if "?" in url else "?sslmode=require"
     return url
 
 
