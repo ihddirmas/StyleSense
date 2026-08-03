@@ -35,9 +35,10 @@ lines = [
     f"FRONTEND_URL={g('FRONTEND_URL', 'http://localhost:3000')}",
 ]
 db = g("DATABASE_URL") or g("SUPABASE_DATABASE_URL")
-if db:
+if db and not db.startswith("http"):
     lines.append(f"DATABASE_URL={db}")
-else:
+elif db:
+    print("SKIP invalid DATABASE_URL — use the Database connection URI, not the project HTTPS URL")
     existing = Path("backend/.env").read_text() if Path("backend/.env").exists() else ""
     for key in ("AURORA_IAM_AUTH", "AURORA_HOST", "AURORA_PORT", "AURORA_DB", "AURORA_USER",
                 "AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
@@ -107,6 +108,7 @@ Supabase (auth + storage + social + core DB), Runway, and Anthropic are cloud-ho
 - `posthog-node` warns on Node 22.14; dev still works.
 - Python commands in docs use Windows paths; on Linux use `backend/venv/bin/python`.
 - First dashboard load may fail wardrobe until `DATABASE_URL` is set and Supabase schema is applied; **Retry** after fixing env.
+- **`DATABASE_URL` must be the database connection URI** from Supabase Dashboard → Database (pooler port **6543**), **not** the `https://` project URL. Fix on Render and Cursor secrets.
 - `tests.test_anthropic_smoke` requires Anthropic API credits; low balance returns HTTP 400.
 - Cloud test login secrets: `TEST_USER_EMAIL` + `TEST_USER_PASSWORD` (if the password secret was saved as `TEST_USER_PASSWOR`, use that env name instead).
 

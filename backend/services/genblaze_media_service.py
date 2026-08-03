@@ -87,7 +87,8 @@ def ingest_media_url(
         name=f"stylesense-{source}",
         tenant_id=user_id,
     )
-    step = result.steps[0] if result.steps else None
+    steps = result.run.steps if result.run else []
+    step = steps[0] if steps else None
     durable_url = step.assets[0].url if step and step.assets else source_url
     return {
         "b2_url": durable_url,
