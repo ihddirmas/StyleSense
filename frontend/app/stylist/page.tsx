@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Loader2, MessageCircle, ChevronRight,
-  Camera, X, Shuffle, Plus, Bookmark, Check, ChevronDown, Trash2,
+  Camera, X, Shuffle, Plus, Bookmark, Check, ChevronDown, Trash2, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useWardrobeItems } from "@/lib/useWardrobeItems";
@@ -26,12 +26,14 @@ import posthog from "posthog-js";
 import { PendingActionCard, type PendingActionResult } from "@/components/stylist/PendingActionCard";
 import ThinkingIndicator from "@/components/stylist/ThinkingIndicator";
 import TrainTasteModal from "@/components/stylist/TrainTasteModal";
+import { CapsulePlanCard } from "@/components/stylist/CapsulePlanCard";
+import type { CapsulePlan } from "@/types";
 
 const SUGGESTION_PROMPTS = [
   "Does this suit my color season?",
   "Paste a Myntra URL — verdict please",
-  "What colors should I avoid?",
-  "Outfit for a dinner date from my closet",
+  "5-day work trip to Milan — capsule from my closet",
+  "What am I missing for a business trip?",
 ];
 
 export default function StylistPage() {
@@ -216,6 +218,29 @@ export default function StylistPage() {
     }
   }
 
+  async function submitFeedback(idx: number, rating: "up" | "down") {
+    const msg = messages[idx];
+    if (msg.role !== "assistant" || msg.feedbackRating) return;
+    try {
+      await apiPost("/api/stylist/feedback", {
+        rating,
+        item_ids: msg.suggestedItemIds || [],
+        note: msg.content.slice(0, 240),
+      });
+      setMessages((prev) =>
+        prev.map((m, i) => (i === idx ? { ...m, feedbackRating: rating } : m))
+      );
+      posthog.capture("stylist_feedback", { rating });
+      toast.success(rating === "up" ? "Thanks — I'll remember that" : "Noted — I'll adjust");
+      const sessionId = useAriaChat.getState().currentSessionId;
+      if (sessionId) {
+        setTimeout(() => updateSession(useAriaChat.getState().messages).catch(() => {}), 0);
+      }
+    } catch (e) {
+      toast.error(`Feedback failed: ${e instanceof Error ? e.message : "unknown"}`);
+    }
+  }
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
@@ -329,6 +354,7 @@ export default function StylistPage() {
           source_url: string;
           suggested_category?: string | null;
         } | null;
+        capsule_plan?: CapsulePlan | null;
       }>("/api/stylist/chat", payload);
       const assistantMsg: ChatMessage = {
         role: "assistant",
@@ -353,6 +379,7 @@ export default function StylistPage() {
               suggestedCategory: res.product_preview.suggested_category,
             }
           : undefined,
+        capsulePlan: res.capsule_plan ?? undefined,
       };
       const updatedMessages = [...next, assistantMsg];
       setMessages(updatedMessages);
@@ -558,6 +585,30 @@ export default function StylistPage() {
                         savedOutfit={!!m.savedOutfit}
                         onSaveOutfit={m.manifestUrl ? () => saveManifestOutfit(i) : undefined}
                       />
+                      {m.capsulePlan && <CapsulePlanCard plan={m.capsulePlan} />}
+                      {m.role === "assistant" && i > 0 && (
+                        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
+                          <span className="text-2xs text-muted mr-1">Helpful?</span>
+                          <button
+                            type="button"
+                            aria-label="Thumbs up"
+                            disabled={!!m.feedbackRating}
+                            onClick={() => submitFeedback(i, "up")}
+                            className={`p-1 rounded ${m.feedbackRating === "up" ? "text-accent" : "text-muted hover:text-foreground"}`}
+                          >
+                            <ThumbsUp size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Thumbs down"
+                            disabled={!!m.feedbackRating}
+                            onClick={() => submitFeedback(i, "down")}
+                            className={`p-1 rounded ${m.feedbackRating === "down" ? "text-accent" : "text-muted hover:text-foreground"}`}
+                          >
+                            <ThumbsDown size={14} />
+                          </button>
+                        </div>
+                      )}
                       {formatMsgTime(m.createdAt) && (
                         <p className="text-2xs text-muted mt-2 mb-0 text-right">{formatMsgTime(m.createdAt)}</p>
                       )}
