@@ -10,7 +10,14 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from supabase import create_client
 
-from scripts.test_users import cleanup_ephemeral_users, protected_emails, qa_email
+from scripts.test_users import (
+    cleanup_ephemeral_users,
+    protected_emails,
+    qa_email,
+    seed_account_credentials,
+    seed_spec_email,
+    SEED_ACCOUNTS,
+)
 
 
 def main():
@@ -33,6 +40,10 @@ def main():
     print(f"[{mode}] {len(targets)} ephemeral user(s)")
     print(f"Protected (never deleted): {', '.join(sorted(protected_emails()))}")
     print(f"Canonical QA: {qa_email()}")
+    configured = {c["key"] for c in seed_account_credentials()}
+    for s in SEED_ACCOUNTS:
+        status = "password in env" if s["key"] in configured else "no password secret"
+        print(f"  Seed {seed_spec_email(s)}: {status}")
     for u in targets:
         print(f"  - {u.email} ({u.id})")
 
