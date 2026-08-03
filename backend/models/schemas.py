@@ -200,6 +200,15 @@ class StylistChatResponse(BaseModel):
     scene: Optional[str] = None  # try-on background for "Manifest this look"
     pending_action: Optional[PendingAction] = None
     product_preview: Optional[ProductPreview] = None
+    capsule_plan: Optional[dict] = None
+
+
+class StylistFeedbackRequest(BaseModel):
+    rating: str  # "up" | "down"
+    verdict: Optional[str] = None
+    item_ids: List[str] = []
+    url: Optional[str] = None
+    note: Optional[str] = None
 
 
 class ToolConfirmRequest(BaseModel):

@@ -57,6 +57,21 @@ export interface ProductPreview {
   suggestedCategory?: string | null;
 }
 
+export interface CapsulePlan {
+  destination: string;
+  days: number;
+  dress_code: string;
+  daily_outfits?: Array<{
+    day?: number;
+    label?: string;
+    items?: Array<{ id: string; name: string; category?: string }>;
+    notes?: string;
+  }>;
+  gaps?: Array<{ category?: string; description?: string; suggestion?: string; why?: string }>;
+  packing_notes?: string[];
+  coverage_pct?: number;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -70,6 +85,8 @@ export interface ChatMessage {
   savedOutfit?: boolean;      // this manifested look was saved to Outfits
   pendingAction?: PendingAction; // a tool call Aria proposed, awaiting confirm/cancel
   productPreview?: ProductPreview; // a link Aria looked up via lookup_product_from_url
+  capsulePlan?: CapsulePlan;
+  feedbackRating?: "up" | "down";
 }
 
 export interface DetectedItem {
