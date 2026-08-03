@@ -9,6 +9,7 @@
 -- users: body + style fields (some may already exist from v2g/v2h/v2i)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS full_body_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS style_preferences JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS aria_memory JSONB DEFAULT '{}'::jsonb;
 
 -- wardrobe: transparent cutout for closet grid
 ALTER TABLE wardrobe_items ADD COLUMN IF NOT EXISTS cutout_url TEXT;

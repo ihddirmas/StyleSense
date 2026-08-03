@@ -165,7 +165,7 @@ def delete_wardrobe_item(item_id: str) -> None:
 # ───────────────────────────── USERS / AVATAR ───────────────────────────── #
 
 # JSONB columns on `users` - dict/list values for these are json-encoded + cast.
-_USER_JSONB_COLS = {"selfie_urls", "color_profile", "style_preferences", "body_analysis", "kibbe_analysis"}
+_USER_JSONB_COLS = {"selfie_urls", "color_profile", "style_preferences", "body_analysis", "kibbe_analysis", "aria_memory"}
 
 
 def upsert_user(user_id: str, **fields) -> dict:

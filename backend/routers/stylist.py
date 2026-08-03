@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from models.schemas import (
     StylistChatRequest,
     StylistChatResponse,
+    StylistFeedbackRequest,
     StylistWardrobeDetectRequest,
     StylistWardrobeDetectResponse,
     StylistWardrobeConfirmRequest,
@@ -21,7 +22,7 @@ from models.schemas import (
     ToolConfirmResponse,
     DetectedItem,
 )
-from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service
+from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service
 from services.auth_service import current_user
 from services.wardrobe_add_service import confirm_and_add_items
 from graphs import aria_graph
@@ -130,6 +131,7 @@ async def chat(req: StylistChatRequest, user = Depends(current_user)):
         scene=result.get("scene"),
         pending_action=pending_action,
         product_preview=result.get("product_preview"),
+        capsule_plan=result.get("capsule_plan"),
     )
 
 
@@ -162,6 +164,31 @@ async def tool_confirm(req: ToolConfirmRequest, user = Depends(current_user)):
 
     supabase_service.update_stylist_tool_call(req.tool_use_id, status="done", result_summary=result["summary"])
     return ToolConfirmResponse(executed=True, **result)
+
+
+@router.post("/feedback")
+async def stylist_feedback(req: StylistFeedbackRequest, user=Depends(current_user)):
+    """Thumbs up/down on an Aria reply — stored in users.aria_memory for future turns."""
+    if req.rating not in ("up", "down"):
+        raise HTTPException(400, "rating must be 'up' or 'down'")
+    try:
+        mem = aria_memory_service.append_verdict_feedback(
+            user["id"],
+            rating=req.rating,
+            verdict=req.verdict,
+            item_ids=req.item_ids,
+            url=req.url,
+            note=req.note,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    analytics_service.capture(user["id"], "stylist_feedback", {"rating": req.rating})
+    return {"ok": True, "memory": mem}
+
+
+@router.get("/memory")
+async def get_aria_memory(user=Depends(current_user)):
+    return {"memory": aria_memory_service.get_memory(user["id"])}
 
 
 @router.get("/insight")

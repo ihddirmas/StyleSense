@@ -90,10 +90,56 @@ ANTHROPIC_TOOLS = [
             "required": ["url"],
         },
     },
+    {
+        "name": "list_wardrobe_gaps",
+        "description": (
+            "Analyze the user's OWNED wardrobe for missing categories before a trip or "
+            "occasion. Free, read-only, runs immediately. Call when they ask what's "
+            "missing, what to pack, or gap analysis for work travel."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dress_code": {
+                    "type": "string",
+                    "enum": ["business", "smart casual", "casual", "formal", "beach", "evening"],
+                    "description": "Dress code for the trip or event.",
+                },
+                "days": {"type": "integer", "minimum": 1, "maximum": 14, "description": "Trip length in days."},
+            },
+            "required": ["dress_code"],
+        },
+    },
+    {
+        "name": "plan_trip_capsule",
+        "description": (
+            "Build a multi-day capsule wardrobe plan from items the user ALREADY OWNS — "
+            "day-by-day outfits, packing notes, and shopping gaps. Free, read-only. "
+            "Use for work trips, vacations, or 'capsule wardrobe for N days in {city}'."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "destination": {"type": "string", "description": "City or destination, e.g. 'Milan'."},
+                "days": {"type": "integer", "minimum": 1, "maximum": 14},
+                "dress_code": {
+                    "type": "string",
+                    "enum": ["business", "smart casual", "casual", "formal", "beach", "evening"],
+                },
+                "climate_notes": {
+                    "type": "string",
+                    "description": "Optional weather/context, e.g. 'hot and humid, 32C'.",
+                },
+            },
+            "required": ["destination", "days", "dress_code"],
+        },
+    },
 ]
 
 CONFIRM_REQUIRED_TOOLS = {"add_wardrobe_items", "generate_tryon"}
-READONLY_TOOLS = {"lookup_product_from_url"}
+READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule"}
+
+_DRESS_CODES = {"business", "smart casual", "casual", "formal", "beach", "evening"}
 
 
 def _clean_item(raw: dict) -> Optional[dict]:
@@ -145,6 +191,41 @@ def _validate_lookup_product(raw_input: dict) -> Optional[dict]:
     return {"url": url.strip()}
 
 
+def _validate_list_gaps(raw_input: dict) -> Optional[dict]:
+    dress = (raw_input or {}).get("dress_code") or "business"
+    dress = str(dress).strip().lower()
+    if dress not in _DRESS_CODES:
+        dress = "business"
+    days = (raw_input or {}).get("days", 5)
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        days = 5
+    return {"dress_code": dress, "days": max(1, min(days, 14))}
+
+
+def _validate_plan_capsule(raw_input: dict) -> Optional[dict]:
+    dest = (raw_input or {}).get("destination")
+    if not isinstance(dest, str) or not dest.strip():
+        return None
+    days = (raw_input or {}).get("days")
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return None
+    dress = (raw_input or {}).get("dress_code") or "business"
+    dress = str(dress).strip().lower()
+    if dress not in _DRESS_CODES:
+        dress = "business"
+    climate = (raw_input or {}).get("climate_notes")
+    return {
+        "destination": dest.strip()[:120],
+        "days": max(1, min(days, 14)),
+        "dress_code": dress,
+        "climate_notes": climate.strip()[:200] if isinstance(climate, str) and climate.strip() else None,
+    }
+
+
 def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[dict]:
     """Re-validate Claude's tool_use input server-side before it's ever shown to the
     user (confirm-required tools) or executed (read-only tools). Returns a cleaned
@@ -155,6 +236,10 @@ def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[
         return _validate_generate_tryon(raw_input, wardrobe)
     if name == "lookup_product_from_url":
         return _validate_lookup_product(raw_input)
+    if name == "list_wardrobe_gaps":
+        return _validate_list_gaps(raw_input)
+    if name == "plan_trip_capsule":
+        return _validate_plan_capsule(raw_input)
     return None
 
 
@@ -275,22 +360,48 @@ async def execute_confirmed_tool(name: str, tool_input: dict, user_id: str) -> d
     raise ValueError(f"Unknown or not-yet-supported tool: {name}")
 
 
-async def execute_readonly_tool(name: str, tool_input: dict) -> dict:
+async def execute_readonly_tool(name: str, tool_input: dict, ctx: Optional[dict] = None) -> dict:
     """Execute a read-only tool immediately, inside the tool-use loop in
-    aria_graph._advise -- it costs nothing and mutates nothing, so unlike
-    CONFIRM_REQUIRED_TOOLS it never needs a user confirmation round-trip."""
-    if name != "lookup_product_from_url":
-        raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")
+    aria_graph._advise -- it costs nothing and mutates nothing."""
+    ctx = ctx or {}
 
-    from services.scrape_service import scrape_product
+    if name == "lookup_product_from_url":
+        from services.scrape_service import scrape_product
 
-    try:
-        result = await scrape_product(tool_input["url"])
-    except Exception as e:
-        return {"error": f"Could not fetch that URL: {e}"}
-    return {
-        "image_url": result.image_url,
-        "name": result.name,
-        "source_url": result.source_url,
-        "suggested_category": result.suggested_category,
-    }
+        try:
+            result = await scrape_product(tool_input["url"])
+        except Exception as e:
+            return {"error": f"Could not fetch that URL: {e}"}
+        return {
+            "image_url": result.image_url,
+            "name": result.name,
+            "source_url": result.source_url,
+            "suggested_category": result.suggested_category,
+        }
+
+    if name == "list_wardrobe_gaps":
+        from services import capsule_service
+
+        return capsule_service.list_wardrobe_gaps(
+            ctx.get("wardrobe") or [],
+            dress_code=tool_input["dress_code"],
+            days=tool_input.get("days", 5),
+            color_profile=ctx.get("color_profile"),
+            kibbe_analysis=ctx.get("kibbe_analysis"),
+        )
+
+    if name == "plan_trip_capsule":
+        from services import capsule_service
+
+        plan = capsule_service.plan_trip_capsule(
+            ctx.get("wardrobe") or [],
+            destination=tool_input["destination"],
+            days=tool_input["days"],
+            dress_code=tool_input["dress_code"],
+            climate_notes=tool_input.get("climate_notes"),
+            color_profile=ctx.get("color_profile"),
+            kibbe_analysis=ctx.get("kibbe_analysis"),
+        )
+        return {"capsule_plan": plan, **plan}
+
+    raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")

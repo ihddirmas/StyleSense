@@ -21,7 +21,7 @@ from typing import Optional, TypedDict
 
 from langgraph.graph import StateGraph, START, END
 
-from services import supabase_service, anthropic_service, style_kb, color_service, kibbe_service, aria_tools, usage_limits
+from services import supabase_service, anthropic_service, style_kb, color_service, kibbe_service, aria_tools, usage_limits, aria_memory_service
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +39,14 @@ class AriaState(TypedDict, total=False):
     scene: Optional[str]
     kb_snippets: list
     style_preferences: list  # from this-or-that choices
+    aria_memory: Optional[dict]
     reply: str
     item_ids: list
     pending_photo_url: Optional[str]  # permanent URL of a photo shared this turn, if any
     avatar_selfie_url: Optional[str]  # best face photo for a try-on generation, if any
     pending_action: Optional[dict]    # tool call Aria proposed but hasn't executed
     product_preview: Optional[dict]   # result of an auto-executed lookup_product_from_url call
+    capsule_plan: Optional[dict]      # result of plan_trip_capsule tool
 
 
 # Maps a detected occasion to a rich try-on background, used when the user clicks
@@ -90,44 +92,41 @@ their color season, undertone, and Kibbe type — for clothes they OWN or paste 
 # USER'S REVEALED PREFERENCES (from this-or-that choices — prioritise these when styling)
 {preferences}
 
+# LONG-TERM MEMORY (feedback & stated loves/avoid — honour these)
+{aria_memory}
+
 # VERDICT MODE (when user asks about a specific item, URL, or "does this suit me")
 1. Lead with a clear verdict: **Suits you** | **Borderline** | **Avoid** (one line).
 2. Explain WHY using their profile: cite undertone vs garment warmth/coolness, contrast, Kibbe lines.
-   Example: "This warm coral clashes with your cool undertone (Summer) — try dusty rose instead."
-3. If color or Kibbe confidence is below ~70%, say "medium confidence — take with a grain of salt"
-   and suggest better lighting or a full-body photo in Settings.
+3. If color or Kibbe confidence is below ~70%, say "medium confidence — take with a grain of salt".
 4. Only then suggest alternatives from wardrobe or what to shop for.
 5. Try-on is optional proof — offer only after the verdict if they want to see it.
+
+# TRIP / CAPSULE MODE (work trip, vacation, "N days in {city}")
+1. Call **plan_trip_capsule** for multi-day requests — only items they OWN.
+2. Call **list_wardrobe_gaps** when they ask what's missing before packing.
+3. Summarize the tool result: day-by-day outfits, gaps, packing notes. Mention coverage %.
+4. Do not invent items — only IDs returned by the planner.
 
 # OUTFIT MODE (when user asks what to wear / occasion styling)
 1. Read their EXACT request — occasion, vibe, constraints.
 2. Build ONE complete outfit FROM THEIR WARDROBE using [ITEM:<id>] tags after each name.
-3. Say WHY each piece works for their season + Kibbe (one reason per outfit, not per bullet).
-4. Vary by occasion — never default to the same hero piece.
+3. Say WHY each piece works for their season + Kibbe.
 
 # RULES
 - Only recommend REAL wardrobe items with exact names: "the Cream sweatshirt [ITEM:abc-123]".
 - Never invent items or IDs.
-- If wardrobe is empty, still give color/Kibbe guidance for pasted URLs or described items.
 
 # FORMAT (Markdown)
-- Verdict/outfit mode: short intro, bullets if listing pieces, one styling tip. Under ~120 words unless URL analysis needs more.
-- Bold item names like **Name** with [ITEM:id] immediately after.
+- Under ~150 words unless trip plan needs a structured day list.
 
-# AGENT ACTIONS (tools — user must confirm anything that spends credits)
+# AGENT ACTIONS (tools)
+- **list_wardrobe_gaps** / **plan_trip_capsule** — free, run immediately for trips/capsules.
+- **lookup_product_from_url** — pasted store URL; runs automatically.
 - **add_wardrobe_items** — photo shared THIS turn + user wants to save garment(s).
-- **generate_tryon** — only AFTER a verdict/outfit with [ITEM:<id>] tags in this same reply (proof step).
-- **lookup_product_from_url** — store URL pasted; runs automatically.
+- **generate_tryon** — only AFTER tagging items with [ITEM:<id>] in this reply.
 
 Never propose add_wardrobe_items without a photo. Never propose generate_tryon before tagging items.
-
-# USER'S STYLE PROFILE (color / season)
-- **add_wardrobe_items** — only when the user shared a photo THIS turn and wants to save garment(s) from it.
-- **generate_tryon** — only after you've recommended specific items using [ITEM:<id>] tags in this same reply.
-- **lookup_product_from_url** — when the user pastes a store URL; runs automatically (no confirmation).
-
-Never propose add_wardrobe_items without a photo in this turn. Never propose generate_tryon before tagging items.
-If the user asks you to try something on, recommend the outfit first, then propose generate_tryon.
 
 # USER'S STYLE PROFILE
 {color_profile}
@@ -135,10 +134,10 @@ If the user asks you to try something on, recommend the outfit first, then propo
 # KIBBE BODY TYPE PROFILE
 {kibbe_profile}
 
-# STYLING KNOWLEDGE (research-grounded reference - apply, don't quote)
+# STYLING KNOWLEDGE
 {kb}
 
-# USER'S WARDROBE (grouped by category)
+# USER'S WARDROBE
 {wardrobe}
 """
 
@@ -189,6 +188,7 @@ def _ensure_profile(state: AriaState) -> dict:
     if prefs:
         result["style_preferences"] = prefs[-10:]
 
+    result["aria_memory"] = aria_memory_service.get_memory(state["user_id"])
     result["avatar_selfie_url"] = color_service.best_face_source(user)
 
     return result
@@ -248,6 +248,7 @@ MAX_TOOL_ROUNDS = 3
 def _advise(state: AriaState) -> dict:
     system = SYSTEM_TEMPLATE.format(
         preferences=_format_preferences(state.get("style_preferences", []), state.get("wardrobe", [])),
+        aria_memory=aria_memory_service.format_for_prompt(state.get("aria_memory")),
         color_profile=color_service.format_color_profile(state.get("color_profile")),
         kibbe_profile=kibbe_service.format_kibbe_profile(state.get("kibbe_analysis")),
         kb="\n".join(f"- {s}" for s in state.get("kb_snippets", [])) or "(none)",
@@ -274,6 +275,15 @@ def _advise(state: AriaState) -> dict:
             return anthropic_service.client.messages.create(model=anthropic_service.MODEL, **kwargs)
 
     product_preview = None
+    capsule_plan = None
+    tool_ctx = {
+        "user_id": state["user_id"],
+        "wardrobe": state.get("wardrobe", []),
+        "color_profile": state.get("color_profile"),
+        "kibbe_analysis": state.get("kibbe_analysis"),
+        "pending_photo_url": state.get("pending_photo_url"),
+        "avatar_selfie_url": state.get("avatar_selfie_url"),
+    }
     resp = _call(msgs)
     rounds = 1
     while resp.stop_reason == "tool_use" and rounds < MAX_TOOL_ROUNDS:
@@ -283,9 +293,11 @@ def _advise(state: AriaState) -> dict:
         validated = aria_tools.validate_tool_input(tool_use.name, tool_use.input, state.get("wardrobe", []))
         if validated is None:
             break
-        tool_result = asyncio.run(aria_tools.execute_readonly_tool(tool_use.name, validated))
-        if "error" not in tool_result:
+        tool_result = asyncio.run(aria_tools.execute_readonly_tool(tool_use.name, validated, tool_ctx))
+        if tool_use.name == "lookup_product_from_url" and "error" not in tool_result:
             product_preview = tool_result
+        if tool_use.name == "plan_trip_capsule" and tool_result.get("capsule_plan"):
+            capsule_plan = tool_result["capsule_plan"]
         msgs = msgs + [
             {"role": "assistant", "content": resp.content},
             {"role": "user", "content": [
@@ -300,6 +312,7 @@ def _advise(state: AriaState) -> dict:
         "reply": reply,
         "item_ids": anthropic_service.extract_item_ids(reply),
         "product_preview": product_preview,
+        "capsule_plan": capsule_plan,
     }
 
     if resp.stop_reason == "tool_use":
@@ -366,4 +379,5 @@ def run_aria(
         "kibbe_analysis": out.get("kibbe_analysis"),
         "pending_action": out.get("pending_action"),
         "product_preview": out.get("product_preview"),
+        "capsule_plan": out.get("capsule_plan"),
     }

@@ -122,6 +122,22 @@ def test_validate_lookup_product_missing_url_returns_none():
     assert aria_tools.validate_tool_input("lookup_product_from_url", {}, WARDROBE) is None
 
 
+def test_validate_list_gaps_defaults():
+    out = aria_tools.validate_tool_input("list_wardrobe_gaps", {}, WARDROBE)
+    assert out["dress_code"] == "business"
+    assert out["days"] == 5
+
+
+def test_validate_plan_capsule_requires_destination():
+    assert aria_tools.validate_tool_input("plan_trip_capsule", {"days": 5, "dress_code": "business"}, WARDROBE) is None
+    out = aria_tools.validate_tool_input(
+        "plan_trip_capsule",
+        {"destination": "Milan", "days": 5, "dress_code": "business"},
+        WARDROBE,
+    )
+    assert out["destination"] == "Milan"
+
+
 # ── build_pending_action ────────────────────────────────────────────────── #
 
 _ONE_ITEM = {"items": [
