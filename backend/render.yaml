@@ -41,6 +41,8 @@ services:
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
+      - key: DATABASE_URL
+        sync: false
       - key: RUNWAY_DEFAULT_VOICE_ID
         sync: false
       - key: STYLIST_CHARACTER_ID

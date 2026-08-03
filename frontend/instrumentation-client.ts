@@ -14,9 +14,11 @@ if (dsn) {
   });
 }
 
+import { getPostHogPublicKey } from "@/lib/posthog-key";
+
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
-const phToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const phToken = getPostHogPublicKey();
 
 if (phToken) {
   posthog.init(phToken, {
@@ -28,7 +30,7 @@ if (phToken) {
   });
 } else if (process.env.NODE_ENV !== "production") {
   console.error(
-    "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, " +
-    "this causes events to be silently missed. This error stops appearing once NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN is configured"
+    "PostHog project token is missing (set NEXT_PUBLIC_POSTHOG_KEY or NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN). " +
+    "Events will be silently missed until configured."
   );
 }
