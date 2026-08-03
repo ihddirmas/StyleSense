@@ -23,7 +23,7 @@ jobs:
           # Set a repo variable BACKEND_HEALTH_URL (Settings -> Secrets and
           # variables -> Actions -> Variables) if the deployed URL differs
           # from the fallback below.
-          HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL || 'https://styleai-backend.onrender.com/health' }}
+          HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL || 'https://styleai-backend-5vk9.onrender.com/health' }}
         run: |
           status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$HEALTH_URL")
           echo "Response status: $status"
