@@ -1,5 +1,9 @@
 """Unit tests for capsule planning and gap analysis (no network)."""
 import unittest
+from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from services import capsule_service
 
