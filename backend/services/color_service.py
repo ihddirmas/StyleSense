@@ -224,6 +224,68 @@ def best_face_source(user_row: dict) -> Optional[str]:
     return _primary_selfie(user_row) or user_row.get("full_body_url")
 
 
+def get_season_swatches(season: Optional[str]) -> list[dict]:
+    """Reference palette for a season: list of {"name", "hex"}. Empty if unknown."""
+    if not season:
+        return []
+    return _load_palettes().get("season_reference_swatches", {}).get(season, {}).get("palette", [])
+
+
+# Each season's most-opposite season for avoid_colors, pairing across both
+# undertone AND depth (spring=warm+light vs winter=cool+deep, etc.) --
+# standard convention in seasonal color analysis.
+_OPPOSITE_SEASON = {"spring": "winter", "winter": "spring", "summer": "autumn", "autumn": "summer"}
+
+
+def classify_season_from_hex(skin_hex: Optional[str]) -> Optional[dict]:
+    """
+    Deterministic seasonal classification from a MEASURED skin-tone hex color
+    (e.g. YouCam Skin AI's skin_color), as opposed to Claude vision's guess
+    from a full photo. No LLM call -- pure color math, using the same
+    season_reference_swatches data Claude-vision profiles already draw on,
+    so results merge cleanly into an existing color_profile.
+
+    Returns {"undertone", "season", "flattering_colors", "avoid_colors",
+    "source": "youcam_measured"} or None if the hex is unparseable.
+    """
+    import colorsys
+
+    if not skin_hex or not re.match(r"^#?[0-9a-fA-F]{6}$", skin_hex):
+        return None
+
+    h = skin_hex.lstrip("#")
+    r, g, b = int(h[0:2], 16) / 255, int(h[2:4], 16) / 255, int(h[4:6], 16) / 255
+    hue, lightness, _sat = colorsys.rgb_to_hls(r, g, b)
+
+    # Warm vs cool: classic red-minus-blue heuristic on skin tones -- warm
+    # (golden/yellow) skin reads red-dominant over blue, cool (pink/rosy)
+    # skin reads closer to neutral or blue-leaning.
+    undertone = "warm" if (r - b) > 0.12 else "cool" if (r - b) < 0.04 else "neutral"
+
+    # Light vs deep skin picks spring/summer (light) vs autumn/winter (deep)
+    # within the undertone's two valid seasons -- an approximation (real
+    # seasonal analysis also weighs contrast/clarity, not captured by a
+    # single skin swatch), stated as such wherever this feeds Aria.
+    valid = _UNDERTONE_SEASON_MAP.get(undertone, ["spring", "summer", "autumn", "winter"])
+    if undertone == "warm":
+        season = "spring" if lightness >= 0.55 else "autumn"
+    elif undertone == "cool":
+        season = "summer" if lightness >= 0.55 else "winter"
+    else:
+        season = min(valid, key=lambda s: abs(lightness - (0.65 if s in ("spring", "summer") else 0.4)))
+
+    palette = get_season_swatches(season)
+    avoid_palette = get_season_swatches(_OPPOSITE_SEASON.get(season, ""))
+
+    return {
+        "undertone": undertone,
+        "season": season,
+        "flattering_colors": [c["name"] for c in palette[:10]],
+        "avoid_colors": [c["name"] for c in avoid_palette[:6]],
+        "source": "youcam_measured",
+    }
+
+
 def best_body_source(user_row: dict) -> Optional[str]:
     """Best photo for BODY/proportions (avatar, optional try-on ref): the full-body photo,
     else the face selfie. None if neither exists."""

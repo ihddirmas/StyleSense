@@ -25,14 +25,14 @@ export default function GlobalError({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#f7f1ea",
-          color: "#1a1a1a",
+          background: "#DDD9CE",
+          color: "#3C2415",
           margin: 0,
         }}
       >
         <div style={{ textAlign: "center", padding: 24, maxWidth: 420 }}>
           <h1 style={{ fontSize: 28, marginBottom: 8 }}>Something went wrong</h1>
-          <p style={{ color: "#666", marginBottom: 20 }}>
+          <p style={{ color: "rgba(60, 36, 21, 0.65)", marginBottom: 20 }}>
             The app hit an unexpected error. Please try again.
           </p>
            <button
@@ -40,8 +40,8 @@ export default function GlobalError({
             className="rounded-sm"
             style={{
               padding: "10px 20px",
-              background: "#c9a84c",
-              color: "#1a1a1a",
+              background: "#E7E2BC",
+              color: "#3C2415",
               border: "none",
               cursor: "pointer",
               fontWeight: 600,

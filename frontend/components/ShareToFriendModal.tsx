@@ -71,7 +71,7 @@ export function ShareToFriendModal({
       >
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="text-xs uppercase tracking-wider" style={{ color: "var(--gold)" }}>
+            <div className="text-xs uppercase tracking-wider" style={{ color: "var(--on-gold)" }}>
               Share with a friend
             </div>
             <div className="font-display text-2xl mt-1">{target.label}</div>
@@ -103,7 +103,7 @@ export function ShareToFriendModal({
         </div>
         {loading ? (
           <div className="text-center py-6">
-            <Loader2 size={18} className="spin mx-auto" style={{ color: "var(--gold)" }} />
+            <Loader2 size={18} className="spin mx-auto" style={{ color: "var(--on-gold)" }} />
           </div>
         ) : friends.length === 0 ? (
           <div className="surface p-6 text-center" style={{ color: "var(--text-muted)" }}>
@@ -126,7 +126,7 @@ export function ShareToFriendModal({
                     className="rounded-full flex items-center justify-center font-semibold text-sm"
                     style={{
                       width: 34, height: 34,
-                      background: "var(--gold-dim)", color: "var(--gold)",
+                      background: "var(--gold-dim)", color: "var(--on-gold)",
                       border: "1px solid var(--border-gold)",
                     }}
                   >

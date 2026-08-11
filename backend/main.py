@@ -47,7 +47,7 @@ if SENTRY_DSN:
         traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")),
     )
 
-from routers import avatar, tryon, wardrobe, outfits, scrape, stylist, friends, chat, media  # noqa: E402
+from routers import avatar, tryon, wardrobe, outfits, scrape, stylist, friends, chat, media, skin  # noqa: E402
 
 app = FastAPI(
     title="StyleAI API",
@@ -142,6 +142,7 @@ app.include_router(outfits.router,   prefix="/api/outfits",   tags=["Outfits"])
 app.include_router(scrape.router,    prefix="/api/scrape",    tags=["Scrape"])
 app.include_router(stylist.router,   prefix="/api/stylist",   tags=["Stylist"])
 app.include_router(friends.router,   prefix="/api/friends",   tags=["Friends"])
+app.include_router(skin.router,      prefix="/api/skin",      tags=["Skin"])
 app.include_router(chat.router,      prefix="/api/chat",      tags=["Chat"])
 app.include_router(media.router,     prefix="/api/media",     tags=["Media"])
 

@@ -17,7 +17,7 @@ export default function Error({
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="surface w-full max-w-md p-10 text-center">
-        <div className="font-display text-5xl mb-1" style={{ color: "var(--gold)" }}>Oops</div>
+        <div className="font-display text-5xl mb-1" style={{ color: "var(--on-gold)" }}>Oops</div>
         <h1 className="font-display text-2xl mb-2">Something went wrong</h1>
         <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
           This feature ran into a problem. You can try again or head back home.

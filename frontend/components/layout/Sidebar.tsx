@@ -79,7 +79,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
     return (
       <aside
         className="hidden md:flex flex-col items-center py-4 shrink-0 border-r-2"
-        style={{ width: 32, borderColor: "#3C2415", background: "var(--bg)" }}
+        style={{ width: 32, borderColor: "var(--ink)", background: "var(--bg)" }}
       >
         <button
           onClick={onToggle}
@@ -97,7 +97,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   return (
     <aside
       className="hidden md:flex flex-col items-center py-4 shrink-0 border-r-2"
-      style={{ width: 64, borderColor: "#3C2415", background: "var(--bg)" }}
+      style={{ width: 64, borderColor: "var(--ink)", background: "var(--bg)" }}
     >
       {/* Collapse button */}
       <button
@@ -110,7 +110,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         <ChevronLeft size={14} />
       </button>
 
-      <nav className="flex flex-col items-center gap-1 flex-1 w-full px-2">
+      <nav aria-label="Sections" className="flex flex-col items-center gap-1 flex-1 w-full px-2">
         {navItems.map(({ href, icon: Icon, label, badge }) => {
           const active = pathname?.startsWith(href);
           return (
@@ -123,7 +123,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
               style={{
                 height: 44,
                 color: active ? "#ffffff" : "var(--text-muted)",
-                background: active ? "#3C2415" : "transparent",
+                background: active ? "var(--ink)" : "transparent",
                 textDecoration: "none",
               }}
             >
@@ -150,7 +150,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
           style={{
             height: 44,
             color: pathname === "/settings" ? "#ffffff" : "var(--text-muted)",
-            background: pathname === "/settings" ? "#3C2415" : "transparent",
+            background: pathname === "/settings" ? "var(--ink)" : "transparent",
             textDecoration: "none",
           }}
         >

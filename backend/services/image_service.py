@@ -40,7 +40,7 @@ def fetch_image_from_url(url: str, timeout: float = 20.0) -> tuple[bytes, str]:
     _assert_public_host(p.hostname or "")
 
     r = httpx.get(url, timeout=timeout, follow_redirects=False,
-                  headers={"User-Agent": "Mozilla/5.0 StyleSense/1.0"})
+                  headers={"User-Agent": "Mozilla/5.0 StyleSenseAI/1.0"})
     r.raise_for_status()
     ctype = r.headers.get("content-type", "").split(";")[0].strip().lower()
     if not ctype.startswith("image/"):

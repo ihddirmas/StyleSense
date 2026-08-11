@@ -39,11 +39,6 @@ interface AppState {
   setTryonModel: (id: string) => void;
   setVideoModel: (id: string) => void;
   hydrated: boolean;
-  // Body silhouette preference (frontend-only, used in Studio try-on context)
-  bodyType: "female" | "male" | null;
-  bodyPhotoUrl: string | null;
-  setBodyType: (type: "female" | "male" | null) => void;
-  setBodyPhotoUrl: (url: string | null) => void;
   // Wipe per-user data (called when the signed-in account changes / on logout).
   // Keeps model preferences, which aren't user-identifying.
   resetUserData: () => void;
@@ -67,10 +62,6 @@ export const useAppStore = create<AppState>()(
       videoModel: "veo3.1",
       setTryonModel: (id) => set({ tryonModel: id }),
       setVideoModel: (id) => set({ videoModel: id }),
-      bodyType: null,
-      bodyPhotoUrl: null,
-      setBodyType: (type) => set({ bodyType: type }),
-      setBodyPhotoUrl: (url) => set({ bodyPhotoUrl: url }),
       toggleSelected: (id) =>
         set((s) => ({
           selectedItemIds: s.selectedItemIds.includes(id)
@@ -93,8 +84,6 @@ export const useAppStore = create<AppState>()(
         stylizedVideoUrl: null,
         stylizedVideoStatus: null,
       hydrated: false,
-      bodyType: null,
-        bodyPhotoUrl: null,
         cachedWardrobe: [],
         cachedRecent: [],
       }),

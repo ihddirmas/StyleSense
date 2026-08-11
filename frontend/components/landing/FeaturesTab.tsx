@@ -64,7 +64,7 @@ const TABS = [
       "Style profile + color analysis baked into every reply",
       "One tap to generate the look on your avatar",
     ],
-    color: "#c9a84c",
+    color: "#E7E2BC",
     placeholder: "Stylist Preview",
   },
 ];

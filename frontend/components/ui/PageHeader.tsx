@@ -35,7 +35,7 @@ export function PageHeader({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="flex items-end justify-between gap-4 mb-5"
+      className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-4 mb-5"
     >
       <div className="flex-1 min-w-0">
         {eyebrow && (
@@ -58,7 +58,7 @@ export function PageHeader({
           </div>
         )}
       </div>
-      {action && <div className="shrink-0 ml-2">{action}</div>}
+      {action && <div className="shrink-0 sm:ml-2">{action}</div>}
     </motion.div>
   );
 }

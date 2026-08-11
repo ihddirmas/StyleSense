@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/Toast";
+import { getPostHogPublicKey } from "@/lib/posthog-key";
 import posthog from "posthog-js";
 
 interface AuthCardProps {
@@ -53,23 +54,23 @@ export function AuthCard({ initialMode, next }: AuthCardProps) {
       });
       setLoading(false);
       if (error) {
-        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        if (getPostHogPublicKey()) {
           posthog.capture("signup_failed", { method: "password", reason: error.message });
         }
         toast.error(error.message);
         return;
       }
       if (data.user && !data.session) {
-        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        if (getPostHogPublicKey()) {
           posthog.capture("signup_completed", { method: "password", requires_email_confirmation: true });
         }
         toast.info("Check your email to confirm your account, then sign in.");
         router.push("/login");
       } else {
-        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        if (getPostHogPublicKey()) {
           posthog.capture("signup_completed", { method: "password", requires_email_confirmation: false });
         }
-        toast.success("Welcome to StyleSense!");
+        toast.success("Welcome to StyleSenseAI!");
         router.push(next);
         router.refresh();
       }
@@ -94,7 +95,7 @@ export function AuthCard({ initialMode, next }: AuthCardProps) {
     >
       {/* Brand */}
       <div className="mb-6 text-center">
-        <div className="font-display text-4xl mb-1" style={{ color: "var(--ink)" }}>StyleSense</div>
+        <div className="font-display text-4xl mb-1" style={{ color: "var(--ink)" }}>StyleSenseAI</div>
         <p className="text-xs uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
           {mode === "login" ? "Sign in to your closet" : "Build your editorial closet"}
         </p>

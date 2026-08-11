@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Camera, Loader2, Star, Trash2, Plus } from "lucide-react";
+import { LogOut, Camera, Loader2, Star, Trash2, Plus, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAppStore } from "@/store/app";
 import { useTasks } from "@/store/tasks";
 import { useAuth } from "@/components/AuthProvider";
 import { TRYON_MODELS, VIDEO_MODELS } from "@/lib/models";
-import { apiGet, apiUpload, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiUpload, apiDelete } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
@@ -25,7 +25,6 @@ export default function SettingsPage() {
   const {
     tryonModel, videoModel, setTryonModel, setVideoModel,
     avatarSelfieUrl, setSelfieOnly,
-    bodyType, setBodyType, setBodyPhotoUrl, bodyPhotoUrl,
   } = useAppStore();
 
   const [selfies, setSelfies] = useState<string[]>([]);
@@ -35,7 +34,10 @@ export default function SettingsPage() {
   const [selectedSeed, setSelectedSeed] = useState<string | null>(null);
   const [fullBodyUrl, setFullBodyUrl] = useState<string | null>(null);
   const [uploadingFull, setUploadingFull] = useState(false);
-  const [bodyAnalysis, setBodyAnalysis] = useState<string | null>(null);
+  const [kibbeAnalysis, setKibbeAnalysis] = useState<{ kibbe_type?: string; notes?: string } | null>(null);
+  const [analyzingBody, setAnalyzingBody] = useState(false);
+  const [skinColors, setSkinColors] = useState<Record<string, string> | null>(null);
+  const [analyzingSkin, setAnalyzingSkin] = useState(false);
   const avatarTask = useTasks((s) =>
     s.tasks.find((t) => (t.kind === "avatar_still" || t.kind === "avatar_video") && t.status === "running")
   );
@@ -58,7 +60,25 @@ export default function SettingsPage() {
     apiGet<{ full_body_url: string | null }>("/api/avatar/full-body")
       .then((d) => setFullBodyUrl(d.full_body_url))
       .catch(() => {});
+    apiGet<{ kibbe_analysis: { kibbe_type?: string; notes?: string } | null }>("/api/stylist/profiles")
+      .then((d) => setKibbeAnalysis(d.kibbe_analysis))
+      .catch(() => {});
+    apiGet<{ status: string; result: { colors?: Record<string, string> } | null }>("/api/skin/status")
+      .then((d) => setSkinColors(d.result?.colors ?? null))
+      .catch(() => {});
   }, [user, refreshSelfies]);
+
+  async function handleAnalyzeSkin() {
+    setAnalyzingSkin(true);
+    try {
+      const result = await apiPost<{ colors: Record<string, string> }>("/api/skin/analyze", {});
+      setSkinColors(result.colors);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Skin analysis failed.");
+    } finally {
+      setAnalyzingSkin(false);
+    }
+  }
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -107,29 +127,43 @@ export default function SettingsPage() {
 
   async function handleUploadFullBody(file: File) {
     setUploadingFull(true);
-    setBodyAnalysis(null);
+    setKibbeAnalysis(null);
     const localUrl = URL.createObjectURL(file);
     setFullBodyUrl(localUrl);
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await apiUpload<{ full_body_url: string; body_analysis?: string }>("/api/avatar/upload-full-body", fd);
+      const res = await apiUpload<{ full_body_url: string }>("/api/avatar/upload-full-body", fd);
       setFullBodyUrl(res.full_body_url || localUrl);
-      setBodyAnalysis(res.body_analysis || "Hourglass silhouette · Warm autumn palette · Balanced proportions");
-      toast.success("Body photo uploaded — style recommendations personalised.");
+      toast.success("Body photo uploaded — analyzing your proportions...");
       // Only actually kicks off generation server-side the first time (no
       // avatar yet) — watchAvatarStill quietly no-ops otherwise.
       useTasks.getState().watchAvatarStill();
-    } catch {
-      setBodyAnalysis("Hourglass silhouette · Warm autumn palette · Balanced proportions");
+      pollKibbeAnalysis();
+    } catch (e) {
+      toast.error(`Upload failed: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
       setUploadingFull(false);
     }
   }
 
-  function handleBodyPhoto(file: File) {
-    setBodyPhotoUrl(URL.createObjectURL(file));
-    setBodyType(null);
+  function pollKibbeAnalysis() {
+    setAnalyzingBody(true);
+    let attempts = 0;
+    const poll = () => {
+      apiGet<{ kibbe_analysis: { kibbe_type?: string; notes?: string } | null; has_kibbe: boolean }>("/api/stylist/profiles")
+        .then((d) => {
+          if (d.has_kibbe || attempts >= 12) {
+            setKibbeAnalysis(d.kibbe_analysis);
+            setAnalyzingBody(false);
+            return;
+          }
+          attempts += 1;
+          setTimeout(poll, 2500);
+        })
+        .catch(() => setAnalyzingBody(false));
+    };
+    poll();
   }
 
   function selectPortrait(name: string, url: string) {
@@ -151,7 +185,7 @@ export default function SettingsPage() {
           className="flex items-center gap-2 px-3 py-2 mb-4"
           style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}
         >
-          <Loader2 size={14} className="spin" style={{ color: "var(--gold)" }} />
+          <Loader2 size={14} className="spin" style={{ color: "var(--on-gold)" }} />
           <span className="text-xs" style={{ color: "var(--text)" }}>
             {avatarTask.kind === "avatar_video" ? "Generating your ramp-walk video…" : "Generating your stylized avatar…"}
           </span>
@@ -194,13 +228,13 @@ export default function SettingsPage() {
                 const isPrimary = url === primaryUrl;
                 return (
                   <div key={url} className="relative group overflow-hidden flex-shrink-0"
-                    style={{ width: 100, height: 122, border: isPrimary ? "2px solid #3C2415" : "1.5px solid var(--border)" }}
+                    style={{ width: 100, height: 122, border: isPrimary ? "2px solid var(--ink)" : "1.5px solid var(--border)" }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt="Selfie" className="w-full h-full object-cover" />
                     {isPrimary && (
                       <div className="absolute top-1 left-1 px-1.5 py-0.5 text-2xs font-semibold flex items-center gap-1"
-                        style={{ background: "#3C2415", color: "#fff" }}>
+                        style={{ background: "var(--ink)", color: "#fff" }}>
                         <Star size={9} /> Primary
                       </div>
                     )}
@@ -224,7 +258,7 @@ export default function SettingsPage() {
                 <label className="flex flex-col items-center justify-center cursor-pointer flex-shrink-0"
                   style={{ width: 100, height: 122, border: "2px dashed rgba(60,36,21,0.45)", color: "var(--text-muted)" }}>
                   {uploading
-                    ? <Loader2 size={20} className="spin" style={{ color: "var(--gold)" }} />
+                    ? <Loader2 size={20} className="spin" style={{ color: "var(--on-gold)" }} />
                     : selfies.length === 0
                       ? <><Camera size={20} className="mb-1" /><span className="text-xs">Add selfie</span></>
                       : <><Plus size={20} className="mb-1" /><span className="text-xs">Add another</span></>
@@ -235,40 +269,6 @@ export default function SettingsPage() {
               )}
             </div>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>{slotHint}</p>
-          </motion.div>
-
-          {/* Body silhouette */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="surface p-6">
-            <div className="text-xs uppercase tracking-widest mb-3 font-semibold" style={{ color: "var(--ink)" }}>
-              Body silhouette
-            </div>
-            <div className="flex gap-3 mb-3">
-              {(["female", "male"] as const).map((type) => (
-                <button key={type} onClick={() => { setBodyType(type); setBodyPhotoUrl(null); }}
-                  className="flex flex-col items-center gap-1 px-6 py-3 text-sm font-semibold transition-all"
-                  style={{
-                    background: bodyType === type ? "var(--parchment)" : "var(--surface2)",
-                    border: bodyType === type ? "2px solid #3C2415" : "1.5px solid var(--border)",
-                    color: "var(--ink)", cursor: "pointer",
-                  }}>
-                  <span className="text-lg">{type === "female" ? "♀" : "♂"}</span>
-                  <span>{type === "female" ? "Female" : "Male"}</span>
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 px-3 py-2 text-xs cursor-pointer"
-                style={{ border: "1.5px dashed rgba(60,36,21,0.45)", color: "var(--text-muted)", display: "inline-flex" }}>
-                <Plus size={12} /> or upload your own
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleBodyPhoto(e.target.files[0])} />
-              </label>
-              {bodyPhotoUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={bodyPhotoUrl} alt="Body" className="object-cover"
-                  style={{ width: 36, height: 50, border: "1.5px solid var(--border)" }} />
-              )}
-            </div>
           </motion.div>
 
           {/* Body analysis */}
@@ -285,10 +285,10 @@ export default function SettingsPage() {
             </p>
             <div className="flex items-start gap-3">
               <label className="flex flex-col items-center justify-center cursor-pointer flex-shrink-0"
-                style={{ width: 72, height: 90, border: fullBodyUrl ? "2px solid #3C2415" : "2px dashed rgba(60,36,21,0.45)",
+                style={{ width: 72, height: 90, border: fullBodyUrl ? "2px solid var(--ink)" : "2px dashed rgba(60,36,21,0.45)",
                   color: "var(--text-muted)", position: "relative", overflow: "hidden" }}>
                 {uploadingFull
-                  ? <Loader2 size={18} className="spin" style={{ color: "var(--gold)" }} />
+                  ? <Loader2 size={18} className="spin" style={{ color: "var(--on-gold)" }} />
                   : fullBodyUrl
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={fullBodyUrl} alt="Full body" className="w-full h-full object-cover" />
@@ -297,16 +297,69 @@ export default function SettingsPage() {
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
                   onChange={(e) => e.target.files?.[0] && handleUploadFullBody(e.target.files[0])} />
               </label>
-              {bodyAnalysis
-                ? <div className="flex-1 p-3" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
-                    <div className="text-2xs uppercase tracking-widest mb-1" style={{ color: "var(--text-dim)" }}>Analysis</div>
-                    <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>{bodyAnalysis}</p>
+              {analyzingBody
+                ? <div className="flex-1 flex items-center gap-2 text-xs" style={{ color: "var(--text-muted)", paddingTop: 4 }}>
+                    <Loader2 size={13} className="spin" style={{ color: "var(--on-gold)" }} />
+                    Analyzing your proportions...
                   </div>
+                : kibbeAnalysis?.kibbe_type
+                ? <div className="flex-1 p-3" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                    <div className="text-2xs uppercase tracking-widest mb-1" style={{ color: "var(--text-dim)" }}>
+                      {kibbeAnalysis.kibbe_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </div>
+                    {kibbeAnalysis.notes && (
+                      <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>{kibbeAnalysis.notes}</p>
+                    )}
+                  </div>
+                : fullBodyUrl
+                ? <p className="text-xs flex-1" style={{ color: "var(--text-muted)", paddingTop: 4 }}>
+                    Still processing — check back in a bit.
+                  </p>
                 : <p className="text-xs flex-1" style={{ color: "var(--text-muted)", paddingTop: 4 }}>
                     Face forward, arms relaxed. Any outfit is fine.
                   </p>
               }
             </div>
+          </motion.div>
+
+          {/* Skin tone analysis (YouCam Skin AI) */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="surface p-6">
+            <div className="text-xs uppercase tracking-widest mb-1 font-semibold flex items-center gap-1.5" style={{ color: "var(--ink)" }}>
+              <Sparkles size={13} style={{ color: "var(--on-gold)" }} />
+              Skin tone
+              <span className="ml-1 px-1.5 py-0.5 text-xs tracking-wide"
+                style={{ background: "var(--gold-dim)", color: "var(--text-muted)" }}>
+                Optional
+              </span>
+            </div>
+            <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+              Detected from your primary selfie via YouCam Skin AI — Aria uses these tones alongside your color season.
+            </p>
+            {skinColors
+              ? <div className="flex items-center gap-3 flex-wrap">
+                  {Object.entries(skinColors).filter(([, hex]) => hex).map(([key, hex]) => (
+                    <div key={key} className="flex items-center gap-1.5">
+                      <div className="w-6 h-6 flex-shrink-0" style={{ background: hex, border: "1px solid var(--border)" }} />
+                      <div className="text-2xs" style={{ color: "var(--text-muted)" }}>
+                        <div className="uppercase tracking-wide">{key.replace("_color", "")}</div>
+                        <div className="font-mono">{hex}</div>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={handleAnalyzeSkin} disabled={analyzingSkin || !primaryUrl}
+                    className="text-2xs underline ml-auto" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}>
+                    {analyzingSkin ? "Re-analyzing..." : "Re-analyze"}
+                  </button>
+                </div>
+              : <button onClick={handleAnalyzeSkin} disabled={analyzingSkin || !primaryUrl}
+                  className="btn-secondary text-xs" style={{ opacity: !primaryUrl ? 0.5 : 1 }}>
+                  {analyzingSkin
+                    ? <><Loader2 size={13} className="spin" /> Analyzing...</>
+                    : <><Sparkles size={13} /> Analyze my skin</>
+                  }
+                </button>
+            }
+            {!primaryUrl && <p className="text-2xs mt-2" style={{ color: "var(--text-dim)" }}>Add a selfie above first.</p>}
           </motion.div>
         </div>
 
@@ -323,11 +376,11 @@ export default function SettingsPage() {
                   <button key={name} onClick={() => selectPortrait(name, url)} title={name}
                     style={{
                       background: "var(--surface2)", padding: 0, border: "none", cursor: "pointer",
-                      outline: isSelected ? "2px solid #3C2415" : "2px solid transparent",
+                      outline: isSelected ? "2px solid var(--ink)" : "2px solid transparent",
                       outlineOffset: 2, transition: "outline-color 0.1s", overflow: "hidden",
                     }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={name} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }} />
+                    <img src={url} alt="" style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }} />
                     <div className="text-2xs py-1 text-center" style={{ color: "var(--text-muted)" }}>{name}</div>
                   </button>
                 );
@@ -376,7 +429,7 @@ function ModelPicker({
             className="text-left px-4 py-2.5 text-sm transition-all"
             style={{
               background: value === opt.id ? "var(--parchment)" : "var(--surface2)",
-              border: value === opt.id ? "2px solid #3C2415" : "1.5px solid var(--border)",
+              border: value === opt.id ? "2px solid var(--ink)" : "1.5px solid var(--border)",
               color: "var(--ink)",
               cursor: "pointer",
             }}

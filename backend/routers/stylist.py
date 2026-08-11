@@ -24,6 +24,7 @@ from models.schemas import (
 )
 from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service
 from services.auth_service import current_user
+from services.rate_limit import check_rate_limit_async
 from services.wardrobe_add_service import confirm_and_add_items
 from graphs import aria_graph
 
@@ -39,6 +40,7 @@ async def _run_blocking(fn, *args, **kwargs):
 
 @router.post("/chat", response_model=StylistChatResponse)
 async def chat(req: StylistChatRequest, user = Depends(current_user)):
+    await check_rate_limit_async(user["id"], "chat", limit=20, window_seconds=60)
     if not req.messages:
         raise HTTPException(400, "Need at least one message.")
 
@@ -219,6 +221,68 @@ async def get_style_profiles(user = Depends(current_user)):
         "ready": bool(color and kibbe),
         "has_color": bool(color),
         "has_kibbe": bool(kibbe),
+    }
+
+
+@router.get("/analysis-report")
+async def get_analysis_report(user = Depends(current_user)):
+    """
+    Visual color + Kibbe body-type analysis report: season palette swatches,
+    best-lines/avoid reference, and a short personalized narrative. Reuses
+    the already-cached color_profile/kibbe_analysis -- no new vision calls.
+    """
+    row = supabase_service.get_user(user["id"]) or {}
+    color_profile = row.get("color_profile")
+    kibbe_analysis = row.get("kibbe_analysis")
+
+    if not color_profile or not kibbe_analysis:
+        return {
+            "ready": False,
+            "has_color": bool(color_profile),
+            "has_kibbe": bool(kibbe_analysis),
+        }
+
+    kibbe_type = kibbe_analysis.get("kibbe_type")
+    kibbe_ref = kibbe_service.get_type_reference(kibbe_type)
+    kibbe_display = (kibbe_type or "").replace("_", " ").title()
+
+    narrative = await _run_blocking(
+        anthropic_service.style_analysis_narrative,
+        color_profile, kibbe_display, kibbe_ref.get("style_essence", ""),
+    )
+    if not narrative:
+        flattering_preview = ", ".join((color_profile.get("flattering_colors") or [])[:3]) or "your flattering colors"
+        narrative = (
+            f"As a {color_profile.get('season', 'your')} season with a {kibbe_display or 'balanced'} line, "
+            f"you look most put-together in {flattering_preview} and silhouettes that follow your natural shape."
+        )
+
+    skin_result = row.get("skin_analysis_result") or {}
+    skin_colors = skin_result.get("colors") or {}
+
+    return {
+        "ready": True,
+        "color": {
+            "season": color_profile.get("season"),
+            "undertone": color_profile.get("undertone"),
+            "contrast": color_profile.get("contrast"),
+            "flattering_colors": color_profile.get("flattering_colors") or [],
+            "avoid_colors": color_profile.get("avoid_colors") or [],
+            "swatches": color_service.get_season_swatches(color_profile.get("season")),
+        },
+        "kibbe": {
+            "type": kibbe_type,
+            "type_display": kibbe_display,
+            "style_essence": kibbe_ref.get("style_essence", ""),
+            "best_lines": kibbe_ref.get("best_lines", ""),
+            "best_fabrics": kibbe_ref.get("best_fabrics", ""),
+            "avoid": kibbe_ref.get("avoid", ""),
+        },
+        "skin": {
+            "has_skin": row.get("skin_analysis_status") == "ready" and bool(skin_colors),
+            "colors": skin_colors,
+        },
+        "narrative": narrative,
     }
 
 

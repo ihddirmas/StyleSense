@@ -124,7 +124,7 @@ function ChatInner() {
             {threads.length === 0 ? (
               <div className="p-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
                 <Users size={24} className="mx-auto mb-2" style={{ color: "var(--text-dim)" }} />
-                No chats yet. <Link href="/friends" style={{ color: "var(--gold)" }}>Add a friend</Link> to start.
+                No chats yet. <Link href="/friends" style={{ color: "var(--on-gold)" }}>Add a friend</Link> to start.
               </div>
             ) : (
               threads.map((t) => (
@@ -147,7 +147,7 @@ function ChatInner() {
             <div className="flex items-center justify-center h-full text-sm" style={{ color: "var(--text-muted)" }}>
               <div className="text-center">
                 <MessagesSquare size={32} className="mx-auto mb-2" style={{ color: "var(--text-dim)" }} />
-                Pick a chat from the left, or <Link href="/friends" style={{ color: "var(--gold)" }}>find a friend</Link>.
+                Pick a chat from the left, or <Link href="/friends" style={{ color: "var(--on-gold)" }}>find a friend</Link>.
               </div>
             </div>
           )}
@@ -368,9 +368,9 @@ function Bubble({ m, mine, onOpenTryOn, onOpenOutfit, onOpenImage }: {
               <img src={m.outfit.preview_image_url} alt={m.outfit.name} style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover" }} />
             )}
             <div className="px-3 py-2 flex items-center gap-2 text-xs">
-              <Layers size={12} style={{ color: "var(--gold)" }} />
+              <Layers size={12} style={{ color: "var(--on-gold)" }} />
               <span style={{ color: "var(--text)" }}>{m.outfit.name}</span>
-              <span className="ml-auto opacity-0 group-hover:opacity-100 transition" style={{ color: "var(--gold)" }}>View →</span>
+              <span className="ml-auto opacity-0 group-hover:opacity-100 transition" style={{ color: "var(--on-gold)" }}>View →</span>
             </div>
           </button>
         )}
@@ -388,9 +388,9 @@ function Bubble({ m, mine, onOpenTryOn, onOpenOutfit, onOpenImage }: {
               <img src={m.tryon.result_image_url} alt="Try-on" style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover" }} />
             )}
             <div className="px-3 py-2 flex items-center gap-2 text-xs">
-              <Sparkles size={12} style={{ color: "var(--gold)" }} />
+              <Sparkles size={12} style={{ color: "var(--on-gold)" }} />
               <span style={{ color: "var(--text)" }}>Try-on</span>
-              <span className="ml-auto opacity-0 group-hover:opacity-100 transition" style={{ color: "var(--gold)" }}>View →</span>
+              <span className="ml-auto opacity-0 group-hover:opacity-100 transition" style={{ color: "var(--on-gold)" }}>View →</span>
             </div>
           </button>
         )}
@@ -519,7 +519,7 @@ function Avatar({ name }: { name: string }) {
       style={{
         width: 38, height: 38,
         background: "var(--gold-dim)",
-        color: "var(--gold)",
+        color: "var(--on-gold)",
         border: "1px solid var(--border-gold)",
         flexShrink: 0,
       }}

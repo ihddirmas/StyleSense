@@ -95,7 +95,7 @@ export default function PricingPage() {
           onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
         >
           <ArrowLeft size={14} />
-          StyleSense
+          StyleSenseAI
         </Link>
       )}
 

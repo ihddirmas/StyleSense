@@ -9,10 +9,12 @@ import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from typing import Optional, Literal
-from services import supabase_service, wardrobe_vision_service
+from services import supabase_service, wardrobe_vision_service, outfit_combo_service, kibbe_service
 from services.auth_service import current_user
 from services.image_service import validate_image_bytes, fetch_image_from_url
 from services.garment_cleaner import clean_garment_bytes, clean_with_runway, runway_isolate_item, make_cutout
+from services.rate_limit import check_rate_limit_async
+from services.usage_limits import check_wardrobe_clean_cap, MAX_ITEMS_PER_ADD_MULTI
 from models.schemas import (
     AddWardrobeFromUrl,
     ExtractFromImage,
@@ -63,6 +65,30 @@ async def list_items(
         ) from exc
 
 
+@router.get("/outfit-suggestions")
+async def get_outfit_suggestions(user = Depends(current_user)):
+    """
+    Deterministically pairs wardrobe items by category (top x bottom, plus
+    dresses alone, each optionally finished with the best-scoring shoe),
+    scores each pairing against the user's color profile AND Kibbe body-type
+    reference (when on file), and captions the top few via one Claude call.
+    Returns {"suggestions": []} if the wardrobe doesn't have enough pieces to
+    pair yet (e.g. no tops, bottoms, or dresses).
+    """
+    row = supabase_service.get_user(user["id"]) or {}
+    color_profile = row.get("color_profile")
+    items = supabase_service.get_wardrobe_items(user["id"])
+
+    kibbe_type = (row.get("kibbe_analysis") or {}).get("kibbe_type")
+    kibbe_ref = kibbe_service.get_type_reference(kibbe_type) if kibbe_type else None
+
+    loop = asyncio.get_event_loop()
+    suggestions = await loop.run_in_executor(
+        None, outfit_combo_service.build_outfit_suggestions, items, color_profile, kibbe_ref
+    )
+    return {"suggestions": suggestions}
+
+
 @router.post("/upload")
 async def upload_item(
     file: UploadFile = File(...),
@@ -84,6 +110,7 @@ async def upload_item(
       - 'rembg' - local cutout only (limited - cannot fix occluded photos)
       - 'none'  - skip cleaning, save original photo as-is
     """
+    await check_rate_limit_async(user["id"], "wardrobe-write", limit=30, window_seconds=60)
     content = await file.read()
     try:
         validate_image_bytes(content, file.content_type or "")
@@ -102,10 +129,13 @@ async def upload_item(
     except Exception as e:
         raise HTTPException(500, f"Upload failed: {e}")
 
-    # Step 2: optionally clean (default on)
+    # Step 2: optionally clean (default on). 'runway'/'auto' spend Runway credits and
+    # are capped on Free tier; 'rembg' is local-only and free.
     final_url = original_url
     method_used = "skipped"
     if clean != "none":
+        if clean in ("runway", "auto"):
+            check_wardrobe_clean_cap(user["id"])
         cleaned_bytes, method_used = clean_garment_bytes(
             image_bytes=content,
             item_name=name,
@@ -113,6 +143,8 @@ async def upload_item(
             item_image_url=original_url,
             prefer=clean,
         )
+        if method_used == "runway":
+            supabase_service.record_usage_event(user["id"], "wardrobe_clean")
         if method_used in ("runway", "rembg"):
             try:
                 final_url = supabase_service.upload_to_storage(
@@ -150,6 +182,7 @@ async def add_from_url(req: AddWardrobeFromUrl, user = Depends(current_user)):
     etc.) are usually already clean product shots. Pass clean='auto' on the request
     body to force cleaning if the source image is messy.
     """
+    await check_rate_limit_async(user["id"], "wardrobe-write", limit=30, window_seconds=60)
     try:
         original_url = supabase_service.upload_url_to_storage(
             bucket="wardrobe",
@@ -163,6 +196,8 @@ async def add_from_url(req: AddWardrobeFromUrl, user = Depends(current_user)):
     method_used = "skipped"
     clean_pref = (req.clean or "none")  # default OFF for URL-based
     if clean_pref != "none":
+        if clean_pref in ("runway", "auto"):
+            check_wardrobe_clean_cap(user["id"])
         try:
             import httpx
             with httpx.Client(timeout=20.0, follow_redirects=True) as c:
@@ -175,6 +210,8 @@ async def add_from_url(req: AddWardrobeFromUrl, user = Depends(current_user)):
                 item_image_url=original_url,
                 prefer=clean_pref,
             )
+            if method_used == "runway":
+                supabase_service.record_usage_event(user["id"], "wardrobe_clean")
             if method_used in ("runway", "rembg"):
                 final_url = supabase_service.upload_to_storage(
                     bucket="wardrobe",
@@ -212,6 +249,7 @@ async def extract_from_image(req: ExtractFromImage, user = Depends(current_user)
     Used by the chat "Save to my wardrobe" button.
     """
     # Use Runway re-synthesis with full quality (gen4_image) for the cleanest extraction
+    check_wardrobe_clean_cap(user["id"])
     cleaned_url = clean_with_runway(
         image_url=req.image_url,
         item_name=req.name,
@@ -220,6 +258,7 @@ async def extract_from_image(req: ExtractFromImage, user = Depends(current_user)
     )
     if not cleaned_url:
         raise HTTPException(500, "Could not extract garment. Try again or upload manually.")
+    supabase_service.record_usage_event(user["id"], "wardrobe_clean")
 
     # Re-host the Runway-generated image to our Supabase Storage (so it doesn't expire)
     try:
@@ -321,6 +360,13 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
     """
     if not req.items:
         raise HTTPException(400, "items list is empty")
+    if len(req.items) > MAX_ITEMS_PER_ADD_MULTI:
+        raise HTTPException(400, f"Too many items in one batch (max {MAX_ITEMS_PER_ADD_MULTI}).")
+    # Weighted by item count -- add-multi can create up to MAX_ITEMS_PER_ADD_MULTI rows
+    # in one call, so it should debit the same "wardrobe-write" budget proportionally
+    # instead of costing the same 1 unit as a single-item upload.
+    await check_rate_limit_async(user["id"], "wardrobe-write", limit=30, window_seconds=60, cost=len(req.items))
+    check_wardrobe_clean_cap(user["id"], requested=len(req.items))
 
     async def _process_one(item: DetectedItem):
         loop = asyncio.get_running_loop()
@@ -378,6 +424,8 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
     results = await asyncio.gather(*[_process_one(it) for it in req.items])
     created = [row for row, _ in results if row is not None]
     failed = [fail for _, fail in results if fail is not None]
+    for _ in req.items:
+        supabase_service.record_usage_event(user["id"], "wardrobe_clean")
     return AddMultiResponse(created=created, failed=failed)
 
 

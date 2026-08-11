@@ -151,16 +151,6 @@ class SaveOutfit(BaseModel):
 
 # ─────────────────────────── AVATAR ─────────────────────────── #
 
-class CreateCharacterRequest(BaseModel):
-    selfie_url: str
-    name: str = "My Stylist"
-    voice: Optional[str] = None
-
-
-class SyncKnowledgeRequest(BaseModel):
-    pass  # user inferred from auth
-
-
 # ─────────────────────────── STYLIST CHAT ─────────────────────────── #
 
 class ChatMessage(BaseModel):

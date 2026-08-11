@@ -21,7 +21,7 @@ from typing import Optional, TypedDict
 
 from langgraph.graph import StateGraph, START, END
 
-from services import supabase_service, anthropic_service, style_kb, color_service, kibbe_service, aria_tools, usage_limits, aria_memory_service
+from services import supabase_service, anthropic_service, style_kb, color_service, kibbe_service, aria_tools, usage_limits, aria_memory_service, youcam_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ class AriaState(TypedDict, total=False):
     wardrobe: list
     color_profile: Optional[dict]
     kibbe_analysis: Optional[dict]
+    skin_analysis: Optional[dict]
     occasion: Optional[str]
     scene: Optional[str]
     kb_snippets: list
@@ -85,7 +86,7 @@ def _scene_for_occasion(occasion: Optional[str], user_text: str) -> Optional[str
     return None
 
 
-SYSTEM_TEMPLATE = """You are Aria, StyleSense's personal stylist. Warm, specific, honest, concise.
+SYSTEM_TEMPLATE = """You are Aria, StyleSenseAI's personal stylist. Warm, specific, honest, concise.
 Your job is **personal style intelligence**: tell users what flatters them and why — grounded in
 their color season, undertone, and Kibbe type — for clothes they OWN or paste as a URL.
 
@@ -112,6 +113,10 @@ their color season, undertone, and Kibbe type — for clothes they OWN or paste 
 1. Read their EXACT request — occasion, vibe, constraints.
 2. Build ONE complete outfit FROM THEIR WARDROBE using [ITEM:<id>] tags after each name.
 3. Say WHY each piece works for their season + Kibbe.
+4. If a skin analysis exists (below), weave in ONE concrete, relevant tie-back when it's
+   genuinely useful — e.g. a flagged redness score favors cooler/muted tones over warm
+   saturated ones, low radiance favors pieces with more contrast near the face. Skip it
+   when there's nothing skin-relevant to say; never force it into every reply.
 
 # RULES
 - Only recommend REAL wardrobe items with exact names: "the Cream sweatshirt [ITEM:abc-123]".
@@ -133,6 +138,9 @@ Never propose add_wardrobe_items without a photo. Never propose generate_tryon b
 
 # KIBBE BODY TYPE PROFILE
 {kibbe_profile}
+
+# SKIN ANALYSIS (YouCam Skin AI — from their selfie)
+{skin_analysis}
 
 # STYLING KNOWLEDGE
 {kb}
@@ -182,6 +190,11 @@ def _ensure_profile(state: AriaState) -> dict:
                     except Exception as e:
                         logger.warning(f"Could not cache Kibbe analysis: {e}")
                     result["kibbe_analysis"] = analysis
+
+    # Skin analysis is generated on-demand (Settings "Analyze my skin", not lazily
+    # here) since it's a separate paid YouCam call -- just read whatever's cached.
+    if not state.get("skin_analysis") and user.get("skin_analysis_status") == "ready":
+        result["skin_analysis"] = user.get("skin_analysis_result")
 
     # Load this-or-that style preferences (last 10)
     prefs = user.get("style_preferences") or []
@@ -251,6 +264,7 @@ def _advise(state: AriaState) -> dict:
         aria_memory=aria_memory_service.format_for_prompt(state.get("aria_memory")),
         color_profile=color_service.format_color_profile(state.get("color_profile")),
         kibbe_profile=kibbe_service.format_kibbe_profile(state.get("kibbe_analysis")),
+        skin_analysis=youcam_service.format_skin_profile(state.get("skin_analysis")),
         kb="\n".join(f"- {s}" for s in state.get("kb_snippets", [])) or "(none)",
         wardrobe=anthropic_service._format_wardrobe(state.get("wardrobe", [])),
     )
@@ -377,6 +391,7 @@ def run_aria(
         "occasion": out.get("occasion"),
         "scene": out.get("scene"),
         "kibbe_analysis": out.get("kibbe_analysis"),
+        "skin_analysis": out.get("skin_analysis"),
         "pending_action": out.get("pending_action"),
         "product_preview": out.get("product_preview"),
         "capsule_plan": out.get("capsule_plan"),

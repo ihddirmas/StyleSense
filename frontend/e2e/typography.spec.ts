@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+// This suite only exercises the public /login and /signup pages, which the
+// app's own middleware redirects authenticated users away from (see
+// middleware.ts) -- run it logged-out regardless of the project-level auth
+// storageState.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe("Typography fixes", () => {
   const SCAN_PAGES = ["/login", "/signup"];
 

@@ -6,6 +6,7 @@ import { apiGet, apiUpload } from "@/lib/api";
 import { useAppStore } from "@/store/app";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
 import type { WardrobeItem } from "@/types";
+import { getPostHogPublicKey } from "@/lib/posthog-key";
 import posthog from "posthog-js";
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -53,7 +54,7 @@ export default function OnboardingPage() {
   const bodyRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_started", { step });
+    if (getPostHogPublicKey()) posthog.capture("onboarding_step_started", { step });
   }, [step]);
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function OnboardingPage() {
           setKibbeProfile(d.kibbe_analysis);
           if (d.ready || attempts >= 12) {
             setProfilesLoading(false);
-            if (d.ready && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+            if (d.ready && getPostHogPublicKey()) {
               posthog.capture("profiles_generated", {
                 color_confidence: d.color_profile?.confidence,
                 kibbe_confidence: d.kibbe_analysis?.confidence,
@@ -94,7 +95,7 @@ export default function OnboardingPage() {
       const fd = new FormData();
       fd.append("file", file);
       await apiUpload("/api/avatar/upload-selfie", fd);
-      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 1 });
+      if (getPostHogPublicKey()) posthog.capture("onboarding_step_completed", { step: 1 });
       setStep(2);
     } catch {
       setStep(2);
@@ -110,7 +111,7 @@ export default function OnboardingPage() {
       const fd = new FormData();
       fd.append("file", file);
       await apiUpload("/api/avatar/upload-full-body", fd);
-      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 2 });
+      if (getPostHogPublicKey()) posthog.capture("onboarding_step_completed", { step: 2 });
       setStep(3);
     } catch {
       setStep(3);
@@ -123,7 +124,7 @@ export default function OnboardingPage() {
     setModalOpen(false);
     setAddedItem(item);
     setSelected([item.id]);
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 4 });
+    if (getPostHogPublicKey()) posthog.capture("onboarding_step_completed", { step: 4 });
     setStep(5);
   }
 
@@ -133,7 +134,7 @@ export default function OnboardingPage() {
       setAddedItem(items[0]);
       setSelected(items.map((i) => i.id));
     }
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) posthog.capture("onboarding_step_completed", { step: 4 });
+    if (getPostHogPublicKey()) posthog.capture("onboarding_step_completed", { step: 4 });
     setStep(5);
   }
 
@@ -210,7 +211,7 @@ export default function OnboardingPage() {
               type="button"
               className="btn-primary w-full mb-3"
               onClick={() => {
-                if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+                if (getPostHogPublicKey()) {
                   posthog.capture("onboarding_completed", { has_item: !!addedItem, destination: "stylist" });
                 }
                 router.push(addedItem ? "/stylist" : "/stylist");

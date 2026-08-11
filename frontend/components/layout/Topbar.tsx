@@ -69,7 +69,7 @@ export function Topbar() {
     <>
       <header
         className="flex items-center px-4 md:px-8 py-4 relative gap-4 md:gap-6 shrink-0"
-        style={{ borderBottom: "2px solid #3C2415" }}
+        style={{ borderBottom: "2px solid var(--ink)" }}
       >
         {/* LEFT — Brand (home) + tasks */}
         <div id="topbar-brand-group" className="flex items-center gap-2 md:gap-4 min-w-0 cursor-pointer" onClick={handleBrandClick}>
@@ -78,7 +78,7 @@ export function Topbar() {
             className="font-display tracking-tight cursor-pointer" 
             style={{ color: "var(--ink)", fontSize: "clamp(1.2rem, 4vw, 1.6rem)", textDecoration: "none" }}
           >
-            StyleSense
+            StyleSenseAI
           </Link>
           {runningCount > 0 && (
             <Link
@@ -94,7 +94,7 @@ export function Topbar() {
         </div>
 
         {/* CENTER — Primary nav (Dashboard, Studio, Aria) */}
-        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
+        <nav aria-label="Primary" className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
           {PRIMARY_NAV.map(({ href, label }) => {
             const active = href === "/dashboard" ? pathname === "/dashboard" : pathname?.startsWith(href);
             return (
@@ -103,8 +103,8 @@ export function Topbar() {
                 href={href}
                 className={
                   active
-                    ? "text-[#3C2415] font-bold px-4 py-2 text-sm transition-all tracking-wide"
-                    : "text-[#84634c] font-normal px-4 py-2 text-sm transition-all tracking-wide hover:text-[#3C2415]"
+                    ? "text-[var(--ink)] font-bold px-4 py-2 text-sm transition-all tracking-wide"
+                    : "text-[var(--text-muted)] font-normal px-4 py-2 text-sm transition-all tracking-wide hover:text-[var(--ink)]"
                 }
                 style={{ textDecoration: "none" }}
               >
@@ -140,7 +140,7 @@ export function Topbar() {
                   width: 36, height: 36,
                   background: avatarSelfieUrl ? "transparent" : "var(--surface2)",
                   color: "var(--ink)",
-                  border: "2px solid #3C2415",
+                  border: "2px solid var(--ink)",
                 }}
               >
                 {avatarSelfieUrl ? (
@@ -175,7 +175,7 @@ export function Topbar() {
 
       {/* Mobile nav drawer — full tab set, since the center nav + sidebar are desktop-only */}
       {mobileMenuOpen && (
-        <nav className="md:hidden shrink-0 border-b" style={{ background: "var(--bg)", borderColor: "rgba(60,36,21,0.2)" }}>
+        <nav aria-label="Mobile" className="md:hidden shrink-0 border-b" style={{ background: "var(--bg)", borderColor: "rgba(60,36,21,0.2)" }}>
           <div className="px-2 py-2">
             {MOBILE_NAV.map(({ href, label, icon: Icon }) => {
               const active = href === "/dashboard" ? pathname === "/dashboard" : pathname?.startsWith(href);
@@ -187,7 +187,7 @@ export function Topbar() {
                   className={`flex items-center gap-3 px-4 py-2.5 text-sm tracking-wide transition-colors ${active ? "font-bold" : "font-normal"}`}
                   style={{
                     textDecoration: "none",
-                    color: active ? "#3C2415" : "#84634c",
+                    color: active ? "var(--ink)" : "var(--text-muted)",
                     background: active ? "var(--parchment)" : "transparent",
                   }}
                 >

@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
-    "@runwayml/avatars-react": "^0.15.0",
     "@runwayml/sdk": "^3.21.0",
     "@sentry/nextjs": "^10.65.0",
     "@supabase/ssr": "^0.10.3",
@@ -34,8 +33,10 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "cypress": "^15.19.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
+    "fetch-network-simulator": "^1.0.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

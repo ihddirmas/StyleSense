@@ -1,12 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Loader2, MessageCircle, ChevronRight,
-  Camera, X, Shuffle, Plus, Bookmark, Check, ChevronDown, Trash2, ThumbsUp, ThumbsDown,
+  Camera, X, Shuffle, Plus, Bookmark, Check, ChevronDown, Trash2, ThumbsUp, ThumbsDown, Sparkles,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+// Deferred: the unified/micromark markdown parser is the single largest
+// page-specific chunk on this route. Only chat message bodies need it, so it
+// shouldn't block first paint of the rest of the page.
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 import { useWardrobeItems } from "@/lib/useWardrobeItems";
 import { useStore } from "zustand";
 import { useAppStore } from "@/store/app";
@@ -421,6 +425,7 @@ export default function StylistPage() {
 
   return (
     <div className="h-full flex flex-col">
+      <h1 className="sr-only">Aria — AI Stylist Chat</h1>
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="surface flex flex-col flex-1 min-h-0">
             {/* Chat toolbar */}
@@ -434,6 +439,9 @@ export default function StylistPage() {
                 />
               )}
               <div className="flex items-center gap-1">
+                <Link href="/stylist/analysis" className="icon-btn" title="Your style report">
+                  <Sparkles size={14} />
+                </Link>
                 <button
                   type="button"
                   onClick={() => setTrainTasteOpen(true)}
@@ -552,7 +560,7 @@ export default function StylistPage() {
                         color: "var(--ink)",
                       } : {
                         background: "var(--surface)",
-                        borderLeft: "3px solid #3C2415",
+                        borderLeft: "3px solid var(--ink)",
                         borderTop: "1px solid var(--border)",
                         borderRight: "1px solid var(--border)",
                         borderBottom: "1px solid var(--border)",
@@ -709,7 +717,7 @@ export default function StylistPage() {
 
                 <input
                   className="input"
-                  placeholder={photoPreview ? "Add a note about this photo..." : "Ask for an outfit, paste a URL, or request a try-on..."}
+                  placeholder={photoPreview ? "Add a note about this photo..." : "Ask Aria, or paste a URL..."}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && send(input)}
@@ -730,6 +738,7 @@ export default function StylistPage() {
                   onClick={() => send(input)}
                   disabled={(!input.trim() && !photoPreview) || loading}
                   style={{ padding: "0.72rem 1rem", flexShrink: 0 }}
+                  aria-label="Send message"
                 >
                   <Send size={14} />
                 </button>
@@ -789,7 +798,7 @@ function FormattedReply({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             li: ({ children, ...rest }: any) => <li style={{ margin: "0.1rem 0" }} {...rest}>{children}</li>,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            strong: ({ children, ...rest }: any) => <strong style={{ color: "#3C2415", fontWeight: 700 }} {...rest}>{children}</strong>,
+            strong: ({ children, ...rest }: any) => <strong style={{ color: "var(--ink)", fontWeight: 700 }} {...rest}>{children}</strong>,
           }}
         >
           {stripped}

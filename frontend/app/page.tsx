@@ -12,21 +12,21 @@ import LandingFooter from "@/components/landing/LandingFooter";
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: "StyleSense — AI Style Agent & Virtual Try-On",
+  title: "StyleSenseAI — AI Style Agent & Virtual Try-On",
   description:
     "Meet Aria, your AI style agent. She knows your wardrobe, recommends outfits, adds items from photos, looks up products, and generates try-ons — you confirm every action.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "StyleSense — AI Style Agent & Virtual Try-On",
+    title: "StyleSenseAI — AI Style Agent & Virtual Try-On",
     description:
       "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
     type: "website",
-    siteName: "StyleSense",
+    siteName: "StyleSenseAI",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "StyleSense — AI Style Agent & Virtual Try-On",
+    title: "StyleSenseAI — AI Style Agent & Virtual Try-On",
     description:
       "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
   },
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "StyleSense",
+  name: "StyleSenseAI",
   applicationCategory: "LifestyleApplication",
   description: "AI style agent, wardrobe, and virtual try-on.",
   operatingSystem: "Web",

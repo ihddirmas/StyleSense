@@ -11,7 +11,7 @@ function HeroAppMockup() {
   return (
     <img
       src="/screenshots/dashboard.png"
-      alt="StyleSense dashboard"
+      alt="StyleSenseAI dashboard"
       style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left", display: "block" }}
     />
   );

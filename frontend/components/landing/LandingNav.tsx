@@ -70,6 +70,7 @@ export default function LandingNav() {
 
   return (
     <nav
+      aria-label="Primary"
       ref={navRef}
       style={{
         position: "fixed",
@@ -113,7 +114,7 @@ export default function LandingNav() {
           className="font-display"
           style={{ fontSize: 22, color: "var(--ink)", textDecoration: "none", letterSpacing: "0.02em" }}
         >
-          StyleSense
+          StyleSenseAI
         </Link>
 
         {/* Center links */}

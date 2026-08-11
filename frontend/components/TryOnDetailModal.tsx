@@ -85,7 +85,7 @@ export function TryOnDetailModal({
           <div className="p-7 flex flex-col" style={{ minHeight: 400, maxHeight: "90vh", overflow: "auto" }}>
             <div className="flex items-start justify-between mb-2">
               <div>
-                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--gold)" }}>
+                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--on-gold)" }}>
                   {sharedBy ? "Shared with you" : "Try-on"}
                 </div>
                 <h2 className="font-display text-3xl">

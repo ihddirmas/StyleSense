@@ -1,6 +1,6 @@
 """
 ONE-TIME SETUP: create the shared admin stylist character ("Aria") that all
-StyleSense users see when they open the AI Stylist voice tab.
+StyleSenseAI users see when they open the AI Stylist voice tab.
 
 Pipeline:
   1. Generate a stylized 3D female stylist portrait via Runway gen4_image
@@ -132,11 +132,11 @@ async def main():
 
     # ─── Step 3: create the Runway Custom Avatar ────────────────────────── #
     step("[3/4] Create Runway Custom Avatar (uses RUNWAY_DEFAULT_VOICE_ID)")
-    instructions = character_service.build_stylist_instructions("StyleSense users")
+    instructions = character_service.build_stylist_instructions("StyleSenseAI users")
     try:
         result = await character_service.create_character(
             selfie_url=permanent_url,
-            name="Aria - StyleSense Stylist",
+            name="Aria - StyleSenseAI Stylist",
             instructions=instructions,
             voice_id=None,  # falls back to RUNWAY_DEFAULT_VOICE_ID
         )

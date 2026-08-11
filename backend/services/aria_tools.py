@@ -15,7 +15,7 @@ ANTHROPIC_TOOLS = [
         "name": "add_wardrobe_items",
         "description": (
             "Add one or more clothing items the user just shared a photo of to their "
-            "StyleSense wardrobe. This SPENDS Runway credits (isolates each item as a clean "
+            "StyleSenseAI wardrobe. This SPENDS Runway credits (isolates each item as a clean "
             "product photo) and writes to the database, so it always requires the user's "
             "explicit confirmation before it runs -- you are only proposing it. Only call "
             "this when the user shared a photo in this turn and wants to save item(s) from it."

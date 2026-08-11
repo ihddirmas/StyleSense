@@ -13,6 +13,9 @@ from services import supabase_service, analytics_service, email_service
 FREE_TRYON_MONTHLY_LIMIT = int(os.getenv("FREE_TRYON_MONTHLY_LIMIT", "5"))
 FREE_EVENT_SCENE_MONTHLY_LIMIT = int(os.getenv("FREE_EVENT_SCENE_MONTHLY_LIMIT", "3"))
 FREE_ANIMATE_MONTHLY_LIMIT = int(os.getenv("FREE_ANIMATE_MONTHLY_LIMIT", "1"))  # 60cr/5s, keep low
+FREE_AVATAR_REFRESH_MONTHLY_LIMIT = int(os.getenv("FREE_AVATAR_REFRESH_MONTHLY_LIMIT", "5"))  # ~2-5cr each
+FREE_WARDROBE_CLEAN_MONTHLY_LIMIT = int(os.getenv("FREE_WARDROBE_CLEAN_MONTHLY_LIMIT", "30"))  # ~2-5cr each garment isolation
+MAX_ITEMS_PER_ADD_MULTI = int(os.getenv("MAX_ITEMS_PER_ADD_MULTI", "12"))  # hard per-request ceiling regardless of cap timing
 
 # Comma-separated Supabase auth user IDs exempt from every cap below -- for the
 # team's own live-account testing, not a general "unlimited tier" (no plan
@@ -58,7 +61,7 @@ def check_tryon_cap(user_id: str) -> None:
         _notify_cap_hit(
             user_id, "cap_email_tryon",
             "You've used all your free try-ons this month",
-            f"<p>You've used all {FREE_TRYON_MONTHLY_LIMIT} try-ons on the StyleSense free plan this month. "
+            f"<p>You've used all {FREE_TRYON_MONTHLY_LIMIT} try-ons on the StyleSenseAI free plan this month. "
             "More capacity is coming soon on paid plans -- we'll let you know when upgrades go live.</p>",
         )
         raise HTTPException(
@@ -77,7 +80,7 @@ def check_event_scene_cap(user_id: str) -> None:
         _notify_cap_hit(
             user_id, "cap_email_event_scene",
             "You've used all your free event scenes this month",
-            f"<p>You've used all {FREE_EVENT_SCENE_MONTHLY_LIMIT} event scenes on the StyleSense free plan "
+            f"<p>You've used all {FREE_EVENT_SCENE_MONTHLY_LIMIT} event scenes on the StyleSenseAI free plan "
             "this month. More capacity is coming soon on paid plans -- we'll let you know when upgrades go live.</p>",
         )
         raise HTTPException(
@@ -85,6 +88,55 @@ def check_event_scene_cap(user_id: str) -> None:
             f"You've used all {FREE_EVENT_SCENE_MONTHLY_LIMIT} event scenes on the free plan "
             "this month. Upgrade for more (coming soon).",
         )
+
+
+def check_avatar_refresh_cap(user_id: str) -> None:
+    if user_id in UNLIMITED_TESTER_USER_IDS:
+        return
+    used = supabase_service.count_usage_events_this_month(user_id, "avatar_refresh")
+    if used >= FREE_AVATAR_REFRESH_MONTHLY_LIMIT:
+        analytics_service.capture(user_id, "avatar_refresh_cap_hit", {"limit": FREE_AVATAR_REFRESH_MONTHLY_LIMIT})
+        _notify_cap_hit(
+            user_id, "cap_email_avatar_refresh",
+            "You've used all your free avatar refreshes this month",
+            f"<p>You've used all {FREE_AVATAR_REFRESH_MONTHLY_LIMIT} avatar refreshes on the StyleSenseAI free plan "
+            "this month. More capacity is coming soon on paid plans -- we'll let you know when upgrades go live.</p>",
+        )
+        raise HTTPException(
+            402,
+            f"You've used all {FREE_AVATAR_REFRESH_MONTHLY_LIMIT} avatar refreshes on the free plan "
+            "this month. Upgrade for more (coming soon).",
+        )
+
+
+def wardrobe_clean_remaining(user_id: str) -> int:
+    """Remaining costed garment-cleaning slots this month (large int if exempt)."""
+    if user_id in UNLIMITED_TESTER_USER_IDS:
+        return 10**9
+    used = supabase_service.count_usage_events_this_month(user_id, "wardrobe_clean")
+    return max(0, FREE_WARDROBE_CLEAN_MONTHLY_LIMIT - used)
+
+
+def check_wardrobe_clean_cap(user_id: str, requested: int = 1) -> None:
+    """Raises if this request would exceed the Free tier's monthly garment-cleaning
+    cap (each isolation/re-synthesis call costs real Runway credits)."""
+    if user_id in UNLIMITED_TESTER_USER_IDS:
+        return
+    if wardrobe_clean_remaining(user_id) >= requested:
+        return
+    analytics_service.capture(user_id, "wardrobe_clean_cap_hit", {"limit": FREE_WARDROBE_CLEAN_MONTHLY_LIMIT})
+    _notify_cap_hit(
+        user_id, "cap_email_wardrobe_clean",
+        "You've used all your free wardrobe cleanups this month",
+        f"<p>You've used all {FREE_WARDROBE_CLEAN_MONTHLY_LIMIT} garment cleanups on the StyleSenseAI free plan "
+        "this month. You can still add items with cleanup turned off, or paste a product URL. "
+        "More capacity is coming soon on paid plans -- we'll let you know when upgrades go live.</p>",
+    )
+    raise HTTPException(
+        402,
+        f"You've used all {FREE_WARDROBE_CLEAN_MONTHLY_LIMIT} garment cleanups on the free plan this month. "
+        "Add items with cleanup off, or paste a product URL instead. Upgrade for more (coming soon).",
+    )
 
 
 def check_animate_cap(user_id: str) -> None:
@@ -96,7 +148,7 @@ def check_animate_cap(user_id: str) -> None:
         _notify_cap_hit(
             user_id, "cap_email_animate",
             "You've used your free video animation this month",
-            f"<p>You've used all {FREE_ANIMATE_MONTHLY_LIMIT} video animations on the StyleSense free plan "
+            f"<p>You've used all {FREE_ANIMATE_MONTHLY_LIMIT} video animations on the StyleSenseAI free plan "
             "this month. More capacity is coming soon on paid plans -- we'll let you know when upgrades go live.</p>",
         )
         raise HTTPException(

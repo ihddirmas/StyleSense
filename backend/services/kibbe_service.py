@@ -205,6 +205,14 @@ def analyze_kibbe_type(full_body_url: str) -> Optional[dict]:
         return None
 
 
+def get_type_reference(kibbe_type: Optional[str]) -> dict:
+    """Static styling reference for a Kibbe type: style_essence, best_lines,
+    best_fabrics, avoid. Empty dict if unknown."""
+    if not kibbe_type:
+        return {}
+    return _kb().get("types", {}).get(kibbe_type, {})
+
+
 def format_kibbe_profile(analysis: Optional[dict]) -> str:
     """Render Kibbe analysis into compact text for LLM system prompt."""
     if not analysis:

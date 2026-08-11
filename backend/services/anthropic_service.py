@@ -30,7 +30,7 @@ def _require_storage_url(url: str) -> None:
         raise ValueError(f"Untrusted image URL rejected: {p.hostname}")
 
 
-SYSTEM_TEMPLATE = """You are Aria, the personal stylist for StyleSense. Your voice is the quiet authority of a high-fashion atelier — channeling the understated luxury of Toteme, the sun-warmed sensuality of Jacquemus, and the effortless wearability of Zara's editorial campaigns. You never explain trends; you curate moments.
+SYSTEM_TEMPLATE = """You are Aria, the personal stylist for StyleSenseAI. Your voice is the quiet authority of a high-fashion atelier — channeling the understated luxury of Toteme, the sun-warmed sensuality of Jacquemus, and the effortless wearability of Zara's editorial campaigns. You never explain trends; you curate moments.
 
 # STYLE LANGUAGE
 - Ground every look in the Earthy Atelier palette: "rich terracotta", "olive moss", "sand dunes", "charcoal slate", "organic linen", bleached bone, warm ivory.
@@ -205,6 +205,84 @@ def style_insight(wardrobe_items: list, recent_tryons: list) -> str:
         messages=[{"role": "user", "content": "\n".join(lines)}],
     )
     return response.content[0].text.strip()
+
+
+def style_analysis_narrative(color_profile: dict, kibbe_type_display: str, kibbe_essence: str) -> str | None:
+    """
+    2-3 sentence narrative tying the user's color season + Kibbe body type
+    together, for the visual analysis report. Returns None on failure so the
+    caller can fall back to a static template sentence -- this page must
+    never hard-fail.
+    """
+    try:
+        season = color_profile.get("season") or "your"
+        undertone = color_profile.get("undertone") or ""
+        flattering = ", ".join((color_profile.get("flattering_colors") or [])[:5])
+        prompt = (
+            f"User is a {season} season with {undertone} undertone; flattering colors: {flattering or 'not specified'}. "
+            f"Their Kibbe body type is {kibbe_type_display or 'not yet analyzed'} ({kibbe_essence or 'no essence on file'}). "
+            "Write a warm, affirming 2-3 sentence note explaining how these two profiles work together "
+            "for their personal style. Address them as 'you'."
+        )
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=120,
+            system=(
+                "You are Aria, an encouraging personal stylist. Be warm, specific, and affirming. "
+                "Never use clinical, medical, or body-shaming language -- styling is about what makes "
+                "someone feel good, not a diagnosis. 2-3 sentences only."
+            ),
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        logger.warning(f"style_analysis_narrative failed: {type(e).__name__}: {e}")
+        return None
+
+
+def caption_outfit_combos(combo_summaries: list[str]) -> list[str] | None:
+    """
+    One short line per pre-selected outfit combo, explaining why it works.
+
+    combo_summaries: e.g. ["Cream linen shirt (cream) + Tan chinos (tan)", ...],
+    already deterministically chosen and scored by outfit_combo_service --
+    Claude only writes captions here, it never invents or reorders items, so
+    there's no hallucination risk into wardrobe data.
+
+    Returns a list of caption strings, same length/order as input, or None
+    on failure (caller falls back to a generic caption per combo).
+    """
+    if not combo_summaries:
+        return None
+    numbered = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(combo_summaries))
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=200,
+            system=(
+                "You are a personal stylist captioning outfit pairings that have already been "
+                "selected for the user based on their color profile. For each numbered outfit, "
+                f"write ONE short line (max 12 words) explaining why it works. Reply with EXACTLY "
+                f"{len(combo_summaries)} lines, formatted '1. reason' etc. No extra commentary."
+            ),
+            messages=[{"role": "user", "content": numbered}],
+        )
+        text = response.content[0].text.strip()
+        captions: dict[int, str] = {}
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or "." not in line:
+                continue
+            idx_part, _, rest = line.partition(".")
+            try:
+                idx = int(idx_part.strip())
+            except ValueError:
+                continue
+            captions[idx] = rest.strip()
+        return [captions.get(i + 1, "") for i in range(len(combo_summaries))]
+    except Exception as e:
+        logger.warning(f"caption_outfit_combos failed: {type(e).__name__}: {e}")
+        return None
 
 
 def suggest_category_from_url(page_title: str) -> str | None:

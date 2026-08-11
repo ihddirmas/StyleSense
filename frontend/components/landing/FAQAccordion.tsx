@@ -9,8 +9,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 const FAQS = [
   {
-    q: "What is StyleSense?",
-    a: "StyleSense is an AI wardrobe with a built-in style agent, Aria. She knows every item you own, recommends outfits from your real closet, and can add items, look up products, or generate try-ons — always with your confirmation before anything spends credits.",
+    q: "What is StyleSenseAI?",
+    a: "StyleSenseAI is an AI wardrobe with a built-in style agent, Aria. She knows every item you own, recommends outfits from your real closet, and can add items, look up products, or generate try-ons — always with your confirmation before anything spends credits.",
   },
   {
     q: "What can Aria do?",
@@ -22,14 +22,14 @@ const FAQS = [
   },
   {
     q: "Do I need my own Runway or Anthropic account?",
-    a: "No. StyleSense handles all AI calls on the backend. You just need a StyleSense account — no external API keys required.",
+    a: "No. StyleSenseAI handles all AI calls on the backend. You just need a StyleSenseAI account — no external API keys required.",
   },
   {
     q: "How accurate is the try-on?",
     a: "Try-on accuracy depends on the selfie and the garment photo. Full-body selfies with a neutral background and flat-lay product images produce the best results. Occluded or complex photos may vary.",
   },
   {
-    q: "Can I use StyleSense on mobile?",
+    q: "Can I use StyleSenseAI on mobile?",
     a: "Yes — the interface is mobile-responsive. For the best experience with the Studio canvas and video generation, a desktop browser is recommended.",
   },
   {

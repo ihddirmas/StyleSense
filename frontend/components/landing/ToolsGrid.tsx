@@ -12,7 +12,7 @@ const TOOLS = [
   { icon: Shirt,         title: "Virtual Try-On",    description: "See yourself in any outfit in seconds",           color: "#8b6fe8" },
   { icon: Globe,         title: "Event Scenes",       description: "Drop yourself into any world — beach, runway, city", color: "#5cb8b2" },
   { icon: Video,         title: "Ramp Walk Video",    description: "Animate your look as a 5-second runway clip",    color: "#e87f8a" },
-  { icon: BookOpen,      title: "Smart Wardrobe",     description: "Add from any URL. Organize everything.",          color: "#c9a84c" },
+  { icon: BookOpen,      title: "Smart Wardrobe",     description: "Add from any URL. Organize everything.",          color: "#E7E2BC" },
   { icon: Heart,         title: "Outfit Builder",     description: "Save and share complete looks instantly",         color: "#e85c5c" },
 ];
 

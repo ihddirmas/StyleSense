@@ -9,7 +9,7 @@ import resend
 logger = logging.getLogger(__name__)
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "StyleSense <onboarding@resend.dev>")
+FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "StyleSenseAI <onboarding@resend.dev>")
 
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY

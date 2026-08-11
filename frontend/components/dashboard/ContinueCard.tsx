@@ -19,8 +19,8 @@ export function ContinueCard({ item }: { item: WardrobeItem }) {
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <Sparkles size={11} style={{ color: "var(--gold)" }} />
-            <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>
+            <Sparkles size={11} style={{ color: "var(--on-gold)" }} />
+            <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--on-gold)" }}>
               Continue
             </span>
           </div>

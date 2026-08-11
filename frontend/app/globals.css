@@ -21,7 +21,10 @@
   /* Text — improved contrast for accessibility */
   --text:       #3C2415;
   --text-muted: #6B4B38;
-  --text-dim:   #8B6F5C;
+  /* Was #8B6F5C — failed WCAG AA (as low as 2.97:1) against every surface in the
+     palette. Matches --text-muted now; a lighter "tertiary" tone isn't achievable
+     as real text color on this light parchment palette without failing contrast. */
+  --text-dim:   #6B4B38;
 
   /* Brand accent — champagne yellow */
   --gold:       #E7E2BC;

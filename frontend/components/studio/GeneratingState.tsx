@@ -47,7 +47,7 @@ export function GeneratingState({
         )}
         <motion.span
           className="font-display text-3xl"
-          style={{ color: "var(--gold)" }}
+          style={{ color: "var(--on-gold)" }}
           animate={{ rotate: 360 }}
           transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
         >
@@ -94,7 +94,7 @@ export function GeneratingState({
       </div>
 
       {secs > 45 && (
-        <div className="text-xs mb-4 px-3 py-2 rounded" style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--gold)" }}>
+        <div className="text-xs mb-4 px-3 py-2 rounded" style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--on-gold)" }}>
           Taking longer than usual — Runway queue may be busy. Hang tight.
         </div>
       )}

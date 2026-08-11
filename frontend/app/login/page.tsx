@@ -29,7 +29,7 @@ function LoginInner() {
         onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
       >
         <ArrowLeft size={14} />
-        StyleSense
+        StyleSenseAI
       </Link>
       <div className="min-h-full flex items-center justify-center px-4 py-16">
         <AuthCard initialMode="login" next={next} />

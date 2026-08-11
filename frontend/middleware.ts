@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = [
   "/", "/login", "/signup", "/auth/callback", "/pricing",
+  // Programmatic SEO style guides — must stay crawlable without a login redirect.
+  "/style",
   // Crawler-facing files: a login redirect here makes them invisible to search engines.
   "/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/opengraph-image.png",
 ];

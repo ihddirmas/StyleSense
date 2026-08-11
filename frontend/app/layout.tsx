@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import "@runwayml/avatars-react/styles.css";
 import { LayoutClient } from "@/components/layout/LayoutClient";
 import { Toaster } from "@/components/ui/Toast";
 import { AuthProvider } from "@/components/AuthProvider";
@@ -16,30 +15,30 @@ export const metadata: Metadata = {
       (process.env.NODE_ENV === "production" ? PRODUCTION_SITE_URL : "http://localhost:3000")
   ),
   title: {
-    default: "StyleSense — AI Style Agent & Virtual Try-On",
-    template: "%s · StyleSense",
+    default: "StyleSenseAI — AI Style Agent & Virtual Try-On",
+    template: "%s · StyleSenseAI",
   },
   description:
-    "StyleSense is your AI style agent and virtual try-on studio. Aria knows your wardrobe, recommends outfits, and runs confirm-gated actions — add items, try on looks, look up products.",
+    "StyleSenseAI is your AI style agent and virtual try-on studio. Aria knows your wardrobe, recommends outfits, and runs confirm-gated actions — add items, try on looks, look up products.",
   keywords: [
     "AI wardrobe",
     "virtual try-on",
     "AI style agent",
     "outfit generator",
     "fashion AI",
-    "StyleSense",
+    "StyleSenseAI",
   ],
-  applicationName: "StyleSense",
+  applicationName: "StyleSenseAI",
   openGraph: {
-    title: "StyleSense — AI Wardrobe & Virtual Try-On",
+    title: "StyleSenseAI — AI Wardrobe & Virtual Try-On",
     description:
       "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
     type: "website",
-    siteName: "StyleSense",
+    siteName: "StyleSenseAI",
   },
   twitter: {
     card: "summary_large_image",
-    title: "StyleSense — AI Wardrobe & Virtual Try-On",
+    title: "StyleSenseAI — AI Wardrobe & Virtual Try-On",
     description:
       "Meet Aria — your AI style agent. Outfit picks, try-ons, and closet actions from a wardrobe she actually knows.",
   },

@@ -54,7 +54,7 @@ export default function LandingFooter() {
               className="font-display"
               style={{ fontSize: 24, color: "var(--ink)", marginBottom: 16 }}
             >
-              StyleSense
+              StyleSenseAI
             </div>
             <p style={{ fontSize: 14, color: "var(--text-muted)", margin: 0, lineHeight: 1.7, maxWidth: 260 }}>
               AI-powered wardrobe and virtual try-on. Wear it before you buy it.
@@ -111,7 +111,7 @@ export default function LandingFooter() {
           }}
         >
           <p style={{ fontSize: 13, color: "var(--text-dim)", margin: 0 }}>
-            © {new Date().getFullYear()} StyleSense. All rights reserved.
+            © {new Date().getFullYear()} StyleSenseAI. All rights reserved.
           </p>
           <p style={{ fontSize: 13, color: "var(--text-dim)", margin: 0, fontFamily: "JetBrains Mono, monospace" }}>
             Powered by Runway · Anthropic · Supabase

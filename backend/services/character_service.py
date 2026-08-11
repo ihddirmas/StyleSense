@@ -1,6 +1,12 @@
 """
 Programmatic Custom Character (avatar) creation via Runway REST API.
 
+Used only by scripts/setup_admin_stylist.py — the one-time provisioning script
+for Aria's shared portrait/character, which backs the dashboard hero fallback
+(GET /api/avatar/stylist) shown to users without a selfie yet. The interactive
+per-session voice/character-sync routes that used to live in routers/avatar.py
+were removed as unreachable (no frontend page mounted the voice avatar widget).
+
 Discovered schema (verified by API probing 2026-05-10):
   POST https://api.dev.runwayml.com/v1/avatars
   body: {
@@ -9,13 +15,6 @@ Discovered schema (verified by API probing 2026-05-10):
     "personality":   string (system prompt for the stylist),
     "voice":         { "type": "custom", "id": <voice_id> }
   }
-
-Voice creation (one-time, see tests/setup_default_voice.py):
-  POST /v1/voices  body: { "name": ..., "from": { "type": "audio", "audio": <wav URL> } }
-
-Knowledge documents:
-  POST /v1/documents -> returns { id }
-  PATCH /v1/avatars/{id} with { document_ids: [...] } to attach
 """
 import os
 import httpx
@@ -83,79 +82,6 @@ async def create_character(
     return resp.json()
 
 
-async def upload_knowledge_document(content: str, name: str = "wardrobe.txt") -> dict:
-    """Upload a knowledge document. Returns dict with 'id'."""
-    payload = {
-        "name": name,
-        "content": content,
-        "content_type": "text/plain",
-    }
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(f"{API_BASE}/documents", headers=_headers(), json=payload)
-
-    if resp.status_code >= 400:
-        logger.error(f"Runway upload_document failed {resp.status_code}: {resp.text}")
-        raise RuntimeError(
-            f"Could not upload knowledge document ({resp.status_code}). {resp.text[:300]}"
-        )
-    return resp.json()
-
-
-async def update_character_personality(character_id: str, personality: str) -> dict:
-    """
-    Replace the personality (system prompt) on an existing avatar. The
-    realtime voice agent reads this on every reply, so this is the load-bearing
-    way to inject up-to-date wardrobe context for the shared admin stylist.
-
-    For the shared stylist setup this is destructive (replaces persona for
-    every concurrent caller). Hackathon-acceptable, single-laptop scope.
-    """
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.patch(
-            f"{API_BASE}/avatars/{character_id}",
-            headers=_headers(),
-            json={"personality": personality},
-        )
-    if resp.status_code >= 400:
-        raise RuntimeError(f"Could not update personality ({resp.status_code}): {resp.text[:300]}")
-    return resp.json()
-
-
-async def update_character_voice(character_id: str, voice_id: str | None = None) -> dict:
-    """
-    Swap the voice on an existing avatar without recreating it.
-    voice_id defaults to RUNWAY_DEFAULT_VOICE_ID env var.
-    """
-    voice = voice_id or _DEFAULT_VOICE_ID
-    if not voice:
-        raise RuntimeError("No voice configured. Set RUNWAY_DEFAULT_VOICE_ID in backend/.env.")
-
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.patch(
-            f"{API_BASE}/avatars/{character_id}",
-            headers=_headers(),
-            json={"voice": {"type": "custom", "id": voice}},
-        )
-    if resp.status_code >= 400:
-        raise RuntimeError(f"Could not update voice ({resp.status_code}): {resp.text[:300]}")
-    return resp.json()
-
-
-async def attach_document_to_character(character_id: str, document_id: str) -> dict:
-    """Link a knowledge document to a character so the avatar can reference it."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.patch(
-            f"{API_BASE}/avatars/{character_id}",
-            headers=_headers(),
-            json={"document_ids": [document_id]},
-        )
-    if resp.status_code >= 400:
-        raise RuntimeError(
-            f"Could not attach document to character ({resp.status_code}). {resp.text[:300]}"
-        )
-    return resp.json()
-
-
 def build_stylist_instructions(user_name: str = "the user") -> str:
     """The system prompt that defines the avatar's stylist persona."""
     return (
@@ -166,96 +92,3 @@ def build_stylist_instructions(user_name: str = "the user") -> str:
         f"(2-3 sentences for the spoken portion). If the user wants to try something on, "
         f"encourage them to use the Studio tab. Never invent items that aren't in the wardrobe."
     )
-
-
-def build_dynamic_persona(
-    user_name: str,
-    items: list,
-    max_items: int = 40,
-    color_profile_text: str = "",
-    style_notes: list | None = None,
-) -> str:
-    """
-    PATCH-time personality string for the shared admin stylist (Aria).
-
-    Embeds the calling user's wardrobe directly in the persona so the realtime
-    voice agent can name specific items and reference them by ID. Capped at
-    max_items to stay under any reasonable Runway personality length limit;
-    when over, drops accessories first, then shoes, then outerwear, keeping
-    tops/bottoms/dresses (the highest-signal categories for outfit picks).
-    """
-    name = user_name.strip() or "the user"
-
-    # Drop priority (lowest first) when capping
-    drop_order = ["accessories", "shoes", "outerwear", "tops", "bottoms", "dresses"]
-    if len(items) > max_items:
-        items = sorted(items, key=lambda it: drop_order.index(it.get("category") or "tops") if (it.get("category") or "tops") in drop_order else 0, reverse=True)
-        items = items[:max_items]
-
-    if items:
-        lines = []
-        for it in items:
-            iid = it.get("id") or "?"
-            iname = it.get("name") or "(unnamed)"
-            cat = it.get("category") or "tops"
-            color = it.get("color") or "?"
-            lines.append(f"- ID:{iid} | {iname} | {cat} | {color}")
-        wardrobe_block = "\n".join(lines)
-    else:
-        wardrobe_block = "(empty - the user has not added any clothes yet)"
-
-    color_block = color_profile_text.strip() or "(not analyzed yet)"
-    notes_block = "\n".join(f"- {s}" for s in (style_notes or [])) or "(none)"
-
-    return f"""You are Aria, {name}'s personal stylist for the StyleSense app. You can SEE their entire wardrobe (listed below) and you make specific outfit recommendations from it.
-
-# HARD RULES
-1. NEVER invent items. ONLY reference clothes that appear in the wardrobe list below by their EXACT name.
-2. After you mention an item by name, append its ID in this exact format: [ITEM:<id>]
-   Example: "Try the Navy linen blazer [ITEM:abc-123-def] over the cream chinos [ITEM:ghi-456-jkl]."
-3. Keep voice replies SHORT and conversational - 2 to 3 spoken sentences plus a list when suggesting an outfit. The user is hearing you, not reading.
-4. If the wardrobe is empty, tell the user they need to add items first - do NOT make up clothes.
-5. Be warm, confident, and specific. Honest opinions on color, fit, occasion welcome.
-6. Use {name}'s COLOR PROFILE: favor their flattering colors, steer away from their avoid colors, and explain briefly WHY a piece suits their coloring.
-
-# {name.upper()}'S COLOR PROFILE
-{color_block}
-
-# STYLING NOTES (reference, apply naturally)
-{notes_block}
-
-# {name.upper()}'S WARDROBE ({len(items)} items)
-{wardrobe_block}
-
-# EXAMPLES
-User: "What should I wear to a brunch tomorrow?"
-You: "For a relaxed brunch I'd pair the Cream linen shirt [ITEM:xxx] with the Tan chinos [ITEM:yyy] and finish with the White leather sneakers [ITEM:zzz] - light, easy, and put-together."
-
-User: "Help me pick a top to go with these black jeans."
-You: "The Striped knit polo [ITEM:xxx] keeps it cool and contrast-y. Or if you want sharper, the Charcoal merino crewneck [ITEM:yyy] with the jeans is a clean monochrome look."
-"""
-
-
-def build_wardrobe_knowledge_text(items: list, user_name: str = "User") -> str:
-    """Format the wardrobe items list into a text document for the knowledge base."""
-    lines = [
-        f"# {user_name}'s Wardrobe",
-        f"# Total items: {len(items)}",
-        "",
-    ]
-    by_category: dict[str, list] = {}
-    for item in items:
-        by_category.setdefault(item.get("category", "uncategorized"), []).append(item)
-
-    for category, group in by_category.items():
-        lines.append(f"\n## {category.upper()} ({len(group)} items)")
-        for item in group:
-            tags = ", ".join(item.get("tags") or [])
-            color = item.get("color") or "color unknown"
-            brand = item.get("brand") or "brand unknown"
-            occasion = item.get("occasion") or "any"
-            extra = f" - tags: {tags}" if tags else ""
-            lines.append(
-                f"- {item['name']} | {color} | {brand} | occasion: {occasion}{extra}"
-            )
-    return "\n".join(lines)

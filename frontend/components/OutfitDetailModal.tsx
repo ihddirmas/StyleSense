@@ -119,7 +119,7 @@ export function OutfitDetailModal({
           <div className="p-5 md:p-7 flex flex-col md:overflow-y-auto" style={{ maxHeight: "90vh" }}>
             <div className="flex items-start justify-between mb-2 pr-8">
               <div>
-                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--gold)" }}>
+                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--on-gold)" }}>
                   Saved outfit
                 </div>
                 <h2 className="font-display text-3xl">{outfit.name}</h2>

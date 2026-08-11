@@ -113,7 +113,11 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       syncUserScope(session?.user?.id ?? null);
       setSession(session);
-      setUser(session?.user ?? null);
+      // Keep the same object reference when the user id hasn't actually
+      // changed -- otherwise every effect with `[user]` in its deps (cache
+      // warming, per-page data fetches) re-fires on every redundant auth
+      // event, multiplying API calls needlessly.
+      setUser((prev) => (prev?.id === session?.user?.id ? prev : (session?.user ?? null)));
       identifyForAnalytics(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
     });
@@ -121,7 +125,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
     const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, sess: Session | null) => {
       syncUserScope(sess?.user?.id ?? null);
       setSession(sess);
-      setUser(sess?.user ?? null);
+      setUser((prev) => (prev?.id === sess?.user?.id ? prev : (sess?.user ?? null)));
       identifyForAnalytics(sess?.user ?? null);
       if (sess?.user) {
         fetchProfile(sess.user.id);

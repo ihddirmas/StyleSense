@@ -33,6 +33,7 @@ desktop.ini
 .agents/
 .remember/
 .playwright-mcp/
+.firecrawl/
 skills-lock.json
 github-project-skill/
 graphify-out/
@@ -51,11 +52,13 @@ frontend/start_frontend.ps1
 backend/_cutout_test/
 backend/_diag/
 backend/_verify/
+backend/_brand_candidates/
 
 backend/agentic_qa/logs/
 
 # GTM / marketing context docs (not for public repo)
 gtm-context/
+gtm-context-os/
 
 # NOTE: frontend/.env.production is intentionally tracked -- it holds only
 # NEXT_PUBLIC_* values (compiled into the client bundle anyway) and Vercel's
@@ -64,3 +67,4 @@ gtm-context/
 # Playwright test artifacts
 frontend/playwright-report/
 frontend/test-results/
+frontend/e2e/.auth/

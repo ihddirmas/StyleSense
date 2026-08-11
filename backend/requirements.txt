@@ -19,6 +19,8 @@ sentry-sdk[fastapi]==2.19.2   # error monitoring, no-op unless SENTRY_DSN is set
 posthog==3.7.4                # product analytics, no-op unless POSTHOG_API_KEY is set
 resend==2.4.0                 # transactional email, no-op unless RESEND_API_KEY is set
 redis==5.2.1                  # shared rate-limit state across workers, no-op unless REDIS_URL is set
+fakeredis==2.37.0             # test-only: in-process fake Redis for rate_limit's Redis-path unit tests
+lupa>=2.1                     # test-only: Lua runtime fakeredis needs to run EVAL scripts
 
 # Backblaze Genblaze + B2 (hackathon / durable media archive — optional)
 genblaze-core>=0.3.0

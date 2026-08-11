@@ -27,6 +27,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _youcam_category(item_category: str) -> str:
+    """Map StyleSense's wardrobe categories to YouCam's garment_category values.
+    VERIFY exact allowed values against the account playground — dresses/outerwear/
+    shoes/accessories are best-effort guesses pending confirmation."""
+    return {
+        "tops": "upper_body",
+        "outerwear": "upper_body",
+        "bottoms": "lower_body",
+        "dresses": "full_body",
+    }.get(item_category, "upper_body")
+
+
 @router.post("/generate")
 async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
     if not req.avatar_selfie_url:
@@ -35,6 +47,46 @@ async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
         raise HTTPException(400, "URLs must be public HTTPS, not localhost. Upload to Supabase first.")
     check_cooldown(user["id"], "generate", 5)
     check_tryon_cap(user["id"])
+
+    # YouCam Apparel VTO path (hackathon primary engine) — separate branch since
+    # it doesn't share Runway's aspect-ratio padding or face-restore pass, both
+    # of which are specific to how Runway's reference-image try-on behaves.
+    if req.model == "youcam":
+        from services import youcam_service
+
+        try:
+            result = await _run_blocking(
+                youcam_service.youcam_apparel_tryon,
+                user_image_url=req.avatar_selfie_url,
+                garment_image_url=req.item_image_url,
+                garment_category=_youcam_category(req.item_category),
+            )
+        except Exception as e:
+            raise HTTPException(502, f"YouCam try-on failed: {e}")
+
+        image_url = await _rehost(user["id"], result["image_url"])
+        saved = supabase_service.save_tryon_result(
+            user_id=user["id"],
+            item_id=req.wardrobe_item_id,
+            result_url=image_url,
+            model_used="youcam",
+            prompt_used=None,
+            runway_task_id=result.get("task_id"),
+        )
+        analytics_service.capture(user["id"], "tryon_generated", {
+            "model_used": "youcam", "endpoint": "generate",
+        })
+        prov = await tryon_service.archive_tryon_image_to_b2(
+            user["id"], saved["id"], image_url,
+            model_used="youcam",
+            item_ids=[req.wardrobe_item_id] if req.wardrobe_item_id else [],
+        )
+        return {
+            "result_image_url": image_url,
+            "result_id": saved["id"],
+            "model_used": "youcam",
+            **archive_fields(prov),
+        }
 
     setting = req.setting
     if req.enhance_prompt and setting:

@@ -1,4 +1,4 @@
-"""SQL database connection for StyleSense core relational tables.
+"""SQL database connection for StyleSenseAI core relational tables.
 
 All domain data (users, wardrobe, try-ons, outfits, stylist sessions, usage caps)
 lives in **Supabase** — same project as Auth, Storage, and social tables.

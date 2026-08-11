@@ -53,14 +53,16 @@ export default function OutfitsPage() {
           tutorialKey="outfits"
           subtitle="Every outfit you save from Studio or Aria lives here. Click any card to view items, re-try, or share."
           action={
-            <Link
-              href="/studio"
-              className="surface surface-hover px-4 py-2 text-sm flex items-center gap-2"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <Sparkles size={14} style={{ color: "var(--gold)" }} />
-              New look
-            </Link>
+            outfits.length > 0 ? (
+              <Link
+                href="/studio"
+                className="surface surface-hover px-4 py-2 text-sm flex items-center gap-2"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <Sparkles size={14} style={{ color: "var(--on-gold)" }} />
+                New look
+              </Link>
+            ) : undefined
           }
         />
       </div>
@@ -168,16 +170,18 @@ function OutfitCard({
       className="flex flex-col"
     >
       {/* Image card */}
-      <button
-        onClick={onOpen}
-        className="overflow-hidden group relative text-left w-full"
+      <div
+        className="overflow-hidden group relative w-full"
         style={{
-          padding: 0,
-          cursor: "pointer",
           color: "inherit",
           background: "var(--bg)",
           border: "1.5px solid var(--border)",
         }}
+      >
+      <button
+        onClick={onOpen}
+        className="block text-left w-full"
+        style={{ padding: 0, cursor: "pointer", border: "none", background: "transparent", color: "inherit" }}
       >
         {outfit.preview_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -211,35 +215,30 @@ function OutfitCard({
             <Eye size={11} /> View
           </div>
         </div>
+      </button>
 
         {/* Share button — top right */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onShare(); }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onShare(); } }}
+        <button
+          onClick={onShare}
           className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition p-1.5 cursor-pointer"
           style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
           aria-label="Share"
           title="Share"
         >
           <Share2 size={11} />
-        </div>
+        </button>
 
         {/* Delete button — top left */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onDelete(); } }}
+        <button
+          onClick={onDelete}
           className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition p-1.5 cursor-pointer"
           style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--red)" }}
           aria-label="Delete"
           title="Delete"
         >
           <Trash2 size={11} />
-        </div>
-      </button>
+        </button>
+      </div>
 
       {/* Footer */}
       <div className="pt-1.5 px-0.5">

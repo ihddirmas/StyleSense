@@ -50,7 +50,7 @@ function DetectedItemsChecklist({
       </h2>
       <p className="text-xs mb-5" style={{ color: "var(--text-muted)" }}>
         Untick to skip, or remove anything you don&apos;t want (e.g. accessories). Adding{" "}
-        <strong style={{ color: "var(--gold)" }}>{checkedCount}</strong>. Each is isolated as a clean product shot.
+        <strong style={{ color: "var(--on-gold)" }}>{checkedCount}</strong>. Each is isolated as a clean product shot.
       </p>
 
       <div className="surface p-3 mb-5 flex items-center gap-3">
@@ -342,7 +342,7 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
 
             {phase === "adding" && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Loader2 size={32} className="spin mb-4" style={{ color: "var(--gold)" }} />
+                <Loader2 size={32} className="spin mb-4" style={{ color: "var(--on-gold)" }} />
                 <h2 className="font-display text-2xl mb-1">Adding to your closet...</h2>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>Cleaning up the garment and saving it.</p>
               </div>

@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 import {
   Sparkles, MapPin, Film, Loader2, Save, ArrowLeftRight, Shirt, AlertCircle, Share2,
   User as UserIcon, RefreshCw, X, Plus, Trash2, ChevronDown, Download,
@@ -26,6 +26,11 @@ import type { WardrobeItem, TryOnResult } from "@/types";
 import posthog from "posthog-js";
 import { FEATURES } from "@/lib/features";
 import { MediaProvenanceBanner } from "@/components/studio/MediaProvenanceBanner";
+
+// Deferred: only needed once a try-on result exists and the user opens the
+// before/after compare view, not on initial page load.
+const ReactCompareSlider = dynamic(() => import("react-compare-slider").then((m) => m.ReactCompareSlider), { ssr: false });
+const ReactCompareSliderImage = dynamic(() => import("react-compare-slider").then((m) => m.ReactCompareSliderImage), { ssr: false });
 
 const MOTION_PRESETS = [
   { label: "Slow turn to camera", prompt: "The subject slowly turns toward the camera with a confident editorial pose, gentle hair movement." },
@@ -62,6 +67,7 @@ export default function StudioPage() {
     setCachedRecent,
   } = useAppStore();
   const [items, setItems] = useState<WardrobeItem[]>(cachedWardrobe);
+  const [wardrobeLoading, setWardrobeLoading] = useState(() => cachedWardrobe.length === 0);
   const [showCompare, setShowCompare] = useState(false);
   const [eventInput, setEventInput] = useState("");
   const [motionPrompt, setMotionPrompt] = useState(MOTION_PRESETS[0].prompt);
@@ -191,7 +197,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
       if (preselectId && data.some(i => i.id === preselectId)) {
         setSelected([preselectId]);
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setWardrobeLoading(false));
     apiGet<TryOnResult[]>("/api/tryon/recent?all=true").then(r => { const s = r.slice(0, 8); setRecentTryOns(s); setCachedRecent(s); }).catch(() => {});
     Promise.all([
       apiGet<{ selfie_urls: string[]; primary_url: string | null }>("/api/avatar/selfies").catch(() => null),
@@ -376,18 +382,17 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           </div>
         )}
 
-        {items.length === 0 && (
+        {!wardrobeLoading && items.length === 0 && (
           <div className="surface p-5 mb-6 flex items-start gap-3">
             <Shirt size={18} style={{ color: "var(--text-dim)", flexShrink: 0, marginTop: 2 }} />
             <div className="text-sm">
               <strong>Empty wardrobe.</strong>{" "}
-              <button onClick={() => setShowQuickAdd(true)} className="underline" style={{ color: "var(--gold)", background: "none", border: "none", cursor: "pointer", padding: 0, font: "inherit" }}>Add your first item</button>
+              <button onClick={() => setShowQuickAdd(true)} className="underline" style={{ color: "var(--on-gold)", background: "none", border: "none", cursor: "pointer", padding: 0, font: "inherit" }}>Add your first item</button>
             </div>
           </div>
         )}
 
         <div className="flex items-center gap-2 mb-3 relative" data-filter-menu>
-          <span className="section-label">Wardrobe</span>
           <button
             type="button"
             onClick={() => setShowFilterMenu((v) => !v)}
@@ -436,7 +441,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                   key={it.id}
                   onClick={() => selectItem(it)}
                   className="overflow-hidden relative flex-shrink-0 w-20 h-20 rounded"
-                  style={{ padding: 0, cursor: "pointer", background: "#fff", border: sel ? "2px solid var(--ink)" : "1px solid var(--border-hover)" }}
+                  style={{ padding: 0, cursor: "pointer", background: "var(--surface)", border: sel ? "2px solid var(--ink)" : "1px solid var(--border-hover)" }}
                   title={it.name}
                 >
                   <div className="relative w-full aspect-square">
@@ -464,7 +469,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               <div key={cat}>
                 <div
                   className="text-2xs font-mono uppercase tracking-widest mb-1.5 px-0.5 font-semibold"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: "var(--text)" }}
                 >
                   {cat}
                 </div>
@@ -474,15 +479,18 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                     return (
                       <div
                         key={it.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => selectItem(it)}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectItem(it); } }}
                         className="overflow-hidden relative group rounded"
-                        style={{ padding: 0, cursor: "pointer", background: "#fff", border: sel ? "2px solid var(--ink)" : "1px solid var(--border-hover)" }}
+                        style={{ padding: 0, background: "var(--surface)", border: sel ? "2px solid var(--ink)" : "1px solid var(--border-hover)" }}
                         title={it.name}
                       >
-                        <div className="relative w-full aspect-square">
+                        <button
+                          type="button"
+                          onClick={() => selectItem(it)}
+                          className="relative w-full aspect-square block"
+                          style={{ padding: 0, border: "none", cursor: "pointer", background: "transparent" }}
+                          aria-label={sel ? `Deselect ${it.name}` : `Select ${it.name}`}
+                          aria-pressed={sel}
+                        >
                           <Image src={it.image_url} alt={it.name} fill className="object-cover" sizes="120px" />
                           {sel && (
                             <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
@@ -490,15 +498,15 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                               {selectedItemIds.indexOf(it.id) + 1}
                             </div>
                           )}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setPendingDelete(it); }}
-                            className="absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                            style={{ background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", cursor: "pointer" }}
-                            aria-label={`Delete ${it.name}`}
-                          >
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
+                        </button>
+                        <button
+                          onClick={() => setPendingDelete(it)}
+                          className="absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                          style={{ background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", cursor: "pointer" }}
+                          aria-label={`Delete ${it.name}`}
+                        >
+                          <Trash2 size={10} />
+                        </button>
                         <div className="px-1.5 py-1" style={{ background: "var(--surface)" }}>
                           <div className="truncate text-2xs font-medium" style={{ color: "var(--text)" }}>{it.name}</div>
                         </div>
@@ -584,15 +592,15 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                           className="flex items-center gap-2 px-3 py-1 rounded-full mb-2"
                           style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)" }}
                         >
-                          <Loader2 size={11} className="spin" style={{ color: "var(--gold)" }} />
-                          <span className="text-xs tracking-wide" style={{ color: "var(--gold)", textTransform: "uppercase" }}>
+                          <Loader2 size={11} className="spin" style={{ color: "var(--on-gold)" }} />
+                          <span className="text-xs tracking-wide" style={{ color: "var(--on-gold)", textTransform: "uppercase" }}>
                             Stylizing your avatar...
                           </span>
                         </div>
                       )}
                       <div
                         className="px-3 py-1 rounded-full mb-2 text-xs tracking-wide"
-                        style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--gold)", textTransform: "uppercase" }}
+                        style={{ background: "var(--gold-dim)", border: "1px solid var(--border-gold)", color: "var(--on-gold)", textTransform: "uppercase" }}
                       >
                         {stylizedAvatarUrl ? "Your avatar" : "Your starting point"}
                       </div>
@@ -621,7 +629,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                       <div className="text-sm font-medium" style={{ color: "var(--text)" }}>Set up your avatar</div>
                       <div className="text-xs mt-1">
                         Add a selfie (and optionally a full-body photo) in{" "}
-                        <Link href="/settings" style={{ color: "var(--gold)" }}>Settings</Link>{" "}
+                        <Link href="/settings" style={{ color: "var(--on-gold)" }}>Settings</Link>{" "}
                         to use the Studio and Aria&apos;s manifest.
                       </div>
                     </div>
@@ -725,7 +733,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             )}
 
             <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Try-on model</div>
-            <select className="input mb-1" value={tryonModel} onChange={(e) => setTryonModel(e.target.value)}>
+            <select aria-label="Try-on model" className="input mb-1" value={tryonModel} onChange={(e) => setTryonModel(e.target.value)}>
               {TRYON_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
               ))}
@@ -807,19 +815,19 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
           {FEATURES.animateVideo && (
             <div className="surface p-4">
               <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
-                Proof video (Genblaze → B2)
+                Runway walk video
               </div>
               <p className="text-2xs text-muted mb-3 m-0">
-                Runway image-to-video via Genblaze Pipeline; output + SHA-256 manifest land in Backblaze B2.
+                Animate this try-on into a 5-second runway walk.
               </p>
               {eventUrl && (
-                <div className="text-xs mb-2" style={{ color: "var(--gold)" }}>
+                <div className="text-xs mb-2" style={{ color: "var(--on-gold)" }}>
                   Using placed scene: {eventInput || "current scene"}
                 </div>
               )}
 
               <div className="text-2xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Video model</div>
-              <select className="input mb-1" value={videoModel} onChange={(e) => setVideoModel(e.target.value)}>
+              <select aria-label="Video model" className="input mb-1" value={videoModel} onChange={(e) => setVideoModel(e.target.value)}>
                 {VIDEO_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
                 ))}

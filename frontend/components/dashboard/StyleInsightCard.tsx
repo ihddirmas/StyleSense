@@ -42,8 +42,8 @@ export function StyleInsightCard({
   return (
     <div className="surface p-4 md:p-5" style={{ borderColor: "var(--border-hover)" }}>
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles size={13} style={{ color: "var(--gold)" }} />
-        <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--gold)" }}>
+        <Sparkles size={13} style={{ color: "var(--on-gold)" }} />
+        <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--on-gold)" }}>
           Style Read
         </span>
       </div>

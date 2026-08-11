@@ -11,6 +11,7 @@ import { apiGet, apiPost, apiDelete, apiUpload } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
+import { OutfitSuggestions } from "@/components/wardrobe/OutfitSuggestions";
 import type { WardrobeItem, DetectedItem } from "@/types";
 import posthog from "posthog-js";
 
@@ -106,13 +107,14 @@ export default function WardrobePage() {
               onClick={() => setFilterCategory(c)}
               aria-pressed={filterCategory === c}
             >
-              {c}
+              {c === "all" ? "All" : c.charAt(0).toUpperCase() + c.slice(1)}
             </button>
           ))}
         </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
+      {!loading && <OutfitSuggestions hasItems={items.length > 0} />}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (

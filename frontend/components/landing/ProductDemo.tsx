@@ -46,7 +46,7 @@ const DEMOS = [
     desc: "Aria reads your full wardrobe, remembers your taste, and proposes actions — outfit picks, try-ons, and closet adds — that you confirm before anything runs.",
     accent: "#6b8e5f",
     src: "/screenshots/stylist.png",
-    alt: "StyleSense Aria agent chat with confirm actions",
+    alt: "StyleSenseAI Aria agent chat with confirm actions",
   },
   {
     step: "02",
@@ -54,7 +54,7 @@ const DEMOS = [
     desc: "One photo is all it takes. Aria uses it for photoreal try-ons and to see you in every look.",
     accent: "#8b6fe8",
     src: "/screenshots/dashboard.png",
-    alt: "StyleSense dashboard showing your digital runway",
+    alt: "StyleSenseAI dashboard showing your digital runway",
   },
   {
     step: "03",
@@ -62,7 +62,7 @@ const DEMOS = [
     desc: "Paste a retailer URL or share a photo. Aria can look up products or propose adding items to your closet.",
     accent: "#5cb8b2",
     src: "/screenshots/wardrobe.png",
-    alt: "StyleSense wardrobe with real clothing items",
+    alt: "StyleSenseAI wardrobe with real clothing items",
   },
   {
     step: "04",
@@ -70,7 +70,7 @@ const DEMOS = [
     desc: "When Aria suggests a look, confirm a try-on and see yourself wearing it in seconds. Credits only spend when you approve.",
     accent: "#e87f8a",
     src: "/screenshots/studio.png",
-    alt: "StyleSense studio try-on interface",
+    alt: "StyleSenseAI studio try-on interface",
   },
 ];
 

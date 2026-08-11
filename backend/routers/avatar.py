@@ -1,69 +1,20 @@
-"""Avatar/character setup: selfie upload + Runway character creation + knowledge sync."""
+"""Avatar setup: selfie upload + stylized avatar generation + Aria's shared hero asset."""
 import os
 import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
-from typing import Optional
 
-from models.schemas import CreateCharacterRequest, SyncKnowledgeRequest
-from services import supabase_service, character_service, avatar_pose_service, color_service, style_kb
+from services import supabase_service, avatar_pose_service, color_service
 from services.auth_service import current_user
 from services.image_service import validate_image_bytes
+from services.rate_limit import check_cooldown
+from services.usage_limits import check_avatar_refresh_cap
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # MVP cut list: skip expensive stylized avatar/video generation on upload (analysis only).
 MVP_MODE = os.getenv("MVP_MODE", "1").lower() not in ("0", "false", "no")
-
-
-def _analyze_body_photo(image_url: str) -> dict:
-    import httpx, base64, json, re
-    from services.anthropic_service import client, MODEL, _require_storage_url
-    try:
-        _require_storage_url(image_url)
-        data = httpx.get(image_url, timeout=20, follow_redirects=False).content
-        b64 = base64.standard_b64encode(data).decode()
-        ext = image_url.split(".")[-1].split("?")[0].lower()
-        media = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
-        resp = client.messages.create(
-            model=MODEL,
-            max_tokens=256,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
-                    {"type": "text", "text": (
-                        'Analyze this full-body photo. Return JSON only:\n'
-                        '{"height_impression":"tall|average|petite",'
-                        '"body_shape":"hourglass|pear|apple|rectangle|inverted_triangle",'
-                        '"skin_undertone":"warm|cool|neutral",'
-                        '"fit_notes":"one sentence about flattering silhouettes"}'
-                    )},
-                ],
-            }],
-        )
-        m = re.search(r"\{.*\}", resp.content[0].text.strip(), re.DOTALL)
-        if m:
-            return json.loads(m.group())
-    except Exception as e:
-        logger.warning(f"Body analysis failed: {e}")
-    return {}
-
-
-@router.post("/upload-body-photo")
-async def upload_body_photo(file: UploadFile = File(...), user = Depends(current_user)):
-    data = await file.read()
-    try:
-        validate_image_bytes(data, file.content_type or "")
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    body_url = supabase_service.upload_to_storage(
-        "selfies", user["id"], data, file.filename or "body.jpg", file.content_type or "image/jpeg"
-    )
-    analysis = _analyze_body_photo(body_url)
-    supabase_service.upsert_user(user["id"], full_body_url=body_url, body_analysis=analysis)
-    return {"full_body_url": body_url, "body_analysis": analysis}
 
 
 async def _bg_refresh_profile(user_id: str, source_url: str):
@@ -286,7 +237,7 @@ async def set_primary_selfie(
     supabase_service.upsert_user(user["id"], avatar_selfie_url=url, email=user["email"])
     # Profile refresh only; the avatar is ON-DEMAND ("Refresh my avatar").
     background_tasks.add_task(_bg_refresh_profile, user["id"], url)
-    return {"primary_url": url, "needs_avatar_recreate": bool(row.get("avatar_character_id"))}
+    return {"primary_url": url}
 
 
 @router.delete("/selfie")
@@ -298,144 +249,6 @@ async def delete_selfie(url: str, user = Depends(current_user)):
         fields["avatar_selfie_url"] = selfies[0] if selfies else None
     supabase_service.upsert_user(user["id"], **fields)
     return {"selfie_urls": selfies, "primary_url": fields.get("avatar_selfie_url")}
-
-
-@router.post("/create-character")
-async def create_character(req: CreateCharacterRequest, user = Depends(current_user)):
-    instructions = character_service.build_stylist_instructions(req.name)
-    try:
-        result = await character_service.create_character(
-            selfie_url=req.selfie_url,
-            name=req.name,
-            instructions=instructions,
-            voice_id=req.voice,  # None falls back to RUNWAY_DEFAULT_VOICE_ID env
-        )
-    except RuntimeError as e:
-        raise HTTPException(
-            status_code=501,
-            detail={
-                "message": str(e),
-                "fallback": (
-                    "Programmatic creation failed. Go to https://dev.runwayml.com → Characters → "
-                    "Create Character. Upload your selfie, paste the instructions shown, "
-                    "then call POST /api/avatar/save-character-id with the resulting UUID."
-                ),
-                "instructions_text": instructions,
-            },
-        )
-
-    character_id = result.get("id") or result.get("avatarId")
-    supabase_service.upsert_user(user["id"], avatar_character_id=character_id, email=user["email"])
-    return {"character_id": character_id, "raw": result}
-
-
-@router.post("/recreate-character")
-async def recreate_character(req: CreateCharacterRequest, user = Depends(current_user)):
-    """
-    Force-recreate the avatar with the given selfie. Used when the user
-    swaps their primary selfie or wants a fresh character.
-    Same body as /create-character. Replaces user's avatar_character_id.
-    """
-    instructions = character_service.build_stylist_instructions(req.name)
-    try:
-        result = await character_service.create_character(
-            selfie_url=req.selfie_url, name=req.name,
-            instructions=instructions, voice_id=req.voice,
-        )
-    except RuntimeError as e:
-        raise HTTPException(500, str(e))
-
-    character_id = result.get("id") or result.get("avatarId")
-    supabase_service.upsert_user(
-        user["id"], avatar_character_id=character_id,
-        avatar_selfie_url=req.selfie_url, email=user["email"],
-    )
-    return {"character_id": character_id, "raw": result}
-
-
-@router.post("/refresh-voice")
-async def refresh_voice(user = Depends(current_user)):
-    """
-    PATCH the user's existing avatar to use the latest RUNWAY_DEFAULT_VOICE_ID.
-    Useful when the default voice is updated server-side and the user wants
-    their already-created avatar to switch to it without full recreation.
-    """
-    row = supabase_service.get_user(user["id"]) or {}
-    char_id = row.get("avatar_character_id")
-    if not char_id:
-        raise HTTPException(400, "No avatar character to update. Create one first.")
-    try:
-        result = await character_service.update_character_voice(char_id)
-        new_voice = (result.get("voice") or {}).get("id")
-        return {"character_id": char_id, "voice_id": new_voice, "ok": True}
-    except RuntimeError as e:
-        raise HTTPException(500, str(e))
-
-
-@router.post("/save-character-id")
-async def save_character_id(
-    character_id: str = Form(...),
-    voice_id: Optional[str] = Form(None),
-    user = Depends(current_user),
-):
-    fields = {"avatar_character_id": character_id, "email": user["email"]}
-    if voice_id:
-        fields["avatar_voice_id"] = voice_id
-    supabase_service.upsert_user(user["id"], **fields)
-    return {"saved": True}
-
-
-@router.post("/sync-wardrobe-knowledge")
-async def sync_wardrobe_knowledge(_req: SyncKnowledgeRequest = None, user = Depends(current_user)):
-    user_row = supabase_service.get_user(user["id"])
-    if not user_row:
-        # Auto-create on the fly
-        supabase_service.upsert_user(user["id"], email=user["email"])
-        user_row = supabase_service.get_user(user["id"])
-
-    items = supabase_service.get_wardrobe_items(user["id"])
-    if not items:
-        raise HTTPException(400, "Wardrobe is empty - add items first.")
-
-    knowledge_text = character_service.build_wardrobe_knowledge_text(
-        items, user_name=user_row.get("full_name") or "User"
-    )
-
-    if not user_row.get("avatar_character_id"):
-        return {
-            "wardrobe_text": knowledge_text,
-            "item_count": len(items),
-            "uploaded": False,
-            "reason": "No character_id on user yet.",
-        }
-
-    try:
-        doc = await character_service.upload_knowledge_document(
-            content=knowledge_text, name=f"wardrobe-{user['id']}.txt"
-        )
-        doc_id = doc.get("id")
-        await character_service.attach_document_to_character(
-            user_row["avatar_character_id"], doc_id
-        )
-        try:
-            supabase_service.upsert_user(user["id"], avatar_document_id=doc_id, email=user["email"])
-        except Exception as e:
-            # Optional local bookkeeping - don't fail the sync if the column is missing
-            import logging
-            logging.getLogger(__name__).warning(f"Could not save avatar_document_id locally: {e}")
-        return {
-            "wardrobe_text": knowledge_text,
-            "item_count": len(items),
-            "uploaded": True,
-            "document_id": doc_id,
-        }
-    except RuntimeError as e:
-        return {
-            "wardrobe_text": knowledge_text,
-            "item_count": len(items),
-            "uploaded": False,
-            "reason": str(e),
-        }
 
 
 @router.get("/stylized")
@@ -485,7 +298,9 @@ async def regenerate_stylized(
     Pass ?video=true to also (re)generate the ramp-walking video (~60-100cr).
 
     Guard: prevents duplicate video generation if one is already ready/generating.
-    (Future: make this a premium feature with rate limiting per tier.)"""
+    Rate-limited by cooldown + monthly cap (Free tier) same as tryon/event-scene/animate."""
+    check_cooldown(user["id"], "avatar-refresh", 30)
+    check_avatar_refresh_cap(user["id"])
     if model not in {"gemini_2.5_flash", "gen4_image"}:
         raise HTTPException(400, f"Unsupported model: {model}")
     row = supabase_service.get_user(user["id"]) or {}
@@ -504,90 +319,16 @@ async def regenerate_stylized(
             )
 
     background_tasks.add_task(_bg_generate_stylized, user["id"], selfie, still_only=not video, model=model)
+    supabase_service.record_usage_event(user["id"], "avatar_refresh")
     return {"queued": True, "with_video": video, "model": model}
-
-
-@router.post("/sync-stylist-kb")
-async def sync_stylist_kb(user = Depends(current_user)):
-    """
-    Sync the calling user's wardrobe to the SHARED admin stylist (Aria) by
-    PATCHing her `personality` with the user's items embedded + strict
-    format rules. Personality is the only field Runway's voice agent is
-    documented to read for custom avatars, so this is the load-bearing path.
-
-    Also attempts to attach a knowledge document (best-effort, may help if
-    Runway ever starts consuming document_ids for realtime).
-
-    Awaits both calls before returning. The frontend MUST await this before
-    starting a realtime session.
-    """
-    char_id = os.getenv("STYLIST_CHARACTER_ID")
-    if not char_id:
-        raise HTTPException(503, "STYLIST_CHARACTER_ID not configured.")
-
-    user_row = supabase_service.get_user(user["id"]) or {}
-    items = supabase_service.get_wardrobe_items(user["id"])
-
-    # Color profile: use cached, else derive once from the primary selfie.
-    profile = user_row.get("color_profile")
-    if not profile:
-        selfie = user_row.get("selfie_url") or (user_row.get("selfie_urls") or [None])[0]
-        if selfie:
-            profile = color_service.analyze_color_profile(selfie)
-            if profile:
-                try:
-                    supabase_service.upsert_user(
-                        user["id"], color_profile=profile, color_profile_source_selfie=selfie
-                    )
-                except Exception as e:
-                    logger.info(f"Could not cache color profile: {e}")
-
-    kb_snippets = style_kb.retrieve(query="", color_profile=profile, occasion=None)
-
-    persona = character_service.build_dynamic_persona(
-        user_name=user_row.get("full_name") or "the user",
-        items=items,
-        color_profile_text=color_service.format_color_profile(profile),
-        style_notes=kb_snippets,
-    )
-
-    # Load-bearing: PATCH personality and AWAIT. If this fails, fail the whole
-    # call so the frontend knows not to start the session with a stale persona.
-    try:
-        await character_service.update_character_personality(char_id, persona)
-    except RuntimeError as e:
-        raise HTTPException(502, f"Could not PATCH stylist personality: {e}")
-
-    # Best-effort: also attach a knowledge document. If it fails the persona
-    # still has the wardrobe inline, so we don't surface this error.
-    doc_id = None
-    if items:
-        try:
-            knowledge_text = character_service.build_wardrobe_knowledge_text(
-                items, user_name=user_row.get("full_name") or "the user"
-            )
-            doc = await character_service.upload_knowledge_document(
-                content=knowledge_text, name=f"wardrobe-{user['id']}.txt"
-            )
-            doc_id = doc.get("id")
-            await character_service.attach_document_to_character(char_id, doc_id)
-        except Exception as e:
-            logger.info(f"Doc attach skipped (best-effort): {e}")
-
-    return {
-        "synced": True,
-        "item_count": len(items),
-        "character_id": char_id,
-        "personality_bytes": len(persona),
-        "document_id": doc_id,
-    }
 
 
 @router.get("/stylist")
 async def get_stylist():
     """
-    Returns the configured shared admin stylist character.
-    Every user's voice avatar session uses this character.
+    Returns the configured shared admin stylist (Aria) character asset —
+    her portrait image and ramp-walking hero video, shown on the dashboard
+    hero as a fallback for users without a selfie yet.
 
     No auth required (the character is a brand asset, same for everyone).
     Set STYLIST_CHARACTER_ID in backend/.env to wire it up. Run
@@ -640,47 +381,4 @@ async def get_stylist():
 async def get_avatar_state(user = Depends(current_user)):
     """Return cached avatar fields for the current user."""
     row = supabase_service.get_user(user["id"]) or {}
-    return {
-        "selfie_url": row.get("avatar_selfie_url"),
-        "character_id": row.get("avatar_character_id"),
-    }
-
-
-@router.get("/status")
-async def get_avatar_status(user = Depends(current_user)):
-    """
-    Live status of the user's Runway avatar character.
-    Returns one of:
-      - { ready: false, status: "no_character" } — no avatar created yet
-      - { ready: false, status: "PROCESSING" }   — avatar is still being built
-      - { ready: true,  status: "READY" }        — safe to start a voice session
-      - { ready: false, status: "FAILED", failure: "..." }
-    """
-    row = supabase_service.get_user(user["id"]) or {}
-    char_id = row.get("avatar_character_id")
-    if not char_id:
-        return {"ready": False, "status": "no_character"}
-
-    import httpx, os
-    api_key = os.getenv("RUNWAY_API_KEY") or os.getenv("RUNWAYML_API_SECRET")
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            r = await client.get(
-                f"https://api.dev.runwayml.com/v1/avatars/{char_id}",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "X-Runway-Version": "2024-11-06",
-                },
-            )
-        if r.status_code >= 400:
-            return {"ready": False, "status": f"http_{r.status_code}", "detail": r.text[:200]}
-        data = r.json()
-        status = data.get("status", "UNKNOWN")
-        return {
-            "ready": status == "READY",
-            "status": status,
-            "voice_id": (data.get("voice") or {}).get("id"),
-            "voice_name": (data.get("voice") or {}).get("name"),
-        }
-    except Exception as e:
-        return {"ready": False, "status": "error", "detail": str(e)}
+    return {"selfie_url": row.get("avatar_selfie_url")}

@@ -1,4 +1,6 @@
-# StyleSense — AI-Powered Personal Wardrobe & Try-On
+# StyleSenseAI — AI-Powered Personal Wardrobe & Try-On
+
+> Repo and infra are still named `StyleSense` (GitHub repo, Vercel project) — the product itself has rebranded to StyleSenseAI. See below for the technical identifiers, which are left as-is since they're accurate references to the actual infrastructure.
 
 > Built for the **AWS + Runway AI Hackathon** · May–June 2026
 
@@ -14,11 +16,9 @@
 Vercel project **style-sense** tracks `github.com/ihddirmas/StyleSense` branch **`master`** with root directory `frontend/`.  
 Set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SITE_URL` in Vercel if you override defaults; otherwise `frontend/.env.production` and `lib/api-base.ts` point at the URLs above.
 
-Vercel project **style-sense** tracks `github.com/ihddirmas/StyleSense` branch **`master`** with root directory `frontend/`.
-
 ## Backblaze Generative AI Media Hackathon (2026)
 
-StyleSense is submitted to the **Backblaze + Genblaze** hackathon as an **agentic fashion media app**:
+StyleSenseAI is submitted to the **Backblaze + Genblaze** hackathon as an **agentic fashion media app**:
 
 - **Genblaze** orchestrates Runway image-to-video (`Pipeline` + `RunwayProvider`) and ingests try-on stills with SHA-256 provenance manifests.
 - **Backblaze B2** durably stores generated images, videos, and manifests (beyond short-lived Runway URLs).
@@ -79,7 +79,6 @@ flowchart TD
 
     subgraph FE [Frontend — Next.js 14 on Vercel]
         Pages[Pages: Dashboard · Wardrobe · Studio · Stylist · Outfits · Chat]
-        SDK[@runwayml/avatars-react WebRTC Widget]
     end
     FE:::app
 
@@ -100,16 +99,14 @@ flowchart TD
     SUPABASE:::supabase
 
     subgraph RUNWAY [Runway AI]
-        Characters[Characters API — WebRTC Avatar]
+        Characters[Characters API — Aria's static portrait + hero video]
         Gen4[gen4_image / turbo — Try-On + Scene]
         Gen45[gen4.5 — Image-to-Video]
-        KB[Knowledge Base — Wardrobe Sync]
     end
     RUNWAY:::runway
 
     User -->|HTTPS| Pages
     Pages -->|REST| API
-    SDK -->|WebRTC| Characters
     API -->|JWT verify| Auth
     API -->|SQLAlchemy| PG
     API -->|Storage SDK| Storage
@@ -117,8 +114,7 @@ flowchart TD
     Services -->|Runway SDK| Gen4
     Services -->|Runway SDK| Gen45
     Services -->|Runway SDK| Characters
-    Graphs -->|Tool calling| Characters
-    Graphs -->|Knowledge sync| KB
+    Graphs -->|Anthropic Claude| API
 ```
 
 ## Screenshots
@@ -175,7 +171,7 @@ Verify connectivity: `cd backend && ./venv/bin/python -m scripts.check_db`
 ```powershell
 cd frontend
 npm install
-# Copy .env.local.example → .env.local and fill in secrets
+# Copy .env.example → .env.local and fill in secrets
 npm run dev   # http://localhost:3000
 ```
 
@@ -185,8 +181,8 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_API_URL=http://localhost:8000
 RUNWAYML_API_SECRET=
-NEXT_PUBLIC_STYLIST_CHARACTER_ID=
-NEXT_PUBLIC_STYLIST_HERO_VIDEO_URL=
+NEXT_PUBLIC_STYLIST_CHARACTER_ID=   # from: python -m scripts.setup_admin_stylist
+NEXT_PUBLIC_STYLIST_HERO_VIDEO_URL= # from: python -m scripts.animate_admin_stylist
 ```
 
 ### One-time Admin Setup
