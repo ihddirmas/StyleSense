@@ -18,7 +18,24 @@ on:
 
 jobs:
   e2e:
-    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview'
+    # Guards against a malicious fork PR getting Vercel to build/deploy attacker
+    # code, then having this job hand real E2E_TEST_EMAIL/PASSWORD secrets to
+    # whatever page loads at target_url (e.g. a fake login form that exfiltrates
+    # them). repository_owner check confirms the deployment belongs to this repo
+    # (not a fork's copy of the workflow); the target_url regex confirms Playwright
+    # only ever navigates to a URL on this project's own Vercel domain.
+    #
+    # This does NOT by itself guarantee target_url's *content* is trustworthy if
+    # your Vercel project is configured to auto-build fork PRs -- verify in Vercel
+    # dashboard -> Project Settings -> Git that fork PR deployments are disabled
+    # (default for most projects). If you need fork PR previews for other reasons,
+    # move this job behind a GitHub Environment with required reviewers instead.
+    if: |
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Preview' &&
+      github.repository_owner == github.event.repository.owner.login &&
+      startsWith(github.event.deployment_status.target_url, 'https://') &&
+      endsWith(github.event.deployment_status.target_url, '.vercel.app')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
