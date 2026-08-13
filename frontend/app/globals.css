@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Public+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* Google Fonts stylesheet is loaded via a <link> in app/layout.tsx, not a CSS
+   @import — @import serializes behind this file's own fetch+parse before the
+   font CSS is even discovered, adding a full extra round trip to the render
+   path. A <head> <link> is discovered by the preload scanner immediately. */
 
 @tailwind base;
 @tailwind components;
@@ -648,5 +651,14 @@ button:focus:not(:focus-visible) { outline: none; }
     opacity: 1 !important;
     width: 100%;
     margin-bottom: 24px;
+  }
+}
+
+/* Below this, "StyleSenseAI" + "Get started" + the hamburger no longer fit on
+   one line and visually collide — drop the header CTA; it's duplicated in the
+   mobile dropdown menu. */
+@media (max-width: 420px) {
+  .landing-nav-cta {
+    display: none !important;
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -9,10 +10,13 @@ gsap.registerPlugin(ScrollTrigger);
 
 function HeroAppMockup() {
   return (
-    <img
+    <Image
       src="/screenshots/dashboard.png"
       alt="StyleSenseAI dashboard"
-      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left", display: "block" }}
+      fill
+      sizes="(max-width: 1100px) 100vw, 1100px"
+      priority
+      style={{ objectFit: "cover", objectPosition: "top left" }}
     />
   );
 }
@@ -51,24 +55,12 @@ export default function HeroSection() {
           { opacity: 1, y: 0, duration: 0.65, stagger: 0.15, ease: "power2.out", delay: 0.9 }
         );
 
-        // Browser frame rises from below with a 3D perspective tilt
-        gsap.fromTo(frameRef.current,
-          {
-            opacity: 0,
-            y: 140,
-            rotationX: 18,
-            transformPerspective: 1400,
-            transformOrigin: "center top",
-          },
-          {
-            opacity: 1,
-            y: 0,
-            rotationX: 0,
-            duration: 1.45,
-            delay: 1.05,
-            ease: "power4.out",
-          }
-        );
+        // No entrance animation on the frame itself: it holds the LCP image,
+        // and Chrome only locks in the LCP timestamp once an element's paint
+        // stops changing — so even an opacity-free transform-only reveal
+        // pushed "Render Delay" past a second in testing. The frame renders
+        // in its final position immediately; scroll parallax below still
+        // gives it motion once the user is engaged, well after LCP is done.
 
         // ── Scroll parallax: frame drifts up slightly ─────────────────────── //
         gsap.to(frameRef.current, {
@@ -225,7 +217,6 @@ export default function HeroSection() {
             borderBottom: "none",
             boxShadow:
               "0 -4px 0 0 rgba(60,36,21,0.04) inset, 0 40px 100px -20px rgba(60,36,21,0.22), 0 0 0 1px rgba(60,36,21,0.07)",
-            opacity: 0,
           }}
         >
           {/* Browser chrome */}
@@ -260,7 +251,7 @@ export default function HeroSection() {
           </div>
 
           {/* App content — fixed height so it partially bleeds below fold */}
-          <div style={{ height: 380 }}>
+          <div style={{ height: 380, position: "relative" }}>
             <HeroAppMockup />
           </div>
         </div>

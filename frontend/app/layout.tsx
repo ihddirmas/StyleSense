@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LayoutClient } from "@/components/layout/LayoutClient";
-import { Toaster } from "@/components/ui/Toast";
+import ToasterClient from "@/components/ui/ToasterClient";
 import { AuthProvider } from "@/components/AuthProvider";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { getSupabaseServer } from "@/lib/supabase/server";
@@ -59,6 +59,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://us.i.posthog.com" />
+        <link rel="preconnect" href="https://us-assets.i.posthog.com" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Public+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        />
+      </head>
       <body>
         <PostHogProvider>
           <AuthProvider initialUser={user} initialProfile={profile}>
@@ -68,7 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               // Public pages (landing / login / signup) render their own full-height layout
               <>{children}</>
             )}
-            <Toaster />
+            <ToasterClient />
           </AuthProvider>
         </PostHogProvider>
         <SpeedInsights />

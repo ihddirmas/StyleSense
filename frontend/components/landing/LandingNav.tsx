@@ -139,7 +139,7 @@ export default function LandingNav() {
           <Link href="/login" className="landing-nav-signin btn-secondary btn-sm tracking-wide">
             Sign in
           </Link>
-          <Link href="/signup" className="btn-primary btn-sm tracking-wide">
+          <Link href="/signup" className="landing-nav-cta btn-primary btn-sm tracking-wide">
             Get started
           </Link>
 
@@ -220,6 +220,14 @@ export default function LandingNav() {
             }}
           >
             Sign in
+          </Link>
+          <Link
+            href="/signup"
+            onClick={() => setMobileOpen(false)}
+            className="landing-nav-cta-mobile btn-primary btn-sm tracking-wide"
+            style={{ marginTop: 8, textAlign: "center" }}
+          >
+            Get started
           </Link>
         </div>
       )}

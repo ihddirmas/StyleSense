@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -8,11 +9,15 @@ gsap.registerPlugin(ScrollTrigger);
 
 function ScreenShot({ src, alt }: { src: string; alt: string }) {
   return (
-    <img
-      src={src}
-      alt={alt}
-      style={{ width: "100%", height: 360, objectFit: "cover", objectPosition: "top left", display: "block" }}
-    />
+    <div style={{ position: "relative", width: "100%", height: 360 }}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(max-width: 860px) 100vw, 50vw"
+        style={{ objectFit: "cover", objectPosition: "top left" }}
+      />
+    </div>
   );
 }
 

@@ -1,31 +1,10 @@
 "use client";
-import { create } from "zustand";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { useToastStore, toast } from "@/store/toast";
 
-type ToastKind = "success" | "error" | "info";
-interface Toast { id: number; kind: ToastKind; message: string; }
-interface ToastStore {
-  toasts: Toast[];
-  push: (kind: ToastKind, message: string) => void;
-  dismiss: (id: number) => void;
-}
-
-const useToastStore = create<ToastStore>((set) => ({
-  toasts: [],
-  push: (kind, message) => {
-    const id = Date.now() + Math.random();
-    set((s) => ({ toasts: [...s.toasts, { id, kind, message }] }));
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 5000);
-  },
-  dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-}));
-
-export const toast = {
-  success: (m: string) => useToastStore.getState().push("success", m),
-  error:   (m: string) => useToastStore.getState().push("error", m),
-  info:    (m: string) => useToastStore.getState().push("info", m),
-};
+export { toast };
+export type { Toast, ToastKind } from "@/store/toast";
 
 export function Toaster() {
   const { toasts, dismiss } = useToastStore();
