@@ -270,6 +270,10 @@ async def get_style_profiles(user = Depends(current_user)):
         "ready": bool(color and kibbe),
         "has_color": bool(color),
         "has_kibbe": bool(kibbe),
+        # Lets the dashboard distinguish "never uploaded anything" (show the full
+        # onboarding CTA) from "uploaded a photo but analysis hasn't run/finished
+        # yet" (show a lighter pending state instead of nagging to start over).
+        "has_photo": bool(color_service.best_profile_source(row)),
     }
 
 
@@ -289,6 +293,10 @@ async def get_analysis_report(user = Depends(current_user)):
             "ready": False,
             "has_color": bool(color_profile),
             "has_kibbe": bool(kibbe_analysis),
+            # Distinguishes "never uploaded" from "uploaded, analysis pending/failed"
+            # so the frontend doesn't tell someone who already has a photo on file
+            # to upload one again.
+            "has_photo": bool(color_service.best_profile_source(row)),
         }
 
     kibbe_type = kibbe_analysis.get("kibbe_type")

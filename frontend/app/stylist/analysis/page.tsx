@@ -16,6 +16,7 @@ interface AnalysisReport {
   ready: boolean;
   has_color?: boolean;
   has_kibbe?: boolean;
+  has_photo?: boolean;
   color?: {
     season: string | null;
     undertone: string | null;
@@ -90,6 +91,8 @@ export default function StyleAnalysisPage() {
             <p className="text-sm mb-1">
               {report?.has_color || report?.has_kibbe
                 ? "Almost there — finish your profile to unlock your report."
+                : report?.has_photo
+                ? "We have your photo — your color & Kibbe analysis hasn't finished yet. Check back shortly, or re-upload in Settings if it's been a while."
                 : "Upload a selfie and a full-body photo to unlock your report."}
             </p>
             <p className="text-xs mb-5">

@@ -39,17 +39,19 @@ export function ProfileHero() {
   const [loading, setLoading] = useState(true);
   const [color, setColor] = useState<ColorProfile | null>(null);
   const [kibbe, setKibbe] = useState<KibbeAnalysis | null>(null);
+  const [hasPhoto, setHasPhoto] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    apiGet<{ color_profile: ColorProfile | null; kibbe_analysis: KibbeAnalysis | null }>(
+    apiGet<{ color_profile: ColorProfile | null; kibbe_analysis: KibbeAnalysis | null; has_photo: boolean }>(
       "/api/stylist/profiles"
     )
       .then((d) => {
         if (cancelled) return;
         setColor(d.color_profile);
         setKibbe(d.kibbe_analysis);
+        setHasPhoto(d.has_photo);
       })
       .catch(() => {})
       .finally(() => {
@@ -68,7 +70,11 @@ export function ProfileHero() {
     );
   }
 
-  if (!color && !kibbe) {
+  // Only push the full "start style profile" onboarding CTA when there's truly
+  // no photo on file. A user who's already uploaded but whose color/Kibbe
+  // analysis hasn't run yet (or failed) gets a lighter pending state below
+  // instead of being told to start over.
+  if (!color && !kibbe && !hasPhoto) {
     return <OnboardingHero />;
   }
 
