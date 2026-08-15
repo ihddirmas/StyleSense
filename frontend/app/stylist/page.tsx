@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, memo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
@@ -141,8 +141,12 @@ export default function StylistPage() {
     }
   }
 
-  async function saveManifestOutfit(idx: number) {
-    const msg = messages[idx];
+  // Reads live state via getState() instead of closing over the reactive `messages`
+  // value, so this callback's identity never changes -- lets MessageBubble rows below
+  // stay memoized even when a new message arrives, not just while the input is idle.
+  const saveManifestOutfit = useCallback(async (idx: number) => {
+    const msg = useAriaChat.getState().messages[idx];
+    if (!msg) return;
     const picked = items.filter((it) => (msg.suggestedItemIds || []).includes(it.id));
     if (!msg.manifestUrl || picked.length === 0) return;
     try {
@@ -158,7 +162,8 @@ export default function StylistPage() {
     } catch (e) {
       toast.error(`Save failed: ${e instanceof Error ? e.message : "unknown"}`);
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   function wardrobeAddedMessage(result: PendingActionResult): string {
     const names = result.created?.map((c) => c.name).filter(Boolean);
@@ -171,7 +176,7 @@ export default function StylistPage() {
     return result.summary || "Added to your wardrobe.";
   }
 
-  function resolvePendingAction(idx: number, result: PendingActionResult) {
+  const resolvePendingAction = useCallback((idx: number, result: PendingActionResult) => {
     setMessages((prev) => {
       const updated = prev.map((m, i) => {
         if (i !== idx || !m.pendingAction) return m;
@@ -252,11 +257,12 @@ export default function StylistPage() {
         updateSession(latest).catch(() => {});
       }, 0);
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshWardrobe]);
 
-  async function submitFeedback(idx: number, rating: "up" | "down") {
-    const msg = messages[idx];
-    if (msg.role !== "assistant" || msg.feedbackRating) return;
+  const submitFeedback = useCallback(async (idx: number, rating: "up" | "down") => {
+    const msg = useAriaChat.getState().messages[idx];
+    if (!msg || msg.role !== "assistant" || msg.feedbackRating) return;
     try {
       await apiPost("/api/stylist/feedback", {
         rating,
@@ -275,7 +281,8 @@ export default function StylistPage() {
     } catch (e) {
       toast.error(`Feedback failed: ${e instanceof Error ? e.message : "unknown"}`);
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -442,14 +449,6 @@ export default function StylistPage() {
     }
   }
 
-  function formatMsgTime(iso?: string) {
-    if (!iso) return null;
-    try {
-      return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    } catch {
-      return null;
-    }
-  }
 
   return (
     <div className="h-full flex flex-col">
@@ -574,98 +573,15 @@ export default function StylistPage() {
             <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
               <AnimatePresence>
                 {messages.map((m, i) => (
-                  <motion.div
+                  <MessageBubble
                     key={i}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className="max-w-[82%] px-4 py-3 text-sm"
-                      style={m.role === "user" ? {
-                        background: "var(--gold-dim)",
-                        border: "1px solid var(--border-gold)",
-                        color: "var(--ink)",
-                      } : {
-                        background: "var(--surface)",
-                        borderLeft: "3px solid var(--ink)",
-                        borderTop: "1px solid var(--border)",
-                        borderRight: "1px solid var(--border)",
-                        borderBottom: "1px solid var(--border)",
-                        color: "var(--ink)",
-                      }}
-                    >
-                      {/* Photo bubble */}
-                      {m.photoUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={m.photoUrl}
-                          alt="Shared photo"
-                          style={{ maxWidth: 180, maxHeight: 220, objectFit: "cover", display: "block", marginBottom: 8 }}
-                        />
-                      )}
-                      {m.productPreview && (
-                        <a
-                          href={m.productPreview.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 mb-2"
-                          style={{ border: "1px solid var(--border)", padding: 6, textDecoration: "none" }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={m.productPreview.imageUrl}
-                            alt={m.productPreview.name}
-                            style={{ width: 44, height: 44, objectFit: "cover", flexShrink: 0 }}
-                          />
-                          <span className="text-xs truncate" style={{ color: "var(--ink)" }}>
-                            {m.productPreview.name}
-                          </span>
-                        </a>
-                      )}
-                      <FormattedReply
-                        content={m.content}
-                        itemIds={m.suggestedItemIds || []}
-                        items={items}
-                        manifestUrl={m.manifestUrl}
-                        savedOutfit={!!m.savedOutfit}
-                        onSaveOutfit={m.manifestUrl ? () => saveManifestOutfit(i) : undefined}
-                      />
-                      {m.capsulePlan && <CapsulePlanCard plan={m.capsulePlan} />}
-                      {m.role === "assistant" && i > 0 && (
-                        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
-                          <span className="text-2xs text-muted mr-1">Helpful?</span>
-                          <button
-                            type="button"
-                            aria-label="Thumbs up"
-                            disabled={!!m.feedbackRating}
-                            onClick={() => submitFeedback(i, "up")}
-                            className={`p-1 rounded ${m.feedbackRating === "up" ? "text-accent" : "text-muted hover:text-foreground"}`}
-                          >
-                            <ThumbsUp size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label="Thumbs down"
-                            disabled={!!m.feedbackRating}
-                            onClick={() => submitFeedback(i, "down")}
-                            className={`p-1 rounded ${m.feedbackRating === "down" ? "text-accent" : "text-muted hover:text-foreground"}`}
-                          >
-                            <ThumbsDown size={14} />
-                          </button>
-                        </div>
-                      )}
-                      {formatMsgTime(m.createdAt) && (
-                        <p className="text-2xs text-muted mt-2 mb-0 text-right">{formatMsgTime(m.createdAt)}</p>
-                      )}
-                      {m.pendingAction && (
-                        <PendingActionCard
-                          action={m.pendingAction}
-                          onResolve={(result) => resolvePendingAction(i, result)}
-                        />
-                      )}
-                    </div>
-                  </motion.div>
+                    message={m}
+                    index={i}
+                    items={items}
+                    onSaveOutfit={saveManifestOutfit}
+                    onSubmitFeedback={submitFeedback}
+                    onResolvePendingAction={resolvePendingAction}
+                  />
                 ))}
               </AnimatePresence>
               {loading && thinkingStartedAt && <ThinkingIndicator startedAt={thinkingStartedAt} />}
@@ -791,6 +707,129 @@ export default function StylistPage() {
   );
 }
 
+// ── Message bubble (memoized) ─────────────────────────────────────────────────
+// Re-parsing markdown for every historical message on every keystroke/loading-state
+// change was measured at 200ms+ blocked time on the suggestion chips (INP). Each
+// row is memoized so only a message that actually changed -- or a newly appended
+// one -- re-renders. Requires message/callback props to stay referentially stable
+// across parent re-renders; see the useCallback wrapping on saveManifestOutfit /
+// submitFeedback / resolvePendingAction above.
+
+function formatMsgTime(iso?: string) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  } catch {
+    return null;
+  }
+}
+
+const MessageBubble = memo(function MessageBubble({
+  message: m, index: i, items,
+  onSaveOutfit, onSubmitFeedback, onResolvePendingAction,
+}: {
+  message: ChatMessage;
+  index: number;
+  items: WardrobeItem[];
+  onSaveOutfit: (idx: number) => void;
+  onSubmitFeedback: (idx: number, rating: "up" | "down") => void;
+  onResolvePendingAction: (idx: number, result: PendingActionResult) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+    >
+      <div
+        className="max-w-[82%] px-4 py-3 text-sm"
+        style={m.role === "user" ? {
+          background: "var(--gold-dim)",
+          border: "1px solid var(--border-gold)",
+          color: "var(--ink)",
+        } : {
+          background: "var(--surface)",
+          borderLeft: "3px solid var(--ink)",
+          borderTop: "1px solid var(--border)",
+          borderRight: "1px solid var(--border)",
+          borderBottom: "1px solid var(--border)",
+          color: "var(--ink)",
+        }}
+      >
+        {/* Photo bubble */}
+        {m.photoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={m.photoUrl}
+            alt="Shared photo"
+            style={{ maxWidth: 180, maxHeight: 220, objectFit: "cover", display: "block", marginBottom: 8 }}
+          />
+        )}
+        {m.productPreview && (
+          <a
+            href={m.productPreview.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 mb-2"
+            style={{ border: "1px solid var(--border)", padding: 6, textDecoration: "none" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={m.productPreview.imageUrl}
+              alt={m.productPreview.name}
+              style={{ width: 44, height: 44, objectFit: "cover", flexShrink: 0 }}
+            />
+            <span className="text-xs truncate" style={{ color: "var(--ink)" }}>
+              {m.productPreview.name}
+            </span>
+          </a>
+        )}
+        <FormattedReply
+          content={m.content}
+          itemIds={m.suggestedItemIds || []}
+          items={items}
+          manifestUrl={m.manifestUrl}
+          savedOutfit={!!m.savedOutfit}
+          onSaveOutfit={m.manifestUrl ? () => onSaveOutfit(i) : undefined}
+        />
+        {m.capsulePlan && <CapsulePlanCard plan={m.capsulePlan} />}
+        {m.role === "assistant" && i > 0 && (
+          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
+            <span className="text-2xs text-muted mr-1">Helpful?</span>
+            <button
+              type="button"
+              aria-label="Thumbs up"
+              disabled={!!m.feedbackRating}
+              onClick={() => onSubmitFeedback(i, "up")}
+              className={`p-1 rounded ${m.feedbackRating === "up" ? "text-accent" : "text-muted hover:text-foreground"}`}
+            >
+              <ThumbsUp size={14} />
+            </button>
+            <button
+              type="button"
+              aria-label="Thumbs down"
+              disabled={!!m.feedbackRating}
+              onClick={() => onSubmitFeedback(i, "down")}
+              className={`p-1 rounded ${m.feedbackRating === "down" ? "text-accent" : "text-muted hover:text-foreground"}`}
+            >
+              <ThumbsDown size={14} />
+            </button>
+          </div>
+        )}
+        {formatMsgTime(m.createdAt) && (
+          <p className="text-2xs text-muted mt-2 mb-0 text-right">{formatMsgTime(m.createdAt)}</p>
+        )}
+        {m.pendingAction && (
+          <PendingActionCard
+            action={m.pendingAction}
+            onResolve={(result) => onResolvePendingAction(i, result)}
+          />
+        )}
+      </div>
+    </motion.div>
+  );
+});
+
 // ── Formatted reply ───────────────────────────────────────────────────────────
 
 function FormattedReply({
@@ -805,8 +844,14 @@ function FormattedReply({
 }) {
   const stripped = content
     .replace(/\s*\[ITEM:[a-zA-Z0-9\-]+\]\s*/g, " ")
-    .replace(/\*\*\s+/g, "**")
-    .replace(/\s+\*\*/g, "**")
+    // Trim only whitespace INSIDE a bold pair (Claude occasionally emits "** padded **"),
+    // via odd/even split on "**" so word-boundary spaces OUTSIDE a pair are untouched.
+    // A regex matching "**...**" directly can't tell a closing marker from an opening
+    // one, so it merges content across unrelated bold spans -- this can't make that
+    // mistake since it walks marker occurrences in order.
+    .split("**")
+    .map((seg, i) => (i % 2 === 1 ? seg.trim() : seg))
+    .join("**")
     .replace(/\s+([.,!?;:])/g, "$1")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
@@ -818,7 +863,7 @@ function FormattedReply({
         <ReactMarkdown
           components={{
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            p: ({ children, ...rest }: any) => <p style={{ margin: "0 0 0.5rem" }} {...rest}>{children}</p>,
+            p: ({ children, ...rest }: any) => <p style={{ margin: "0 0 0.75rem" }} {...rest}>{children}</p>,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ul: ({ children, ...rest }: any) => <ul style={{ margin: "0.25rem 0 0.5rem", paddingLeft: "1.1rem", listStyle: "disc" }} {...rest}>{children}</ul>,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
