@@ -123,7 +123,7 @@ Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/ag
 
 ### MCP servers (`.mcp.json`)
 
-- **`playwright`** — already active, no setup. Used throughout `frontend/e2e/` and for live manual verification.
+- **`playwright`** — provided by the globally-enabled `playwright@claude-plugins-official` plugin (not this project's `.mcp.json` — a project-local entry there previously shadowed the global one under the same server name and was removed 2026-08-15). Used throughout `frontend/e2e/` and for live manual verification. If `browser_*` tools don't appear in a session despite `claude mcp list` showing it Connected, that's a session tool-catalog refresh gap, not a missing install — resume/restart the session rather than re-adding a project-level entry.
 - **`context7`** — library/API docs lookup (Runway, Supabase, Next.js, etc.) before implementing against an unfamiliar API surface. Works without a key (rate-limited); set `CONTEXT7_API_KEY` for higher limits.
 - **`supabase`** — direct DB access (schema, migrations, logs) scoped to this project (`--project-ref=zlgzpgqqodfrwnlephrc`), defaults to `--read-only`. Requires `SUPABASE_ACCESS_TOKEN` (Supabase Dashboard → Account → Access Tokens) set as a local env var — never commit a real token. Drop `--read-only` locally (don't commit that change) when you actually need to apply a migration instead of just inspecting schema/logs.
 
