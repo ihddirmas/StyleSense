@@ -29,7 +29,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // getSession() reads the JWT from cookies locally -- no network round-trip
+  // to Supabase's auth server, unlike getUser(). Safe here because this check
+  // only drives a UX redirect (send logged-out users to /login, logged-in
+  // users away from /login), not an authorization decision -- every real API
+  // call independently re-verifies the JWT server-side via current_user
+  // (see backend/services/auth_service.py), so a stale/forged cookie here
+  // can at worst show a page shell, never bypass real auth. root layout.tsx
+  // still uses the fully-verified getUser() for the data it actually renders.
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || (p !== "/" && path.startsWith(p + "/")));
