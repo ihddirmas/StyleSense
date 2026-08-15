@@ -86,9 +86,37 @@ export default function StylistPage() {
   }, [user, loadSessions]);
 
   // Greeting only after localStorage hydration + optional server session restore.
+  // Best-effort: fold in a data-grounded opening note (today's outfit pick or
+  // a wardrobe gap) so Aria opens like she's already looked at the closet,
+  // rather than a blank prompt. Falls back to the plain greeting on any
+  // failure or empty wardrobe — never blocks the thread from opening.
+  const greetingFetchStarted = useRef(false);
   useEffect(() => {
-    if (!hydrated) return;
-    if (messages.length === 0) setMessages([{ ...greeting(), createdAt: new Date().toISOString() }]);
+    if (!hydrated || messages.length !== 0 || greetingFetchStarted.current) return;
+    greetingFetchStarted.current = true;
+
+    let cancelled = false;
+    apiGet<{ type: "outfit" | "gap" | null; caption: string | null; item_ids: string[] | null }>(
+      "/api/stylist/opening-note"
+    )
+      .then((note) => {
+        if (cancelled) return;
+        const base = greeting();
+        const withNote = note?.caption
+          ? {
+              ...base,
+              content: `${base.content} I already had a look at your closet: ${note.caption} Want me to build on that, or ask me anything else?`,
+              suggestedItemIds: note.item_ids || undefined,
+            }
+          : base;
+        setMessages([{ ...withNote, createdAt: new Date().toISOString() }]);
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([{ ...greeting(), createdAt: new Date().toISOString() }]);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, messages.length, firstName]);
 

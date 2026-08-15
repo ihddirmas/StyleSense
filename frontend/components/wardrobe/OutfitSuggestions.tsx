@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Sparkles, User } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { useAppStore } from "@/store/app";
 import { apiGet } from "@/lib/api";
 
 interface SuggestedItem {
@@ -28,6 +29,7 @@ interface Props {
 export function OutfitSuggestions({ hasItems }: Props) {
   const { user } = useAuth();
   const [suggestions, setSuggestions] = useState<OutfitSuggestion[] | null>(null);
+  const { ariaImageUrl, ariaName, setAria } = useAppStore();
 
   useEffect(() => {
     if (!user || !hasItems) return;
@@ -35,6 +37,15 @@ export function OutfitSuggestions({ hasItems }: Props) {
       .then((d) => setSuggestions(d.suggestions))
       .catch(() => setSuggestions([]));
   }, [user, hasItems]);
+
+  // Fetch Aria's portrait once if not already cached (e.g. user landed on
+  // /wardrobe first, before /dashboard's HeroVideo populated the store).
+  useEffect(() => {
+    if (!user || ariaImageUrl) return;
+    apiGet<{ image_url: string | null; hero_video_url: string | null; name: string | null }>("/api/avatar/stylist")
+      .then((d) => setAria(d.hero_video_url, d.image_url, d.name))
+      .catch(() => {});
+  }, [user, ariaImageUrl, setAria]);
 
   if (!hasItems || suggestions === null) return null;
 
@@ -51,7 +62,13 @@ export function OutfitSuggestions({ hasItems }: Props) {
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
-          <Sparkles size={13} /> Outfit ideas from your closet
+          {ariaImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ariaImageUrl} alt={ariaName || "Aria"} className="rounded-full object-cover" style={{ width: 16, height: 16 }} />
+          ) : (
+            <Sparkles size={13} />
+          )}
+          {ariaName || "Aria"} picked these from your closet
         </div>
         <Link href="/stylist/analysis" className="text-xs text-muted hover:underline">
           Why these? →

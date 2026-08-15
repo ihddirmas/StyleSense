@@ -22,7 +22,7 @@ from models.schemas import (
     ToolConfirmResponse,
     DetectedItem,
 )
-from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service
+from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service, outfit_combo_service, capsule_service
 from services.auth_service import current_user
 from services.rate_limit import check_rate_limit_async
 from services.wardrobe_add_service import confirm_and_add_items
@@ -43,6 +43,11 @@ async def chat(req: StylistChatRequest, user = Depends(current_user)):
     await check_rate_limit_async(user["id"], "chat", limit=20, window_seconds=60)
     if not req.messages:
         raise HTTPException(400, "Need at least one message.")
+    if not req.messages[-1].content.strip():
+        # An empty/whitespace-only text block reaches Anthropic's API as an
+        # invalid content block and crashes as an unhandled 500 further down
+        # -- reject it here with a clean error instead.
+        raise HTTPException(400, "Message can't be empty.")
 
     wardrobe = supabase_service.get_wardrobe_items(user["id"])
     messages = [m.model_dump() for m in req.messages]
@@ -206,6 +211,50 @@ async def get_style_insight(user = Depends(current_user)):
     except Exception as e:
         raise HTTPException(500, f"Insight failed: {e}")
     return {"insight": insight}
+
+
+@router.get("/opening-note")
+async def get_opening_note(user = Depends(current_user)):
+    """
+    Data-grounded opening note for a fresh Aria chat thread — reuses the same
+    outfit_combo_service / capsule_service pipelines as /wardrobe's
+    outfit-suggestions endpoint and Aria's own list_wardrobe_gaps tool, so
+    opening /stylist with no history feels like she already looked at the
+    closet instead of a blank greeting. No wardrobe -> {"type": None}.
+    """
+    row = supabase_service.get_user(user["id"]) or {}
+    wardrobe = supabase_service.get_wardrobe_items(user["id"])
+    if not wardrobe:
+        return {"type": None, "caption": None, "item_ids": None}
+
+    color_profile = row.get("color_profile")
+    kibbe_analysis = row.get("kibbe_analysis")
+    kibbe_type = (kibbe_analysis or {}).get("kibbe_type")
+    kibbe_ref = kibbe_service.get_type_reference(kibbe_type) if kibbe_type else None
+
+    try:
+        suggestions = await _run_blocking(
+            outfit_combo_service.build_outfit_suggestions, wardrobe, color_profile, kibbe_ref
+        )
+    except Exception as e:
+        logger.warning(f"opening-note outfit suggestion failed for {user['id']}: {e}")
+        suggestions = []
+
+    if suggestions:
+        top = suggestions[0]
+        return {
+            "type": "outfit",
+            "caption": top["caption"],
+            "item_ids": [it["id"] for it in top["items"]],
+        }
+
+    gaps = capsule_service.list_wardrobe_gaps(
+        wardrobe, dress_code="casual", days=5, color_profile=color_profile, kibbe_analysis=kibbe_analysis
+    )
+    if gaps["gaps"]:
+        return {"type": "gap", "caption": gaps["gaps"][0]["suggestion"], "item_ids": None}
+
+    return {"type": None, "caption": None, "item_ids": None}
 
 
 @router.get("/profiles")

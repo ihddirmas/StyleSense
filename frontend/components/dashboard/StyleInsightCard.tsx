@@ -1,5 +1,6 @@
 "use client";
 import { Sparkles } from "lucide-react";
+import { useAppStore } from "@/store/app";
 import type { WardrobeItem, TryOnResult } from "@/types";
 
 function deriveSignals(items: WardrobeItem[], recent: TryOnResult[]) {
@@ -36,15 +37,21 @@ export function StyleInsightCard({
   recent: TryOnResult[];
 }) {
   const signals = deriveSignals(items, recent);
+  const { ariaImageUrl, ariaName } = useAppStore();
 
   if (!insight && !signals.length) return null;
 
   return (
     <div className="surface p-4 md:p-5" style={{ borderColor: "var(--border-hover)" }}>
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles size={13} style={{ color: "var(--on-gold)" }} />
+        {ariaImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={ariaImageUrl} alt={ariaName || "Aria"} className="rounded-full object-cover" style={{ width: 16, height: 16 }} />
+        ) : (
+          <Sparkles size={13} style={{ color: "var(--on-gold)" }} />
+        )}
         <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: "var(--on-gold)" }}>
-          Style Read
+          {ariaName || "Aria"} noticed
         </span>
       </div>
 
