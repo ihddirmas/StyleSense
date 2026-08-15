@@ -5,7 +5,13 @@ rather than the request body. The user_id field on these models is kept for
 back-compat but is ignored / overridden server-side.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Literal, Optional, List
+
+# Must match the DB CHECK constraints on wardrobe_items (category, occasion) --
+# an unlisted value previously reached the INSERT and crashed as an unhandled
+# 500 instead of a clean 422. Keep in sync with supabase_schema*.sql.
+WardrobeCategory = Literal["tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"]
+WardrobeOccasion = Literal["casual", "formal", "evening", "sport", "beach", "any"]
 
 
 # ─────────────────────────── TRY-ON ─────────────────────────── #
@@ -53,9 +59,9 @@ class AnimateRequest(BaseModel):
 
 class AddWardrobeFromUrl(BaseModel):
     name: str
-    category: str
+    category: WardrobeCategory
     image_url: str
-    occasion: Optional[str] = "casual"
+    occasion: Optional[WardrobeOccasion] = "casual"
     color: Optional[str] = None
     brand: Optional[str] = None
     source_url: Optional[str] = None
@@ -68,8 +74,8 @@ class ExtractFromImage(BaseModel):
     preview) into the user's wardrobe. Always runs the cleaner."""
     image_url: str
     name: str = "Inspired item"
-    category: str = "tops"
-    occasion: Optional[str] = "casual"
+    category: WardrobeCategory = "tops"
+    occasion: Optional[WardrobeOccasion] = "casual"
     notes: Optional[str] = None
 
 
