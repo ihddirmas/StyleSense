@@ -41,6 +41,17 @@ async def analyze_skin(user=Depends(current_user)):
         supabase_service.upsert_user(user["id"], skin_analysis_status="failed")
         raise HTTPException(502, f"Skin tone analysis failed: {e}")
 
+    # Second, independent YouCam call on the same selfie -- a dermatology-
+    # standard classification (Fitzpatrick I-VI) alongside the hex colors
+    # above. Non-fatal: the primary skin-tone result already succeeded, so a
+    # Fitzpatrick failure shouldn't sink the whole "Analyze my skin" action.
+    try:
+        fitzpatrick = await _run_blocking(youcam_service.youcam_fitzpatrick_analysis, selfie_url)
+        result["fitzpatrick"] = fitzpatrick
+    except Exception as e:
+        logger.warning(f"Fitzpatrick analysis failed for {user['id']} (non-fatal): {e}")
+        result["fitzpatrick"] = None
+
     from datetime import datetime, timezone
 
     update_fields = {

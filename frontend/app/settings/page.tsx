@@ -11,6 +11,11 @@ import { apiGet, apiPost, apiUpload, apiDelete } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
+interface SkinAnalysisResult {
+  colors?: Record<string, string>;
+  fitzpatrick?: { fitzpatrick_type?: string; fitzpatrick_label?: string } | null;
+}
+
 const PORTRAIT_SAMPLES = [
   { name: "Amara", url: "/avatars/sample-1.jpg" },
   { name: "Mei",   url: "/avatars/sample-2.jpg" },
@@ -37,6 +42,7 @@ export default function SettingsPage() {
   const [kibbeAnalysis, setKibbeAnalysis] = useState<{ kibbe_type?: string; notes?: string } | null>(null);
   const [analyzingBody, setAnalyzingBody] = useState(false);
   const [skinColors, setSkinColors] = useState<Record<string, string> | null>(null);
+  const [fitzpatrick, setFitzpatrick] = useState<string | null>(null);
   const [analyzingSkin, setAnalyzingSkin] = useState(false);
   const avatarTask = useTasks((s) =>
     s.tasks.find((t) => (t.kind === "avatar_still" || t.kind === "avatar_video") && t.status === "running")
@@ -63,16 +69,20 @@ export default function SettingsPage() {
     apiGet<{ kibbe_analysis: { kibbe_type?: string; notes?: string } | null }>("/api/stylist/profiles")
       .then((d) => setKibbeAnalysis(d.kibbe_analysis))
       .catch(() => {});
-    apiGet<{ status: string; result: { colors?: Record<string, string> } | null }>("/api/skin/status")
-      .then((d) => setSkinColors(d.result?.colors ?? null))
+    apiGet<{ status: string; result: SkinAnalysisResult | null }>("/api/skin/status")
+      .then((d) => {
+        setSkinColors(d.result?.colors ?? null);
+        setFitzpatrick(d.result?.fitzpatrick?.fitzpatrick_label ?? null);
+      })
       .catch(() => {});
   }, [user, refreshSelfies]);
 
   async function handleAnalyzeSkin() {
     setAnalyzingSkin(true);
     try {
-      const result = await apiPost<{ colors: Record<string, string> }>("/api/skin/analyze", {});
-      setSkinColors(result.colors);
+      const result = await apiPost<SkinAnalysisResult>("/api/skin/analyze", {});
+      setSkinColors(result.colors ?? null);
+      setFitzpatrick(result.fitzpatrick?.fitzpatrick_label ?? null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Skin analysis failed.");
     } finally {
@@ -336,20 +346,27 @@ export default function SettingsPage() {
               Detected from your primary selfie via YouCam Skin AI — Aria uses these tones alongside your color season.
             </p>
             {skinColors
-              ? <div className="flex items-center gap-3 flex-wrap">
-                  {Object.entries(skinColors).filter(([, hex]) => hex).map(([key, hex]) => (
-                    <div key={key} className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 flex-shrink-0" style={{ background: hex, border: "1px solid var(--border)" }} />
-                      <div className="text-2xs" style={{ color: "var(--text-muted)" }}>
-                        <div className="uppercase tracking-wide">{key.replace("_color", "")}</div>
-                        <div className="font-mono">{hex}</div>
+              ? <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {Object.entries(skinColors).filter(([, hex]) => hex).map(([key, hex]) => (
+                      <div key={key} className="flex items-center gap-1.5">
+                        <div className="w-6 h-6 flex-shrink-0" style={{ background: hex, border: "1px solid var(--border)" }} />
+                        <div className="text-2xs" style={{ color: "var(--text-muted)" }}>
+                          <div className="uppercase tracking-wide">{key.replace("_color", "")}</div>
+                          <div className="font-mono">{hex}</div>
+                        </div>
                       </div>
+                    ))}
+                    <button onClick={handleAnalyzeSkin} disabled={analyzingSkin || !primaryUrl}
+                      className="text-2xs underline ml-auto" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}>
+                      {analyzingSkin ? "Re-analyzing..." : "Re-analyze"}
+                    </button>
+                  </div>
+                  {fitzpatrick && (
+                    <div className="text-2xs" style={{ color: "var(--text-muted)" }}>
+                      Fitzpatrick scale: <span className="font-mono" style={{ color: "var(--text)" }}>{fitzpatrick}</span>
                     </div>
-                  ))}
-                  <button onClick={handleAnalyzeSkin} disabled={analyzingSkin || !primaryUrl}
-                    className="text-2xs underline ml-auto" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}>
-                    {analyzingSkin ? "Re-analyzing..." : "Re-analyze"}
-                  </button>
+                  )}
                 </div>
               : <button onClick={handleAnalyzeSkin} disabled={analyzingSkin || !primaryUrl}
                   className="btn-secondary text-xs" style={{ opacity: !primaryUrl ? 0.5 : 1 }}>

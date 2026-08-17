@@ -221,6 +221,41 @@ def youcam_skin_tone_analysis(image_url: str, face_angle_strictness: str = "low"
     }
 
 
+# ───────────────────────────── FITZPATRICK SKIN TYPE ───────────────────────────── #
+# Contract confirmed 2026-08-17 against docs.perfectcorp.com's live OpenAPI spec
+# (the outage noted at the top of this file has since resolved) -- not
+# reverse-engineered like the two features above.
+
+FITZPATRICK_LABELS = {
+    "I": "Type I — White",
+    "II": "Type II — Beige",
+    "III": "Type III — Light Brown",
+    "IV": "Type IV — Medium Brown",
+    "V": "Type V — Dark Brown",
+    "VI": "Type VI — Very Dark Brown",
+}
+
+
+def youcam_fitzpatrick_analysis(image_url: str) -> dict:
+    """Run YouCam's fitzpatrick-scale-analyzer on a selfie. Returns one of six
+    Fitzpatrick skin types (I-VI) -- a dermatology-standard classification
+    that complements skin-tone-analysis's hex colors with a second,
+    industry-recognized signal for the same "what does your skin tell us"
+    read Aria already gives from skin-tone-analysis."""
+    data = _create_task_and_poll(
+        "fitzpatrick-scale-analyzer",
+        {"src_file_url": image_url, "version": "1.0"},
+    )
+    results = data.get("results") or {}
+    scale = results.get("fitzpatrick_scale")
+    return {
+        "fitzpatrick_type": scale,
+        "fitzpatrick_label": FITZPATRICK_LABELS.get(scale),
+        "task_id": data.get("task_id"),
+        "provider": "youcam",
+    }
+
+
 def format_skin_profile(result: dict | None) -> str:
     """Render a skin-tone analysis result into a compact line for Aria's
     system prompt. Mirrors color_service.format_color_profile /

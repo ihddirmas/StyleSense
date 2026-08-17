@@ -19,12 +19,13 @@ export interface ModelOption {
 // non-technical user shouldn't have to know which AI vendor renders their
 // try-on, only what tradeoff they're picking.
 export const TRYON_MODELS: ModelOption[] = [
-  // Hackathon primary engine (YouCam API Skin AI & Apparel VTO). Verified
-  // end-to-end live 2026-08-09 (see docs/hackathons/YOUCAM_2026.md) — now
-  // the default (see DEFAULT_TRYON_MODEL below).
-  { id: "youcam", label: "Best for Garments", blurb: "Purpose-built garment try-on", tier: "premium" },
+  // Runway/Gemini give the more reliable photoreal outfit render; that's
+  // the default and lead option. YouCam's cloth-v3 (hackathon Apparel VTO
+  // engine, verified end-to-end 2026-08-09, see docs/hackathons/YOUCAM_2026.md)
+  // stays available as the garment-specialized alternative, not the default.
   { id: "gen4_image", label: "Best Face Match", blurb: "Looks most like you", tier: "premium" },
   { id: "gemini_2.5_flash", label: "Fast Full-Body", blurb: "Fast, reliable full-body", tier: "fast" },
+  { id: "youcam", label: "Best for Garments", blurb: "Purpose-built garment try-on", tier: "premium" },
   { id: "gen4_image_turbo", label: "Quick Draft", blurb: "Fast & cheap draft", tier: "fast" },
 ];
 
@@ -35,5 +36,5 @@ export const VIDEO_MODELS: ModelOption[] = [
   { id: "gen4_turbo", label: "Native Motion", blurb: "Runway native motion", tier: "standard" },
 ];
 
-export const DEFAULT_TRYON_MODEL = "youcam";
+export const DEFAULT_TRYON_MODEL = "gen4_image";
 export const DEFAULT_VIDEO_MODEL = "veo3.1";
