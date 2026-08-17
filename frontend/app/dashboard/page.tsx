@@ -153,7 +153,16 @@ export default function DashboardPage() {
           </p>
           <button
             type="button"
-            onClick={() => setHintDismissed(true)}
+            onClick={() => {
+              setHintDismissed(true);
+              // useSeenOnce's own localStorage write only fires once per
+              // browser, on this component's very first-ever mount -- not
+              // when the user actually dismisses it. Without this, clicking
+              // X only hides the hint until the next unmount (e.g.
+              // navigating to Studio and back), since hintDismissed is
+              // plain useState.
+              try { localStorage.setItem("ss_seen_dashboard-welcome", "1"); } catch {}
+            }}
             aria-label="Dismiss hint"
             className="icon-btn shrink-0"
           >

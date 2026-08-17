@@ -12,10 +12,6 @@ import { toast } from "@/components/ui/Toast";
 import { OnboardingHero } from "./OnboardingHero";
 
 export function HeroVideo() {
-  if (!FEATURES.heroVideo) {
-    return <ProfileHero />;
-  }
-
   const { user, profile } = useAuth();
   const {
     avatarSelfieUrl,
@@ -78,6 +74,13 @@ export function HeroVideo() {
     if (stylizedVideoStatus === "ready") return;
     useTasks.getState().watchAvatarVideo();
   }, [user, hydrated, stylizedVideoStatus]);
+
+  // Must come after every hook above -- an early return before them would
+  // call hooks conditionally on a feature flag, violating the Rules of
+  // Hooks (React requires the same hooks in the same order every render).
+  if (!FEATURES.heroVideo) {
+    return <ProfileHero />;
+  }
 
   const showUser = !!stylizedVideoUrl && stylizedVideoStatus === "ready";
   const generating = !!avatarSelfieUrl && stylizedVideoStatus === "generating";
