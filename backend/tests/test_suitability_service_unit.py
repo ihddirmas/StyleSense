@@ -1,5 +1,6 @@
 """
-Unit tests for suitability_service.get_color_verdict / get_silhouette_verdict / score_items.
+Unit tests for suitability_service.get_color_verdict / get_silhouette_verdict /
+score_items / verdicts_for_items.
 
 Pure unit tests -- no network, no Supabase, no Runway/Anthropic credits.
 Run with: .\\venv\\Scripts\\python.exe -m pytest tests/test_suitability_service_unit.py -v
@@ -9,7 +10,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from services.suitability_service import get_color_verdict, get_silhouette_verdict, score_items
+from services.suitability_service import (
+    get_color_verdict,
+    get_silhouette_verdict,
+    score_items,
+    verdicts_for_items,
+)
 
 
 WINTER_PROFILE = {
@@ -121,3 +127,41 @@ def test_score_items_nets_color_and_silhouette_when_kibbe_ref_given():
 def test_score_items_silhouette_reconsider_lowers_score():
     items = [{"color": "Mustard", "name": "Sharp Tailoring Blazer"}]  # color -1, silhouette -1
     assert score_items(items, WINTER_PROFILE, SOFT_NATURAL_KIBBE_REF) == -2
+
+
+def test_verdicts_for_items_returns_per_item_color_verdicts():
+    items = [
+        {"id": "a", "name": "Blazer", "color": "Royal Blue"},
+        {"id": "b", "name": "Scarf", "color": "Mustard"},
+    ]
+    result = verdicts_for_items(items, WINTER_PROFILE)
+    assert [r["id"] for r in result["items"]] == ["a", "b"]
+    assert result["items"][0]["color"]["verdict"] == "flatters"
+    assert result["items"][1]["color"]["verdict"] == "reconsider"
+    assert result["score"] == 0  # +1 -1, no kibbe_ref
+
+
+def test_verdicts_for_items_omits_silhouette_without_kibbe_ref():
+    result = verdicts_for_items([{"id": "a", "name": "Flowing Top", "color": "Emerald"}], WINTER_PROFILE)
+    assert "silhouette" not in result["items"][0]
+
+
+def test_verdicts_for_items_includes_silhouette_with_kibbe_ref():
+    result = verdicts_for_items(
+        [{"id": "a", "name": "Flowing Top", "color": "Emerald"}],
+        WINTER_PROFILE,
+        SOFT_NATURAL_KIBBE_REF,
+    )
+    assert result["items"][0]["silhouette"]["verdict"] == "flatters"
+    assert result["score"] == 2  # color +1, silhouette +1
+
+
+def test_verdicts_for_items_no_color_profile_is_neutral_not_crash():
+    result = verdicts_for_items([{"id": "a", "name": "Flowing Top", "color": "Emerald"}], None, SOFT_NATURAL_KIBBE_REF)
+    assert result["items"][0]["color"]["verdict"] == "neutral"
+    assert result["items"][0]["silhouette"]["verdict"] == "flatters"
+
+
+def test_verdicts_for_items_empty_list():
+    result = verdicts_for_items([], WINTER_PROFILE, SOFT_NATURAL_KIBBE_REF)
+    assert result == {"items": [], "score": 0}

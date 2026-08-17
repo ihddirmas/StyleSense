@@ -33,6 +33,7 @@ interface BaseTask {
 export interface TryOnTask extends BaseTask {
   kind: "tryon";
   // Inputs (so Studio can show what's being made even after a refresh)
+  itemIds: string[];
   itemNames: string[];
   itemImageUrls: string[];
   setting?: string;
@@ -128,6 +129,7 @@ export const useTasks = create<State>((set, get) => ({
     const task: TryOnTask = {
       id, kind: "tryon", status: "running", startedAt: Date.now(),
       label: input.items.map((i) => i.name).join(" + ") || "Try-on",
+      itemIds: input.items.map((i) => i.id),
       itemNames: input.items.map((i) => i.name),
       itemImageUrls: input.items.map((i) => i.image_url),
       setting: input.setting,
@@ -182,7 +184,7 @@ export const useTasks = create<State>((set, get) => ({
           imageManifestHash: res.image_manifest_hash,
         });
         if (res.image_manifest_hash) {
-          toast.success("Try-on ready — archived to B2 (Genblaze manifest)", { duration: 5000 });
+          toast.success("Try-on ready — archived to B2 (Genblaze manifest)");
         } else {
           toast.success(`Try-on ready: ${task.label.slice(0, 40)}`);
         }
@@ -279,7 +281,7 @@ export const useTasks = create<State>((set, get) => ({
           }));
         }
         if (res.video_manifest_hash) {
-          toast.success("Video ready — Genblaze pipeline → Backblaze B2", { duration: 5000 });
+          toast.success("Video ready — Genblaze pipeline → Backblaze B2");
         } else {
           toast.success("Video ready!");
         }

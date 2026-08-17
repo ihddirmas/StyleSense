@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Users, Settings, Bell, Shirt, Layers, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useTasks } from "@/store/tasks";
 import { apiGet } from "@/lib/api";
@@ -43,8 +44,8 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
     // an already-subscribed channel for the same topic, and .on() then throws.
     const topic = `sidebar:${uid}`;
     client.getChannels()
-      .filter((ch) => ch.topic === `realtime:${topic}`)
-      .forEach((ch) => client.removeChannel(ch));
+      .filter((ch: RealtimeChannel) => ch.topic === `realtime:${topic}`)
+      .forEach((ch: RealtimeChannel) => client.removeChannel(ch));
 
     const channel = client
       .channel(topic)

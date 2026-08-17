@@ -14,6 +14,7 @@ from models.schemas import (
     StylistChatRequest,
     StylistChatResponse,
     StylistFeedbackRequest,
+    StylistVerdictRequest,
     StylistWardrobeDetectRequest,
     StylistWardrobeDetectResponse,
     StylistWardrobeConfirmRequest,
@@ -22,7 +23,7 @@ from models.schemas import (
     ToolConfirmResponse,
     DetectedItem,
 )
-from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service, outfit_combo_service, capsule_service
+from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service, outfit_combo_service, capsule_service, suitability_service
 from services.auth_service import current_user
 from services.rate_limit import check_rate_limit_async
 from services.wardrobe_add_service import confirm_and_add_items
@@ -358,6 +359,29 @@ async def get_analysis_report(user = Depends(current_user)):
         },
         "narrative": narrative,
     }
+
+
+@router.post("/verdict")
+async def item_verdicts(req: StylistVerdictRequest, user = Depends(current_user)):
+    """
+    Per-item suitability verdicts for a set of the user's wardrobe items —
+    shown under every Studio try-on result. Deterministic word-overlap scoring
+    against the cached color/Kibbe profiles (suitability_service): no LLM or
+    vision calls, so it is free to fire on every generation.
+    """
+    row = supabase_service.get_user(user["id"]) or {}
+    color_profile = row.get("color_profile")
+    kibbe_type = (row.get("kibbe_analysis") or {}).get("kibbe_type")
+    kibbe_ref = kibbe_service.get_type_reference(kibbe_type) or None
+
+    if not color_profile and not kibbe_ref:
+        # Nothing to judge against yet — the frontend renders an analysis CTA.
+        return {"ready": False, "items": [], "score": 0}
+
+    # Fetching through the user's own wardrobe enforces ownership of the ids.
+    wanted = set(req.item_ids)
+    items = [it for it in supabase_service.get_wardrobe_items(user["id"]) if it.get("id") in wanted]
+    return {"ready": True, **suitability_service.verdicts_for_items(items, color_profile, kibbe_ref)}
 
 
 @router.get("/color-profile")

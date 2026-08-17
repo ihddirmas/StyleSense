@@ -10,6 +10,7 @@ import { WardrobeFetchError } from "@/components/dashboard/WardrobeFetchError";
 import { useSeenOnce } from "@/lib/useSeenOnce";
 import type { TryOnResult } from "@/types";
 import { HeroVideo } from "@/components/dashboard/HeroVideo";
+import { ProfileHero } from "@/components/dashboard/ProfileHero";
 import { TryOnCarousel } from "@/components/dashboard/TryOnCarousel";
 import { useAuth } from "@/components/AuthProvider";
 import { useAppStore } from "@/store/app";
@@ -167,16 +168,19 @@ export default function DashboardPage() {
 
       {showEmptyPanel ? (
         <>
-          <HeroVideo />
+          <ProfileHero />
           <DashboardEmptyPanel
             fetchError={fetchError}
             onRetry={() => setRetryKey(k => k + 1)}
           />
         </>
       ) : (
+        // Style Report first: the measured analysis is the product's USP, so it
+        // owns the hero slot. The ramp video is a flourish and rides the rail.
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 md:gap-5">
-          <HeroVideo />
+          <ProfileHero />
           <div className="flex flex-col gap-3 md:gap-4">
+            <HeroVideo />
             <StyleInsightCard insight={insight} items={items} recent={recent} />
             <UsageMeter />
             {continueItem && !atCap && <ContinueCard item={continueItem} />}

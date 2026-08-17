@@ -110,6 +110,33 @@ def get_silhouette_verdict(item: dict, kibbe_ref: Optional[dict]) -> dict:
     }
 
 
+def verdicts_for_items(
+    items: list[dict],
+    color_profile: Optional[dict],
+    kibbe_ref: Optional[dict] = None,
+) -> dict:
+    """
+    Per-item color + silhouette verdicts for a set of wardrobe items — the
+    payload behind the try-on verdict in the Studio. Pure reuse of
+    get_color_verdict/get_silhouette_verdict, so the Studio, the analysis
+    report, and outfit combos can never diverge on what suits the user.
+
+    Returns {"items": [{"id", "name", "color": verdict, "silhouette"?: verdict}],
+    "score": int}. "silhouette" is present only when a kibbe_ref is supplied.
+    """
+    results = []
+    for item in items:
+        entry: dict = {
+            "id": item.get("id"),
+            "name": item.get("name"),
+            "color": get_color_verdict(item.get("color"), color_profile),
+        }
+        if kibbe_ref:
+            entry["silhouette"] = get_silhouette_verdict(item, kibbe_ref)
+        results.append(entry)
+    return {"items": results, "score": score_items(items, color_profile, kibbe_ref)}
+
+
 def score_items(items: list[dict], color_profile: Optional[dict], kibbe_ref: Optional[dict] = None) -> int:
     """
     Net score for a group of items: +1 per flattering piece, -1 per reconsider

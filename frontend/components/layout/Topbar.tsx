@@ -10,17 +10,19 @@ import { useAppStore } from "@/store/app";
 import { apiGet } from "@/lib/api";
 import { FEATURES } from "@/lib/features";
 
+// Aria before Studio: the stylist is the product's USP; the Studio is one of
+// her tools. Nav order is the cheapest place to say that.
 const PRIMARY_NAV = [
   { href: "/dashboard", label: "HOME" },
-  { href: "/studio",    label: "STUDIO" },
   { href: "/stylist",   label: "ARIA" },
+  { href: "/studio",    label: "STUDIO" },
 ];
 
 // Mobile drawer mirrors PRIMARY_NAV + the desktop Sidebar, since both are hidden on mobile.
 const MOBILE_NAV = [
   { href: "/dashboard", label: "Home",     icon: Home },
-  { href: "/studio",    label: "Studio",   icon: Sparkles },
   { href: "/stylist",   label: "Aria",     icon: MessageCircle },
+  { href: "/studio",    label: "Studio",   icon: Sparkles },
   { href: "/wardrobe",  label: "Wardrobe", icon: Shirt },
   { href: "/outfits",   label: "Outfits",  icon: Layers },
   ...(FEATURES.social ? [
@@ -93,7 +95,7 @@ export function Topbar() {
           )}
         </div>
 
-        {/* CENTER — Primary nav (Dashboard, Studio, Aria) */}
+        {/* CENTER — Primary nav (Dashboard, Aria, Studio) */}
         <nav aria-label="Primary" className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
           {PRIMARY_NAV.map(({ href, label }) => {
             const active = href === "/dashboard" ? pathname === "/dashboard" : pathname?.startsWith(href);

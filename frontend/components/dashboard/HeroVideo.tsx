@@ -1,6 +1,5 @@
 "use client";
 import { FEATURES } from "@/lib/features";
-import { ProfileHero } from "./ProfileHero";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
@@ -9,7 +8,6 @@ import { useAppStore } from "@/store/app";
 import { useTasks } from "@/store/tasks";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "@/components/ui/Toast";
-import { OnboardingHero } from "./OnboardingHero";
 
 export function HeroVideo() {
   const { user, profile } = useAuth();
@@ -78,8 +76,11 @@ export function HeroVideo() {
   // Must come after every hook above -- an early return before them would
   // call hooks conditionally on a feature flag, violating the Rules of
   // Hooks (React requires the same hooks in the same order every render).
+  // The dashboard owns the Style Report hero (ProfileHero) now; this
+  // component is only the ramp-video media card, so a disabled flag or a
+  // user with nothing to play renders nothing rather than a fallback hero.
   if (!FEATURES.heroVideo) {
-    return <ProfileHero />;
+    return null;
   }
 
   const showUser = !!stylizedVideoUrl && stylizedVideoStatus === "ready";
@@ -123,9 +124,10 @@ export function HeroVideo() {
     }
   };
 
-  // If no selfie AND no Aria fallback, show onboarding CTA instead of empty video container
+  // No selfie AND no Aria media: nothing to play. ProfileHero (rendered by
+  // the dashboard) already carries the onboarding CTA in the hero slot.
   if (showOnboarding) {
-    return <OnboardingHero />;
+    return null;
   }
 
   return (

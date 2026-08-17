@@ -11,6 +11,7 @@ import {
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { GeneratingState } from "@/components/studio/GeneratingState";
+import { TryOnVerdict } from "@/components/studio/TryOnVerdict";
 import { downloadWithWatermark } from "@/components/studio/ShareCard";
 import { ShareToFriendModal } from "@/components/ShareToFriendModal";
 import { PromptDialog, ConfirmDialog } from "@/components/ui/Dialog";
@@ -647,6 +648,11 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                 )}
                 </div>
               </div>
+          )}
+
+          {/* Aria's verdict on the generated look — the stylist reads every result */}
+          {resultUrl && resultId && !generating && (
+            <TryOnVerdict itemIds={activeTryOn?.itemIds ?? []} resultId={resultId} />
           )}
 
           {/* N2 — Previous try-ons strip (idle only — hidden when result is showing) */}
