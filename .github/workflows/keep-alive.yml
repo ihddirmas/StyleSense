@@ -9,9 +9,13 @@ name: Keep Render backend alive
 
 on:
   schedule:
-    # Every 10 minutes -- comfortably under Render's 15-min free-tier
-    # spin-down window, without hammering Actions minutes.
-    - cron: "*/10 * * * *"
+    # Every 10 minutes, offset from :00/:10/:20... -- GitHub explicitly warns
+    # round-number cron offsets collide with huge numbers of other repos'
+    # scheduled workflows and get delayed under load. Measured gaps on the
+    # old "*/10 * * * *" schedule were 24-69 minutes in practice (checked via
+    # `gh run list`), well past Render's 15-min spin-down window -- this is
+    # why the backend kept going cold despite this workflow existing.
+    - cron: "3,13,23,33,43,53 * * * *"
   workflow_dispatch: {}
 
 jobs:
