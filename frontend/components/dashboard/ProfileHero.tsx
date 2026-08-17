@@ -17,6 +17,8 @@ interface ColorProfile {
   avoid_colors?: string[];
   notes?: string;
   limitations?: string[];
+  face_shape?: string;
+  face_shape_source?: string;
 }
 
 interface KibbeAnalysis {
@@ -127,6 +129,19 @@ export function ProfileHero() {
             )}
           </div>
         )}
+        {color?.face_shape && (
+          <div className="rounded-lg border border-border bg-surface-2 p-3 sm:col-span-2">
+            <p className="text-xs uppercase tracking-wider text-muted mb-2">
+              Face shape
+              {color.face_shape_source === "youcam_measured" && (
+                <span className="ml-2 normal-case tracking-normal rounded-full border border-border px-2 py-0.5">
+                  measured
+                </span>
+              )}
+            </p>
+            <p className="text-foreground capitalize">{color.face_shape}</p>
+          </div>
+        )}
       </div>
 
       {(!kibbe || (color?.confidence != null && color.confidence < 0.65)) && (
@@ -137,9 +152,14 @@ export function ProfileHero() {
         </p>
       )}
 
-      <Link href="/stylist" className="btn-primary btn-sm mt-4 inline-flex">
-        Ask Aria about an item
-      </Link>
+      <div className="flex flex-wrap gap-2 mt-4">
+        <Link href="/stylist" className="btn-primary btn-sm inline-flex">
+          Ask Aria about an item
+        </Link>
+        <Link href="/stylist/analysis" className="btn-secondary btn-sm inline-flex">
+          Full Style Report
+        </Link>
+      </div>
     </div>
   );
 }
