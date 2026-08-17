@@ -17,8 +17,27 @@ logger = logging.getLogger(__name__)
 MVP_MODE = os.getenv("MVP_MODE", "1").lower() not in ("0", "false", "no")
 
 
+def _set_analysis_status(user_id: str, column: str, status: str) -> None:
+    """Best-effort status write for the background analyses.
+
+    These run fire-and-forget in BackgroundTasks, so a status bookkeeping
+    failure must never be what takes the task down -- the analysis result
+    itself matters more than the flag describing it.
+    """
+    try:
+        supabase_service.upsert_user(user_id, **{column: status})
+    except Exception as e:
+        logger.warning(f"Could not set {column}={status} for {user_id}: {e}")
+
+
 async def _bg_refresh_profile(user_id: str, source_url: str):
     """Cheap color/body profile refresh from the best available photo (no avatar/video)."""
+    _set_analysis_status(user_id, "color_analysis_status", "generating")
+    # Only a confirmed profile write flips this. Anything else -- exception,
+    # or a vision call that returns nothing usable -- leaves it False and
+    # lands on "failed" below, so a silent no-op can't masquerade as
+    # "still running" on the Style Report forever.
+    wrote_profile = False
     try:
         # Best-effort lighting correction before the vision call -- targets the
         # "Low confidence — retake in natural light" message users otherwise
@@ -32,8 +51,12 @@ async def _bg_refresh_profile(user_id: str, source_url: str):
         profile = color_service.analyze_color_profile(analysis_source)
         if profile:
             supabase_service.upsert_user(
-                user_id, color_profile=profile, color_profile_source_selfie=source_url
+                user_id,
+                color_profile=profile,
+                color_profile_source_selfie=source_url,
+                color_analysis_status="ready",
             )
+            wrote_profile = True
             logger.info(f"Profile refreshed for user {user_id}")
             from services import analytics_service
             analytics_service.capture(user_id, "color_profile_generated", {
@@ -52,9 +75,14 @@ async def _bg_refresh_profile(user_id: str, source_url: str):
     except Exception as e:
         logger.warning(f"Profile refresh failed for {user_id}: {e}")
 
+    if not wrote_profile:
+        _set_analysis_status(user_id, "color_analysis_status", "failed")
+
 
 async def _bg_refresh_kibbe(user_id: str, full_body_url: str):
     """Kibbe analysis from full-body photo — cached for Aria."""
+    _set_analysis_status(user_id, "kibbe_analysis_status", "generating")
+    wrote_analysis = False
     try:
         from services import kibbe_service
         analysis = kibbe_service.analyze_kibbe_type(full_body_url)
@@ -64,7 +92,9 @@ async def _bg_refresh_kibbe(user_id: str, full_body_url: str):
                 kibbe_type=analysis.get("kibbe_type"),
                 kibbe_analysis=analysis,
                 kibbe_source_photo=full_body_url,
+                kibbe_analysis_status="ready",
             )
+            wrote_analysis = True
             logger.info(f"Kibbe profile refreshed for user {user_id}")
             from services import analytics_service
             analytics_service.capture(user_id, "kibbe_profile_generated", {
@@ -81,6 +111,9 @@ async def _bg_refresh_kibbe(user_id: str, full_body_url: str):
                 })
     except Exception as e:
         logger.warning(f"Kibbe refresh failed for {user_id}: {e}")
+
+    if not wrote_analysis:
+        _set_analysis_status(user_id, "kibbe_analysis_status", "failed")
 
 
 async def _bg_generate_stylized(user_id: str, selfie_url: str, still_only: bool = True, model: str = "gemini_2.5_flash"):
@@ -225,6 +258,39 @@ async def upload_full_body(
         face = color_service.best_face_source(row) or public_url
         background_tasks.add_task(_bg_generate_stylized, user["id"], face, still_only=True)
     return {"full_body_url": public_url}
+
+
+@router.post("/retry-analysis")
+async def retry_analysis(
+    background_tasks: BackgroundTasks,
+    user = Depends(current_user),
+):
+    """Re-run the color and/or Kibbe analysis from photos already on file.
+
+    Recovery path for a background analysis that failed -- before this, the
+    only way out was re-uploading a photo, or /regenerate-stylized which
+    also spends Runway credits on an avatar the user didn't ask for. This
+    re-runs the Claude-vision analyses only: no Runway calls, no credits.
+
+    Re-queues only what isn't already done, so a user missing just their
+    Kibbe analysis doesn't pay for a redundant color pass.
+    """
+    row = supabase_service.get_user(user["id"]) or {}
+    profile_src = color_service.best_profile_source(row)
+    full_body = row.get("full_body_url")
+
+    if not profile_src and not full_body:
+        raise HTTPException(400, "Upload a selfie or full-body photo first (Settings > Avatar).")
+
+    queued = []
+    if profile_src and row.get("color_analysis_status") != "ready":
+        background_tasks.add_task(_bg_refresh_profile, user["id"], profile_src)
+        queued.append("color")
+    if full_body and row.get("kibbe_analysis_status") != "ready":
+        background_tasks.add_task(_bg_refresh_kibbe, user["id"], full_body)
+        queued.append("kibbe")
+
+    return {"queued": queued, "needs_full_body": not full_body}
 
 
 @router.get("/full-body")

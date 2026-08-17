@@ -297,6 +297,13 @@ async def get_analysis_report(user = Depends(current_user)):
             # so the frontend doesn't tell someone who already has a photo on file
             # to upload one again.
             "has_photo": bool(color_service.best_profile_source(row)),
+            "has_full_body": bool(row.get("full_body_url")),
+            # 'pending' | 'generating' | 'ready' | 'failed' -- separates "still
+            # working" from "died in a BackgroundTask", which used to be
+            # indistinguishable here and left this page saying "check back
+            # shortly" indefinitely. See supabase_schema_v2o_analysis_status.sql.
+            "color_status": row.get("color_analysis_status") or "pending",
+            "kibbe_status": row.get("kibbe_analysis_status") or "pending",
         }
 
     kibbe_type = kibbe_analysis.get("kibbe_type")

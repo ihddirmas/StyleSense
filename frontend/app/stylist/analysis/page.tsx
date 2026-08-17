@@ -2,10 +2,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, Palette, User, Droplet, Smile } from "lucide-react";
+import { Sparkles, ArrowRight, Palette, User, Droplet, Smile, AlertTriangle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
+
+type AnalysisStatus = "pending" | "generating" | "ready" | "failed";
 
 interface Swatch {
   name: string;
@@ -17,6 +19,9 @@ interface AnalysisReport {
   has_color?: boolean;
   has_kibbe?: boolean;
   has_photo?: boolean;
+  has_full_body?: boolean;
+  color_status?: AnalysisStatus;
+  kibbe_status?: AnalysisStatus;
   color?: {
     season: string | null;
     undertone: string | null;
@@ -61,6 +66,26 @@ const SKIN_TONE_LABELS: Record<string, string> = {
   lip_color: "Lips",
 };
 
+// "Color profile ready" / "... is still running" / "... failed" -- the failed
+// case is the one that used to be invisible: an analysis that died in a
+// BackgroundTask read identically to one still in progress.
+function statusLabel(
+  name: string,
+  has: boolean | undefined,
+  status: AnalysisStatus | undefined,
+): string {
+  if (has) return `✓ ${name} ready`;
+  if (status === "failed") return `✗ ${name} failed`;
+  if (status === "generating") return `${name} analysing now`;
+  return `${name} not analyzed yet`;
+}
+
+function failedLabel(colorFailed: boolean, kibbeFailed: boolean): string {
+  if (colorFailed && kibbeFailed) return "Your color and body-type analysis";
+  if (colorFailed) return "Your color analysis";
+  return "Your body-type analysis";
+}
+
 function titleCase(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -69,6 +94,9 @@ export default function StyleAnalysisPage() {
   const { user } = useAuth();
   const [report, setReport] = useState<AnalysisReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [retryQueued, setRetryQueued] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -77,6 +105,25 @@ export default function StyleAnalysisPage() {
       .catch(() => setReport(null))
       .finally(() => setLoading(false));
   }, [user]);
+
+  const colorFailed = report?.color_status === "failed";
+  const kibbeFailed = report?.kibbe_status === "failed";
+  const analysisFailed = colorFailed || kibbeFailed;
+
+  async function handleRetry() {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      await apiPost("/api/avatar/retry-analysis", {});
+      // The work is queued in a BackgroundTask, so there is nothing to show
+      // yet -- say so plainly rather than flipping to a fake "ready" state.
+      setRetryQueued(true);
+    } catch {
+      setRetryError("Couldn't start the retry. Try again in a moment.");
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   return (
     <div className="h-full flex flex-col overflow-y-auto pb-8">
@@ -100,26 +147,59 @@ export default function StyleAnalysisPage() {
           </div>
         ) : !report || !report.ready ? (
           <div className="surface p-10 text-center text-muted">
-            <Sparkles size={28} className="mx-auto mb-3 text-dim" />
+            {analysisFailed ? (
+              <AlertTriangle size={28} className="mx-auto mb-3" style={{ color: "var(--on-gold)" }} />
+            ) : (
+              <Sparkles size={28} className="mx-auto mb-3 text-dim" />
+            )}
             <p className="text-sm mb-1">
-              {report?.has_color || report?.has_kibbe
+              {analysisFailed
+                ? retryQueued
+                  ? "Re-analysing now — this usually takes under a minute. Refresh the page to check."
+                  : `${failedLabel(colorFailed, kibbeFailed)} didn't finish. This happens when a photo is too dark or cropped tightly — retrying is free and doesn't use any credits.`
+                : report?.has_color || report?.has_kibbe
                 ? "Almost there — finish your profile to unlock your report."
                 : report?.has_photo
                 ? "We have your photo — your color & Kibbe analysis hasn't finished yet. Check back shortly, or re-upload in Settings if it's been a while."
                 : "Upload a selfie and a full-body photo to unlock your report."}
             </p>
             <p className="text-xs mb-5">
-              {report?.has_color ? "✓ Color profile ready" : "Color profile not analyzed yet"}
+              {statusLabel("Color profile", report?.has_color, report?.color_status)}
               {" · "}
-              {report?.has_kibbe ? "✓ Body-type profile ready" : "Body-type profile not analyzed yet"}
+              {statusLabel("Body-type profile", report?.has_kibbe, report?.kibbe_status)}
             </p>
-            <Link
-              href="/settings"
-              className="surface surface-hover px-4 py-2 text-sm inline-flex items-center gap-2"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              Complete your profile <ArrowRight size={14} />
-            </Link>
+            {retryError && (
+              <p className="text-xs mb-3" style={{ color: "var(--on-gold)" }}>{retryError}</p>
+            )}
+            {analysisFailed && !retryQueued ? (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  disabled={retrying}
+                  className="surface surface-hover px-4 py-2 text-sm inline-flex items-center gap-2"
+                  style={{ cursor: retrying ? "default" : "pointer" }}
+                >
+                  <RefreshCw size={14} className={retrying ? "spin" : undefined} />
+                  {retrying ? "Starting…" : "Retry analysis"}
+                </button>
+                <Link
+                  href="/settings"
+                  className="text-sm inline-flex items-center gap-2"
+                  style={{ color: "var(--on-gold)" }}
+                >
+                  Or upload a clearer photo <ArrowRight size={14} />
+                </Link>
+              </div>
+            ) : (
+              <Link
+                href="/settings"
+                className="surface surface-hover px-4 py-2 text-sm inline-flex items-center gap-2"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                Complete your profile <ArrowRight size={14} />
+              </Link>
+            )}
           </div>
         ) : (
           <motion.div
