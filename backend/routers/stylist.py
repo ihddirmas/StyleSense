@@ -317,12 +317,15 @@ async def get_analysis_report(user = Depends(current_user)):
     skin_result = row.get("skin_analysis_result") or {}
     skin_colors = skin_result.get("colors") or {}
 
+    face_shape = color_profile.get("face_shape")
+
     return {
         "ready": True,
         "color": {
             "season": color_profile.get("season"),
             "undertone": color_profile.get("undertone"),
             "contrast": color_profile.get("contrast"),
+            "confidence": color_profile.get("confidence"),
             "flattering_colors": color_profile.get("flattering_colors") or [],
             "avoid_colors": color_profile.get("avoid_colors") or [],
             "swatches": color_service.get_season_swatches(color_profile.get("season")),
@@ -330,11 +333,18 @@ async def get_analysis_report(user = Depends(current_user)):
         "kibbe": {
             "type": kibbe_type,
             "type_display": kibbe_display,
+            "confidence": kibbe_analysis.get("confidence"),
             "style_essence": kibbe_ref.get("style_essence", ""),
             "best_lines": kibbe_ref.get("best_lines", ""),
             "best_fabrics": kibbe_ref.get("best_fabrics", ""),
             "avoid": kibbe_ref.get("avoid", ""),
         },
+        "face_shape": {
+            "shape": face_shape,
+            "shape_display": color_service.get_face_shape_display(face_shape),
+            "source": color_profile.get("face_shape_source"),
+            "style_tip": color_service.get_face_shape_style_tip(face_shape),
+        } if face_shape else None,
         "skin": {
             "has_skin": row.get("skin_analysis_status") == "ready" and bool(skin_colors),
             "colors": skin_colors,

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, Palette, User, Droplet } from "lucide-react";
+import { Sparkles, ArrowRight, Palette, User, Droplet, Smile } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { apiGet } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -21,6 +21,7 @@ interface AnalysisReport {
     season: string | null;
     undertone: string | null;
     contrast: string | null;
+    confidence: number | null;
     flattering_colors: string[];
     avoid_colors: string[];
     swatches: Swatch[];
@@ -29,16 +30,28 @@ interface AnalysisReport {
   kibbe?: {
     type: string | null;
     type_display: string;
+    confidence: number | null;
     style_essence: string;
     best_lines: string;
     best_fabrics: string;
     avoid: string;
   };
+  face_shape?: {
+    shape: string;
+    shape_display: string | null;
+    source: string | null;
+    style_tip: string | null;
+  } | null;
   skin?: {
     has_skin: boolean;
     colors: Record<string, string>;
   };
   narrative?: string;
+}
+
+function confidencePercent(c?: number | null): string | null {
+  if (c == null) return null;
+  return `${Math.round(c * 100)}% analysis confidence`;
 }
 
 const SKIN_TONE_LABELS: Record<string, string> = {
@@ -134,10 +147,13 @@ export default function StyleAnalysisPage() {
                 <p className="font-display text-2xl mb-1">
                   {titleCase(report.color?.season || "Unknown")}
                 </p>
-                <p className="text-sm text-muted mb-4">
+                <p className="text-sm text-muted mb-1">
                   {titleCase(report.color?.undertone || "")} undertone
                   {report.color?.contrast ? ` · ${report.color.contrast} contrast` : ""}
                 </p>
+                {report.color?.confidence != null && (
+                  <p className="text-xs text-dim mb-3">{confidencePercent(report.color.confidence)}</p>
+                )}
 
                 {!!report.color?.swatches?.length && (
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -172,7 +188,10 @@ export default function StyleAnalysisPage() {
                 </div>
                 <p className="font-display text-2xl mb-1">{report.kibbe?.type_display || "Unknown"}</p>
                 {report.kibbe?.style_essence && (
-                  <p className="text-sm text-muted mb-4">{report.kibbe.style_essence}</p>
+                  <p className="text-sm text-muted mb-1">{report.kibbe.style_essence}</p>
+                )}
+                {report.kibbe?.confidence != null && (
+                  <p className="text-xs text-dim mb-3">{confidencePercent(report.kibbe.confidence)}</p>
                 )}
                 {report.kibbe?.best_lines && (
                   <p className="text-xs text-muted mb-1">
@@ -191,6 +210,29 @@ export default function StyleAnalysisPage() {
                 )}
               </div>
             </div>
+
+            {/* Face shape (YouCam face-attr-analysis) — measured, not guessed; feeds necklines/glasses/earring advice */}
+            {report.face_shape?.shape && (
+              <div className="surface p-6">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+                    <Smile size={13} /> Face Shape
+                  </div>
+                  {report.face_shape.source === "youcam_measured" && (
+                    <span
+                      className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                      style={{ background: "var(--gold-dim)", color: "var(--gold)" }}
+                    >
+                      YouCam‑measured
+                    </span>
+                  )}
+                </div>
+                <p className="font-display text-2xl mb-2">{report.face_shape.shape_display}</p>
+                {report.face_shape.style_tip && (
+                  <p className="text-xs text-muted">{report.face_shape.style_tip}</p>
+                )}
+              </div>
+            )}
 
             {/* Skin tones (YouCam Skin AI) — the measured input the Color Season card above is grounded in */}
             <div className="surface p-6">

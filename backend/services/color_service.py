@@ -231,6 +231,49 @@ def get_season_swatches(season: Optional[str]) -> list[dict]:
     return _load_palettes().get("season_reference_swatches", {}).get(season, {}).get("palette", [])
 
 
+# Styling reference for YouCam's measured face-attr-analysis faceShape output
+# (see youcam_service.youcam_face_shape_analysis) -- necklines, glasses, and
+# earring shapes that balance each face shape. This is the reason that
+# feature requests faceShape at all, per its own docstring; it was measured
+# but never actually surfaced to a user until this reference existed.
+FACE_SHAPE_STYLE_TIPS = {
+    "oval": "Most necklines, glasses, and earring shapes suit you — few hard rules to work around.",
+    "round": "Angular necklines (V-neck, square) and structured earrings add definition; avoid round frames.",
+    "square": "Soften with round or oval necklines and curved earrings; avoid boxy, angular frames.",
+    "heart": "Draw the eye down with V-necks and teardrop earrings; bottom-heavy frames balance a wider brow.",
+    "diamond": "Cat-eye or rimless glasses and wide necklines flatter narrow cheekbone width best.",
+    "triangle": "Statement necklines and top-heavy earrings balance a narrower forehead against a fuller jaw.",
+    "invtriangle": "Rounded necklines and bottom-weighted earrings soften a wider forehead.",
+    "oblong": "Rounded or curved necklines break up length; avoid long, narrow glasses frames.",
+}
+
+FACE_SHAPE_DISPLAY_LABELS = {
+    "oval": "Oval",
+    "round": "Round",
+    "square": "Square",
+    "heart": "Heart",
+    "diamond": "Diamond",
+    "triangle": "Triangle",
+    "invtriangle": "Inverted Triangle",
+    "oblong": "Oblong",
+}
+
+
+def get_face_shape_style_tip(face_shape: Optional[str]) -> Optional[str]:
+    """Styling note for a measured face shape (see FACE_SHAPE_STYLE_TIPS). None if unknown."""
+    if not face_shape:
+        return None
+    return FACE_SHAPE_STYLE_TIPS.get(face_shape.strip().lower().replace(" ", ""))
+
+
+def get_face_shape_display(face_shape: Optional[str]) -> Optional[str]:
+    """Human-readable label for a measured face shape. Falls back to title-case."""
+    if not face_shape:
+        return None
+    key = face_shape.strip().lower().replace(" ", "")
+    return FACE_SHAPE_DISPLAY_LABELS.get(key, face_shape.title())
+
+
 # Each season's most-opposite season for avoid_colors, pairing across both
 # undertone AND depth (spring=warm+light vs winter=cool+deep, etc.) --
 # standard convention in seasonal color analysis.
