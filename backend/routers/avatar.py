@@ -20,7 +20,16 @@ MVP_MODE = os.getenv("MVP_MODE", "1").lower() not in ("0", "false", "no")
 async def _bg_refresh_profile(user_id: str, source_url: str):
     """Cheap color/body profile refresh from the best available photo (no avatar/video)."""
     try:
-        profile = color_service.analyze_color_profile(source_url)
+        # Best-effort lighting correction before the vision call -- targets the
+        # "Low confidence — retake in natural light" message users otherwise
+        # see (ProfileHero.tsx's confidenceLabel()) when a selfie is dim or
+        # poorly lit. Never blocks: falls back to the raw selfie on any
+        # failure, and the enhanced URL is only used for this one vision
+        # call, never persisted as the user's selfie.
+        from services import youcam_service
+        analysis_source = youcam_service.youcam_photo_lighting(source_url) or source_url
+
+        profile = color_service.analyze_color_profile(analysis_source)
         if profile:
             supabase_service.upsert_user(
                 user_id, color_profile=profile, color_profile_source_selfie=source_url

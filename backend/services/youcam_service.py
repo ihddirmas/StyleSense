@@ -256,6 +256,30 @@ def youcam_fitzpatrick_analysis(image_url: str) -> dict:
     }
 
 
+# ───────────────────────────── PHOTO LIGHTING ───────────────────────────── #
+# Contract verified live 2026-08-17 -- BasicRunTaskV2 request (src_file_url +
+# version), single-url result shape, matching the docs exactly (unlike
+# face-attr-analysis below, this one was accurate).
+
+def youcam_photo_lighting(image_url: str) -> str | None:
+    """Brighten/correct a selfie's lighting before it's used for color/Kibbe
+    vision analysis. Returns the enhanced image URL (host-side, expires in
+    2 hours -- callers must use it immediately, not persist it), or None if
+    the task fails. Never raises: this is a quality boost for the vision
+    call downstream, not a feature the user directly triggers or depends on
+    seeing succeed."""
+    try:
+        data = _create_task_and_poll(
+            "lighting",
+            {"src_file_url": image_url, "version": "1.0"},
+            timeout=60.0,
+        )
+        return (data.get("results") or {}).get("url")
+    except Exception as e:
+        logger.warning(f"YouCam photo lighting failed for {image_url}: {e}")
+        return None
+
+
 # ───────────────────────────── FACE SHAPE ───────────────────────────── #
 # Request shape verified live 2026-08-17 -- docs.perfectcorp.com's published
 # OpenAPI spec for this endpoint (a nested request_id/payload/actions/
