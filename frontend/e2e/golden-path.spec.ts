@@ -126,6 +126,23 @@ async function stubBackend(page: Page, captured: CapturedRequests) {
       case "GET /api/chat/threads":
         return json([]);
 
+      // --- Aria's verdict on the generated look (deterministic, free) ---
+      case "POST /api/stylist/verdict":
+        return json({
+          ready: true,
+          items: [
+            {
+              id: ITEM.id,
+              name: ITEM.name,
+              color: {
+                verdict: "flatters",
+                reason: '"navy" echoes your flattering "soft navy" — a good pick for your coloring.',
+              },
+            },
+          ],
+          score: 1,
+        });
+
       // --- Generation + save (the calls that would cost credits / write DB) ---
       case "POST /api/tryon/generate":
       case "POST /api/tryon/generate-multi":
@@ -208,6 +225,10 @@ test.describe("Golden path", () => {
       wardrobe_item_id: ITEM.id,
       item_image_url: ITEM.image_url,
     });
+
+    // Aria's verdict renders under the result — the stylist reads every look.
+    await expect(page.getByText(/Aria.s read/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/a good pick for your coloring/)).toBeVisible();
 
     // --- Step 5: save the look as an outfit ---
     await page.getByRole("button", { name: "Save as outfit" }).click();

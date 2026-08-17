@@ -207,6 +207,10 @@ class StylistFeedbackRequest(BaseModel):
     note: Optional[str] = None
 
 
+class StylistVerdictRequest(BaseModel):
+    item_ids: List[str]
+
+
 class ToolConfirmRequest(BaseModel):
     tool_name: str
     tool_use_id: str
