@@ -15,7 +15,7 @@ test.describe("Typography fixes", () => {
 
       const violations = await page.evaluate(() => {
         const results: { tag: string; selector: string; props: string[] }[] = [];
-        const all = document.querySelectorAll("*");
+        const all = Array.from(document.querySelectorAll("*"));
         for (const el of all) {
           const inline = (el as HTMLElement).style;
           const props: string[] = [];

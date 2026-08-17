@@ -60,6 +60,7 @@ export const useAppStore = create<AppState>()(
       cachedRecent: [],
       tryonModel: "gen4_image",
       videoModel: "veo3.1",
+      hydrated: false,
       setTryonModel: (id) => set({ tryonModel: id }),
       setVideoModel: (id) => set({ videoModel: id }),
       toggleSelected: (id) =>
@@ -83,7 +84,7 @@ export const useAppStore = create<AppState>()(
         stylizedAvatarStatus: null,
         stylizedVideoUrl: null,
         stylizedVideoStatus: null,
-      hydrated: false,
+        hydrated: false,
         cachedWardrobe: [],
         cachedRecent: [],
       }),

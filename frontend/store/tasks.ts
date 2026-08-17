@@ -182,7 +182,7 @@ export const useTasks = create<State>((set, get) => ({
           imageManifestHash: res.image_manifest_hash,
         });
         if (res.image_manifest_hash) {
-          toast.success("Try-on ready — archived to B2 (Genblaze manifest)", { duration: 5000 });
+          toast.success("Try-on ready — archived to B2 (Genblaze manifest)");
         } else {
           toast.success(`Try-on ready: ${task.label.slice(0, 40)}`);
         }
@@ -279,7 +279,7 @@ export const useTasks = create<State>((set, get) => ({
           }));
         }
         if (res.video_manifest_hash) {
-          toast.success("Video ready — Genblaze pipeline → Backblaze B2", { duration: 5000 });
+          toast.success("Video ready — Genblaze pipeline → Backblaze B2");
         } else {
           toast.success("Video ready!");
         }
