@@ -256,6 +256,29 @@ def youcam_fitzpatrick_analysis(image_url: str) -> dict:
     }
 
 
+# ───────────────────────────── BACKGROUND REMOVAL ───────────────────────────── #
+# Contract verified live 2026-08-17 -- BasicRunTaskV2 request (src_file_url +
+# version), single-url PNG result. Task slug is "sod" (salient object
+# detection) on the provider side, not "background-removal" -- confirmed
+# from the live OpenAPI path, not guessed.
+
+def youcam_background_removal(image_url: str) -> str | None:
+    """Cut a garment out to a transparent PNG via YouCam, as a same-vendor
+    alternative to garment_cleaner.py's rembg (local, free but lower
+    fidelity) -- doesn't spend Runway's credit budget. Returns the result
+    URL (expires in 2 hours) or None on failure."""
+    try:
+        data = _create_task_and_poll(
+            "sod",
+            {"src_file_url": image_url, "version": "1.0"},
+            timeout=60.0,
+        )
+        return (data.get("results") or {}).get("url")
+    except Exception as e:
+        logger.warning(f"YouCam background removal failed for {image_url}: {e}")
+        return None
+
+
 # ───────────────────────────── PHOTO LIGHTING ───────────────────────────── #
 # Contract verified live 2026-08-17 -- BasicRunTaskV2 request (src_file_url +
 # version), single-url result shape, matching the docs exactly (unlike

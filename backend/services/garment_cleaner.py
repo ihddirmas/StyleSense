@@ -178,7 +178,7 @@ def make_cutout(image_bytes: bytes, category: Optional[str] = None) -> bytes | N
         return None
 
 
-CleanMethod = Literal["runway", "rembg", "original", "skipped"]
+CleanMethod = Literal["runway", "rembg", "youcam", "original", "skipped"]
 
 
 VERIFY_PROMPT = (
@@ -319,6 +319,32 @@ def clean_with_rembg(image_bytes: bytes) -> bytes:
     return buf.getvalue()
 
 
+def clean_with_youcam(image_url: str) -> bytes | None:
+    """Same-vendor alternative to clean_with_rembg -- background removal via
+    YouCam's sod task instead of local rembg. Doesn't spend Runway credits.
+    Requires a public HTTPS URL (unlike clean_with_rembg, which works on raw
+    bytes). Returns transparent PNG bytes, or None if the task or download
+    fails -- callers should fall back to rembg or the original on None."""
+    from services import youcam_service
+
+    result_url = youcam_service.youcam_background_removal(image_url)
+    if not result_url:
+        return None
+    try:
+        import httpx
+        with httpx.Client(timeout=20.0, follow_redirects=True) as c:
+            r = c.get(result_url)
+            r.raise_for_status()
+        cutout = Image.open(io.BytesIO(r.content)).convert("RGBA")
+        cutout = _fit_portrait_3x4_rgba(cutout)
+        buf = io.BytesIO()
+        cutout.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception as e:
+        logger.warning(f"Could not download/process YouCam bg-removal result: {e}")
+        return None
+
+
 def _fit_portrait_3x4_rgba(img: Image.Image) -> Image.Image:
     """Resize + pad to 768x1024 on a fully transparent canvas (RGBA)."""
     target_w, target_h = 768, 1024
@@ -412,7 +438,7 @@ def clean_garment_bytes(
     item_name: str,
     item_category: str = "tops",
     item_image_url: str | None = None,
-    prefer: Literal["auto", "runway", "rembg", "none"] = "auto",
+    prefer: Literal["auto", "runway", "rembg", "youcam", "none"] = "auto",
 ) -> tuple[bytes, CleanMethod, str]:
     """
     Run the cleanup pipeline on raw image bytes.
@@ -426,13 +452,22 @@ def clean_garment_bytes(
             'auto'   -> try Runway if URL given, else rembg
             'runway' -> only Runway, fallback to original on fail
             'rembg'  -> only rembg
+            'youcam' -> YouCam background removal (needs item_image_url), fallback to
+                rembg then original. Not part of 'auto' -- opt in explicitly; doesn't
+                spend Runway's credit budget, callers can route here deliberately.
             'none'   -> return original unchanged
 
     Returns: (output_bytes, method_used, content_type)
-        content_type is "image/png" for rembg (transparent), "image/jpeg" for runway/original.
+        content_type is "image/png" for rembg/youcam (transparent), "image/jpeg" for runway/original.
     """
     if prefer == "none":
         return image_bytes, "skipped", "image/jpeg"
+
+    if prefer == "youcam" and item_image_url:
+        youcam_cleaned = clean_with_youcam(item_image_url)
+        if youcam_cleaned:
+            return youcam_cleaned, "youcam", "image/png"
+        # Fall through to rembg on failure
 
     # Try Runway first if a public URL is available
     if prefer in ("auto", "runway") and item_image_url:
