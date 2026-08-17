@@ -21,7 +21,7 @@ export function PageHeader({
   titleSize = "default",
   tutorialKey,
 }: PageHeaderProps) {
-  const seen = useSeenOnce(tutorialKey ?? "");
+  const [seen, markSeen] = useSeenOnce(tutorialKey ?? "");
   const [dismissed, setDismissed] = useState(false);
   const showSubtitle = !!subtitle && (!tutorialKey || (!seen && !dismissed));
 
@@ -48,7 +48,10 @@ export function PageHeader({
             {tutorialKey && (
               <button
                 type="button"
-                onClick={() => setDismissed(true)}
+                onClick={() => {
+                  setDismissed(true);
+                  markSeen();
+                }}
                 aria-label="Dismiss hint"
                 className="icon-btn shrink-0"
               >

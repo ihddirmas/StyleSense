@@ -82,7 +82,7 @@ export default function StudioPage() {
   const [refreshingAvatar, setRefreshingAvatar] = useState(false);
   // null = still loading; false = the user has uploaded no photo at all.
   const [hasPhoto, setHasPhoto] = useState<boolean | null>(null);
-  const taskHintSeen = useSeenOnce("studio-task-hint");
+  const [taskHintSeen, markTaskHintSeen] = useSeenOnce("studio-task-hint");
   const [recentTryOns, setRecentTryOns] = useState<TryOnResult[]>(cachedRecent);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -615,7 +615,16 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                         </button>
                       )}
                       {!taskHintSeen && (
-                        <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                        // No dismiss button on this one, so it marks itself seen
+                        // when it actually reaches the screen -- keeping the ref
+                        // here means it can never drift from the render
+                        // condition above it. markSeen only writes storage, so
+                        // the hint stays readable for the rest of this session.
+                        <div
+                          ref={markTaskHintSeen}
+                          className="text-xs mt-1"
+                          style={{ color: "var(--text-muted)" }}
+                        >
                           You can navigate away — task keeps running
                         </div>
                       )}

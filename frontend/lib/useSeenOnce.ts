@@ -1,25 +1,38 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-// One-time hint gating. Returns true once the hint identified by `key` has been
-// seen before. First render returns false (show it); on mount we read
-// localStorage and, if unseen, mark it so subsequent visits hide it. SSR-safe:
-// defaults to "not seen" until mounted to avoid a hydration mismatch. An empty
-// key is a no-op that always shows the hint.
-export function useSeenOnce(key: string): boolean {
+// One-time hint gating. Returns `[seen, markSeen]`:
+//   seen     — true once this hint was marked seen in an EARLIER visit. Reading
+//              is all that happens on mount, so a hint the user never actually
+//              laid eyes on is never consumed.
+//   markSeen — persists "seen" for future visits. Write-only by design: it does
+//              NOT flip `seen` for the current render, because callers that mark
+//              on render (a passive hint with no dismiss button) would otherwise
+//              re-render it straight back out of existence. Hiding the hint for
+//              the rest of this session stays the caller's job, via its own
+//              dismissed flag.
+// SSR-safe: defaults to "not seen" until mounted, avoiding a hydration mismatch.
+// An empty key is a no-op — always shows the hint, never persists anything.
+export function useSeenOnce(key: string): [boolean, () => void] {
   const [seen, setSeen] = useState(false);
+
   useEffect(() => {
     if (!key) return;
-    const storageKey = `ss_seen_${key}`;
     try {
-      if (localStorage.getItem(storageKey)) {
-        setSeen(true);
-      } else {
-        localStorage.setItem(storageKey, "1");
-      }
+      if (localStorage.getItem(`ss_seen_${key}`)) setSeen(true);
     } catch {
       // localStorage unavailable — always show the hint
     }
   }, [key]);
-  return seen;
+
+  const markSeen = useCallback(() => {
+    if (!key) return;
+    try {
+      localStorage.setItem(`ss_seen_${key}`, "1");
+    } catch {
+      // localStorage unavailable — dismissal just won't survive a reload
+    }
+  }, [key]);
+
+  return [seen, markSeen];
 }

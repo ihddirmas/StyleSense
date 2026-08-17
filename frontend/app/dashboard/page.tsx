@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const [retryKey, setRetryKey] = useState(0);
   const [insight, setInsight] = useState<string | null>(null);
   const [atCap, setAtCap] = useState(false);
-  const hintSeen = useSeenOnce("dashboard-welcome");
+  const [hintSeen, markHintSeen] = useSeenOnce("dashboard-welcome");
 
   useEffect(() => {
     if (!user) return;
@@ -155,13 +155,7 @@ export default function DashboardPage() {
             type="button"
             onClick={() => {
               setHintDismissed(true);
-              // useSeenOnce's own localStorage write only fires once per
-              // browser, on this component's very first-ever mount -- not
-              // when the user actually dismisses it. Without this, clicking
-              // X only hides the hint until the next unmount (e.g.
-              // navigating to Studio and back), since hintDismissed is
-              // plain useState.
-              try { localStorage.setItem("ss_seen_dashboard-welcome", "1"); } catch {}
+              markHintSeen();
             }}
             aria-label="Dismiss hint"
             className="icon-btn shrink-0"
