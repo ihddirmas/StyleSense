@@ -67,6 +67,7 @@ export default function StylistPage() {
   const [loading, setLoading] = useState(false);
   const [thinkingStartedAt, setThinkingStartedAt] = useState<number | null>(null);
   const { items, refresh: refreshWardrobe, count: wardrobeCount, countReady: wardrobeCountReady } = useWardrobeItems();
+  const [tryonUsage, setTryonUsage] = useState<{ used: number; limit: number } | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -84,6 +85,17 @@ export default function StylistPage() {
     if (!user) return;
     loadSessions().catch(() => toast.error("Failed to load chat history"));
   }, [user, loadSessions]);
+
+  // Credit ledger — same /api/tryon/usage-status Studio and Dashboard already
+  // read, surfaced here too since try-on generation is what Aria's advice
+  // leads to. Silently hidden on failure or for unlimited testers (limit 0),
+  // matching UsageMeter's convention.
+  useEffect(() => {
+    if (!user) return;
+    apiGet<{ tryon: { used: number; limit: number } }>("/api/tryon/usage-status")
+      .then((d) => setTryonUsage(d.tryon))
+      .catch(() => {});
+  }, [user]);
 
   // Greeting only after localStorage hydration + optional server session restore.
   // Best-effort: fold in a data-grounded opening note (today's outfit pick or
@@ -457,14 +469,32 @@ export default function StylistPage() {
         <div className="surface flex flex-col flex-1 min-h-0">
             {/* Chat toolbar */}
             <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border text-xs text-muted">
-              {wardrobeCountReady ? (
-                <span className="font-mono">{wardrobeCount} items in wardrobe</span>
-              ) : (
-                <span
-                  className="inline-block h-3 w-28 rounded shimmer"
-                  aria-label="Loading wardrobe"
-                />
-              )}
+              <div className="flex items-center gap-2">
+                {wardrobeCountReady ? (
+                  <span className="font-mono">{wardrobeCount} items in wardrobe</span>
+                ) : (
+                  <span
+                    className="inline-block h-3 w-28 rounded shimmer"
+                    aria-label="Loading wardrobe"
+                  />
+                )}
+                {tryonUsage && tryonUsage.limit > 0 && (
+                  tryonUsage.used >= tryonUsage.limit ? (
+                    <Link
+                      href="/pricing"
+                      className="font-mono underline"
+                      style={{ color: "var(--on-gold)" }}
+                      title="You've used all your free try-ons this month"
+                    >
+                      {tryonUsage.used}/{tryonUsage.limit} try-ons — Upgrade
+                    </Link>
+                  ) : (
+                    <span className="font-mono" title="Try-ons used this month">
+                      {tryonUsage.used}/{tryonUsage.limit} try-ons
+                    </span>
+                  )
+                )}
+              </div>
               <div className="flex items-center gap-1">
                 <Link href="/stylist/analysis" className="icon-btn" title="Your style report">
                   <Sparkles size={14} />
