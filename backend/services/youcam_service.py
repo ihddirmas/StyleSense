@@ -193,11 +193,15 @@ def youcam_apparel_tryon(
 
 # ───────────────────────────── SKIN TONE ANALYSIS ───────────────────────────── #
 
-def youcam_skin_tone_analysis(image_url: str, face_angle_strictness: str = "high") -> dict:
+def youcam_skin_tone_analysis(image_url: str, face_angle_strictness: str = "low") -> dict:
     """Run YouCam's skin-tone-analysis on a selfie. Returns skin/hair/eye/lip
     hex colors -- feeds directly into color-season styling logic.
 
-    face_angle_strictness: strict | high | medium | low | flexible.
+    face_angle_strictness: strict | high | medium | low | flexible. Default
+    "low" -- "high" rejected multiple genuinely front-facing test photos with
+    error_face_angle_downward / error_face_not_forward_facing (2026-08-17),
+    which is an unacceptable failure mode for a live judge demo where the
+    selfie is whatever angle they happen to hold their webcam at.
     """
     data = _create_task_and_poll(
         "skin-tone-analysis",
