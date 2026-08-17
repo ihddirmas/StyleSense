@@ -52,6 +52,17 @@ async def analyze_skin(user=Depends(current_user)):
         logger.warning(f"Fitzpatrick analysis failed for {user['id']} (non-fatal): {e}")
         result["fitzpatrick"] = None
 
+    # Third, independent call -- measured face shape, grounding the same
+    # color_profile.face_shape field color_service's Claude-vision pass
+    # currently guesses at from a full photo. Also non-fatal.
+    face_shape_result = None
+    try:
+        face_shape_result = await _run_blocking(youcam_service.youcam_face_shape_analysis, selfie_url)
+        result["face_shape"] = face_shape_result
+    except Exception as e:
+        logger.warning(f"Face shape analysis failed for {user['id']} (non-fatal): {e}")
+        result["face_shape"] = None
+
     from datetime import datetime, timezone
 
     update_fields = {
@@ -71,9 +82,16 @@ async def analyze_skin(user=Depends(current_user)):
 
     skin_hex = (result.get("colors") or {}).get("skin_color")
     classification = color_service.classify_season_from_hex(skin_hex)
-    if classification:
+    profile_update: dict = dict(classification) if classification else {}
+
+    measured_shape = (face_shape_result or {}).get("face_shape")
+    if measured_shape:
+        profile_update["face_shape"] = measured_shape.lower()
+        profile_update["face_shape_source"] = "youcam_measured"
+
+    if profile_update:
         current_profile = row.get("color_profile") or {}
-        update_fields["color_profile"] = {**current_profile, **classification}
+        update_fields["color_profile"] = {**current_profile, **profile_update}
 
     supabase_service.upsert_user(user["id"], **update_fields)
 

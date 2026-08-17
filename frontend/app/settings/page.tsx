@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/ui/Dialog";
 interface SkinAnalysisResult {
   colors?: Record<string, string>;
   fitzpatrick?: { fitzpatrick_type?: string; fitzpatrick_label?: string } | null;
+  face_shape?: { face_shape?: string | null } | null;
 }
 
 const PORTRAIT_SAMPLES = [
@@ -43,6 +44,7 @@ export default function SettingsPage() {
   const [analyzingBody, setAnalyzingBody] = useState(false);
   const [skinColors, setSkinColors] = useState<Record<string, string> | null>(null);
   const [fitzpatrick, setFitzpatrick] = useState<string | null>(null);
+  const [faceShape, setFaceShape] = useState<string | null>(null);
   const [analyzingSkin, setAnalyzingSkin] = useState(false);
   const avatarTask = useTasks((s) =>
     s.tasks.find((t) => (t.kind === "avatar_still" || t.kind === "avatar_video") && t.status === "running")
@@ -73,6 +75,7 @@ export default function SettingsPage() {
       .then((d) => {
         setSkinColors(d.result?.colors ?? null);
         setFitzpatrick(d.result?.fitzpatrick?.fitzpatrick_label ?? null);
+        setFaceShape(d.result?.face_shape?.face_shape ?? null);
       })
       .catch(() => {});
   }, [user, refreshSelfies]);
@@ -83,6 +86,7 @@ export default function SettingsPage() {
       const result = await apiPost<SkinAnalysisResult>("/api/skin/analyze", {});
       setSkinColors(result.colors ?? null);
       setFitzpatrick(result.fitzpatrick?.fitzpatrick_label ?? null);
+      setFaceShape(result.face_shape?.face_shape ?? null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Skin analysis failed.");
     } finally {
@@ -365,6 +369,11 @@ export default function SettingsPage() {
                   {fitzpatrick && (
                     <div className="text-2xs" style={{ color: "var(--text-muted)" }}>
                       Fitzpatrick scale: <span className="font-mono" style={{ color: "var(--text)" }}>{fitzpatrick}</span>
+                    </div>
+                  )}
+                  {faceShape && (
+                    <div className="text-2xs" style={{ color: "var(--text-muted)" }}>
+                      Face shape: <span className="font-mono capitalize" style={{ color: "var(--text)" }}>{faceShape}</span>
                     </div>
                   )}
                 </div>

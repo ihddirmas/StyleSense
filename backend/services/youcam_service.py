@@ -256,6 +256,54 @@ def youcam_fitzpatrick_analysis(image_url: str) -> dict:
     }
 
 
+# ───────────────────────────── FACE SHAPE ───────────────────────────── #
+# Request shape verified live 2026-08-17 -- docs.perfectcorp.com's published
+# OpenAPI spec for this endpoint (a nested request_id/payload/actions/
+# dst_actions structure) does NOT match what the live API actually accepts;
+# a real call against it 400s with "InvalidParameters". The flat shape below
+# (src_file_id + top-level features[] + top-level face_angle_strictness_level)
+# is what a live call confirmed working end-to-end, including polling
+# data.results.faceshape on the completed task -- that part of the published
+# spec was accurate. face-attr-analysis still requires a file_id (not a
+# src_file_url like the other two features above), so this downloads our own
+# Supabase-hosted selfie and re-uploads it via _upload_file first.
+
+def youcam_face_shape_analysis(image_url: str) -> dict:
+    """Run YouCam's face-attr-analysis on a selfie, requesting only the
+    faceShape feature (of 30+ available) -- Kibbe/stylist advice (necklines,
+    glasses, earring shapes) cares about face shape, not the full attribute
+    set. Returns one of: Triangle, Diamond, Heart, InvTriangle, Oblong,
+    Oval, Round, Square, Unknown."""
+    with httpx.Client(timeout=30.0) as client:
+        img_resp = client.get(image_url)
+        img_resp.raise_for_status()
+        image_bytes = img_resp.content
+
+    content_type = "image/png" if image_url.lower().endswith(".png") else "image/jpeg"
+    filename = "selfie.png" if content_type == "image/png" else "selfie.jpg"
+    file_id = _upload_file("face-attr-analysis", image_bytes, filename, content_type)
+
+    data = _create_task_and_poll(
+        "face-attr-analysis",
+        {
+            "src_file_id": file_id,
+            "features": ["faceShape"],
+            # "high" (the provider default) rejected genuinely front-facing
+            # photos during skin-tone-analysis testing (see
+            # youcam_skin_tone_analysis) -- same lesson applies here, default
+            # to "low" up front instead of relearning it.
+            "face_angle_strictness_level": "low",
+        },
+    )
+    results = data.get("results") or {}
+    shape = results.get("faceshape")
+    return {
+        "face_shape": shape if shape and shape != "Unknown" else None,
+        "task_id": data.get("task_id"),
+        "provider": "youcam",
+    }
+
+
 def format_skin_profile(result: dict | None) -> str:
     """Render a skin-tone analysis result into a compact line for Aria's
     system prompt. Mirrors color_service.format_color_profile /
