@@ -106,6 +106,7 @@ runway_hackthon/
 - **Cleaner default is `clean='runway'`** for direct uploads, `'none'` for URL-scraped items (retailer photos already clean).
 - **Keep emojis out of code/files.** UI uses lucide-react icons + Cormorant Garamond display font.
 - **Don't add comments unless the WHY is non-obvious.**
+- **Never `git add -A` / `git add .`.** Stage files by name. A broad add on 2026-08-11 (commit `d6ccfa5`) swept 10 unrelated screenshots (competitor research, manual-test verification shots) into master alongside real feature work — nobody noticed until the user spotted stray images on GitHub. A local `.git/hooks/pre-commit` now blocks images outside `frontend/public/`, `backend/tests/fixtures/`, `docs/screenshots/`, and Next.js's `app/**/icon.png` convention, but that hook is machine-local (not tracked by git, doesn't protect other clones or CI) — the actual fix is reviewing `git status`/`git diff --cached` before every commit, every session.
 
 ## Agent skills
 
