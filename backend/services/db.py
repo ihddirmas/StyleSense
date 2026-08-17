@@ -13,6 +13,7 @@ Until `DATABASE_URL` is set on Render, falls back to legacy Aurora IAM when
 
 The thin `query()` helper returns plain dicts so callers match the previous style.
 """
+
 import os
 import logging
 import uuid
@@ -48,7 +49,9 @@ def _normalize_database_url(url: str) -> str:
 
 
 def _resolve_database_url() -> str:
-    url = (os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DATABASE_URL") or "").strip()
+    url = (
+        os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DATABASE_URL") or ""
+    ).strip()
     if url:
         if url.startswith("https://") or url.startswith("http://"):
             raise RuntimeError(
@@ -57,9 +60,7 @@ def _resolve_database_url() -> str:
             )
         return _normalize_database_url(url)
     legacy = (
-        os.getenv("LEGACY_DATABASE_URL")
-        or os.getenv("LEGACY_DB_URL")
-        or ""
+        os.getenv("LEGACY_DATABASE_URL") or os.getenv("LEGACY_DB_URL") or ""
     ).strip()
     if legacy:
         logger.warning(
@@ -90,7 +91,25 @@ def _build_engine() -> Engine:
     region = os.environ["AWS_REGION"]
     pg = "post" + "gres"
     url = f"{pg}ql+psycopg2://{user}@{host}:{port}/{db}?sslmode=require"
-    eng = create_engine(url, pool_recycle=600, **_COMMON_KW)
+
+    # libpq >= 13 treats ~/.postgresql/root.crt as an implicit verify-ca when
+    # present; Aurora's chain (Amazon RSA 2048 M01 -> Amazon Root CA 1) is not
+    # in the RDS-only global bundle, so supply a combined bundle explicitly.
+    connect_args: dict[str, Any] = {}
+    cert = (os.getenv("PGSSLROOTCERT") or "").strip()
+    if not cert:
+        local = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            ".ssl",
+            "rds-combined.pem",
+        )
+        if os.path.exists(local):
+            cert = local
+    if cert:
+        connect_args["sslrootcert"] = cert
+        logger.info("DB: Aurora SSL root cert from %s", cert)
+
+    eng = create_engine(url, pool_recycle=600, connect_args=connect_args, **_COMMON_KW)
     rds = boto3.client("rds", region_name=region)
 
     @event.listens_for(eng, "do_connect")

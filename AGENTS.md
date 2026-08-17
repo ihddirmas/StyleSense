@@ -106,6 +106,7 @@ Supabase (auth + storage + social + core DB), Runway, and Anthropic are cloud-ho
 
 ### Gotchas
 
+- **Aurora SSL cert verify failure (Windows, local dev)**: if `~/.postgresql/root.crt` exists, libpq 13+ silently upgrades `sslmode=require` to verify-ca and Aurora fails with `certificate verify failed` (Aurora chains via Amazon's generic "RSA 2048 M01" intermediate, not in the RDS-only bundle). Fix: `backend/.ssl/rds-combined.pem` (gitignored) — RDS global bundle + Amazon Root CA 1 concatenated; `services/db.py` picks it up automatically (or set `PGSSLROOTCERT`). Regenerate: `curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem` + `curl -fsSL https://www.amazontrust.com/repository/AmazonRootCA1.pem`, concat both.
 - Supabase **email confirmation must be OFF** or signup hits rate limits (`CLAUDE.md`).
 - Runway image URLs must be public HTTPS — localhost fails; use Supabase Storage.
 - `posthog-node` warns on Node 22.14; dev still works.
