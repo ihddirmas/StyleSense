@@ -368,7 +368,6 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
       <div className="shrink-0">
         <PageHeader
           eyebrow="Try-On"
-          title="Studio"
           subtitle="Pick 1 or 2 items from your wardrobe, then generate a try-on on your avatar."
           tutorialKey="studio"
         />
@@ -653,12 +652,12 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
                     key={r.id}
                     onClick={() => setLightboxUrl(r.event_scene_url || r.result_image_url)}
                     style={{ padding: 0, background: "none", border: "1px solid var(--border)", cursor: "pointer", flexShrink: 0 }}
-                    title={r.event_context || r.prompt_used || "Past try-on"}
+                    title={r.event_context || "Past try-on"}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={r.event_scene_url || r.result_image_url}
-                      alt={r.event_context || r.prompt_used || "Past try-on"}
+                      alt={r.event_context || "Past try-on"}
                       style={{ width: 52, height: 52, objectFit: "cover", display: "block" }}
                     />
                   </button>
@@ -735,7 +734,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
             <div className="text-2xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Try-on model</div>
             <select aria-label="Try-on model" className="input mb-1" value={tryonModel} onChange={(e) => setTryonModel(e.target.value)}>
               {TRYON_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
+                <option key={m.id} value={m.id}>{m.label}</option>
               ))}
             </select>
             <div className="text-2xs mb-3" style={{ color: "var(--text-dim)" }}>
@@ -829,7 +828,7 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               <div className="text-2xs uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Video model</div>
               <select aria-label="Video model" className="input mb-1" value={videoModel} onChange={(e) => setVideoModel(e.target.value)}>
                 {VIDEO_MODELS.map((m) => (
-                  <option key={m.id} value={m.id}>{m.label} — {m.tier}</option>
+                  <option key={m.id} value={m.id}>{m.label}</option>
                 ))}
               </select>
               <div className="text-2xs mb-3" style={{ color: "var(--text-dim)" }}>

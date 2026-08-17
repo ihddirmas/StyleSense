@@ -119,7 +119,7 @@ export default function DashboardPage() {
           <>
             <span className="page-stats-sep">·</span>
             <span>
-              {displayRecent.length} saved {displayRecent.length === 1 ? "look" : "looks"}
+              {displayRecent.length} recent {displayRecent.length === 1 ? "try-on" : "try-ons"}
             </span>
           </>
         )}
@@ -129,7 +129,7 @@ export default function DashboardPage() {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="Dashboard"
+        eyebrow="Home"
         title="Your Style Intelligence"
         titleSize="responsive"
         action={statsAction}

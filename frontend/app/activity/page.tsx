@@ -61,6 +61,7 @@ export default function ActivityPage() {
       <div className="shrink-0">
         <PageHeader
           eyebrow="Background tasks"
+          title="Activity"
           tutorialKey="activity"
           subtitle="All try-ons, scenes, and animations started this session. History resets on page reload."
           action={

@@ -32,6 +32,12 @@ export function AuthCard({ initialMode, next }: AuthCardProps) {
   }
 
   async function submit() {
+    // Re-entrancy guard: the password field's onKeyDown (Enter-to-submit)
+    // and the submit button's onClick can both fire for the same user
+    // action before React re-renders the button's disabled state, causing
+    // a duplicate signInWithPassword/signUp call. Bail out immediately if
+    // a submission is already in flight.
+    if (loading) return;
     if (!email || !password) { toast.error("Email and password required"); return; }
     if (mode === "signup" && password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setLoading(true);

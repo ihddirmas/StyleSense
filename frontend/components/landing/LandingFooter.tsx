@@ -17,14 +17,6 @@ const COLUMNS = [
     links: [
       { label: "Sign up", href: "/signup" },
       { label: "Sign in", href: "/login" },
-      { label: "Dashboard", href: "/dashboard" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Privacy Policy", href: "#" },
-      { label: "Terms of Service", href: "#" },
     ],
   },
 ];
@@ -43,7 +35,7 @@ export default function LandingFooter() {
           className="landing-footer-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr",
+            gridTemplateColumns: "2fr 1fr 1fr",
             gap: 64,
             marginBottom: 64,
           }}
@@ -114,7 +106,7 @@ export default function LandingFooter() {
             © {new Date().getFullYear()} StyleSenseAI. All rights reserved.
           </p>
           <p style={{ fontSize: 13, color: "var(--text-dim)", margin: 0, fontFamily: "JetBrains Mono, monospace" }}>
-            Powered by Runway · Anthropic · Supabase
+            Powered by YouCam · Anthropic · Supabase
           </p>
         </div>
       </div>

@@ -192,7 +192,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-8">
+      <div className={`grid grid-cols-1 gap-5 pb-8 ${selfies.length === 0 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
 
         {/* COL 1 — Generation quality + Account */}
         <div className="flex flex-col gap-5">
@@ -363,34 +363,36 @@ export default function SettingsPage() {
           </motion.div>
         </div>
 
-        {/* COL 3 — Sample portraits */}
-        <div className="flex flex-col gap-5">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="surface p-6 flex-1">
-            <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>
-              Or try with a sample look
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {PORTRAIT_SAMPLES.map(({ name, url }) => {
-                const isSelected = selectedSeed === name && selfies.length === 0;
-                return (
-                  <button key={name} onClick={() => selectPortrait(name, url)} title={name}
-                    style={{
-                      background: "var(--surface2)", padding: 0, border: "none", cursor: "pointer",
-                      outline: isSelected ? "2px solid var(--ink)" : "2px solid transparent",
-                      outlineOffset: 2, transition: "outline-color 0.1s", overflow: "hidden",
-                    }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }} />
-                    <div className="text-2xs py-1 text-center" style={{ color: "var(--text-muted)" }}>{name}</div>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
-              Upload your own selfie for personalised try-ons.
-            </p>
-          </motion.div>
-        </div>
+        {/* COL 3 — Sample portraits (onboarding aid: only relevant before the user has their own selfie) */}
+        {selfies.length === 0 && (
+          <div className="flex flex-col gap-5">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="surface p-6 flex-1">
+              <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>
+                Or try with a sample look
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {PORTRAIT_SAMPLES.map(({ name, url }) => {
+                  const isSelected = selectedSeed === name;
+                  return (
+                    <button key={name} onClick={() => selectPortrait(name, url)} title={name}
+                      style={{
+                        background: "var(--surface2)", padding: 0, border: "none", cursor: "pointer",
+                        outline: isSelected ? "2px solid var(--ink)" : "2px solid transparent",
+                        outlineOffset: 2, transition: "outline-color 0.1s", overflow: "hidden",
+                      }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }} />
+                      <div className="text-2xs py-1 text-center" style={{ color: "var(--text-muted)" }}>{name}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
+                Upload your own selfie for personalised try-ons.
+              </p>
+            </motion.div>
+          </div>
+        )}
       </div>
 
       <ConfirmDialog

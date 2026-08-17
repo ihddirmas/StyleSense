@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
@@ -94,6 +94,10 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(initialProfile);
   const [loading, setLoading] = useState(false);
+  // Tracks the current user id for the onAuthStateChange listener below,
+  // which is registered once on mount -- reading `user` state there would
+  // be a stale closure, always seeing whatever it was at mount time.
+  const userIdRef = useRef<string | null>(initialUser?.id ?? null);
 
   const fetchProfile = useCallback(async (uid: string) => {
     // users table has selfie/avatar/stylized fields; profiles table has share_code + social fields.
@@ -112,6 +116,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       syncUserScope(session?.user?.id ?? null);
+      userIdRef.current = session?.user?.id ?? null;
       setSession(session);
       // Keep the same object reference when the user id hasn't actually
       // changed -- otherwise every effect with `[user]` in its deps (cache
@@ -124,6 +129,15 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, sess: Session | null) => {
       syncUserScope(sess?.user?.id ?? null);
+      // TOKEN_REFRESHED fires silently in the background every ~50-60min (or
+      // on tab refocus) for a still-valid session -- same user, renewed JWT.
+      // router.refresh() below re-runs middleware.ts's cookie-based session
+      // check; if the browser's refreshed token hasn't finished syncing to
+      // the cookie yet, that read can transiently see no session and bounce
+      // an actively-logged-in user to /login. Only a real identity change
+      // (sign in/out, or switching accounts) needs a server refetch.
+      const identityChanged = sess?.user?.id !== userIdRef.current;
+      userIdRef.current = sess?.user?.id ?? null;
       setSession(sess);
       setUser((prev) => (prev?.id === sess?.user?.id ? prev : (sess?.user ?? null)));
       identifyForAnalytics(sess?.user ?? null);
@@ -137,8 +151,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: {
       } else {
         setProfile(null);
       }
-      // Force a refetch of server components when auth changes
-      router.refresh();
+      if (identityChanged) router.refresh();
     });
 
     return () => sub.subscription.unsubscribe();

@@ -78,8 +78,13 @@ export default function LandingNav() {
         left: 0,
         right: 0,
         zIndex: 50,
-        borderBottom: "1px solid transparent",
-        backgroundColor: "rgba(221, 217, 206, 0)",
+        borderBottom: mobileOpen ? "1px solid rgba(60, 36, 21, 0.12)" : "1px solid transparent",
+        // Transparent-until-scroll is an intentional reveal effect (see the
+        // ScrollTrigger below), but that leaves the bar see-through if the
+        // mobile menu is opened before scrolling -- the dropdown panel then
+        // sits on a transparent strip with hero content bleeding through
+        // behind it. A menu overlay should never be see-through.
+        backgroundColor: mobileOpen ? "rgba(221, 217, 206, 0.98)" : "rgba(221, 217, 206, 0)",
       }}
     >
       {/* Scroll progress bar */}
