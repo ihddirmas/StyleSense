@@ -2,7 +2,9 @@
 
 > Repo and infra are still named `StyleSense` (GitHub repo, Vercel project) — the product itself has rebranded to StyleSenseAI. See below for the technical identifiers, which are left as-is since they're accurate references to the actual infrastructure.
 
-> Built for the **AWS + Runway AI Hackathon** · May–June 2026
+> Originally built for the **AWS + Runway AI Hackathon** (May–June 2026); currently targeting the **YouCam Hackathon** (deadline 2026-08-17).
+>
+> Every capability claim in this README is traceable to source — see **[CAPABILITIES.md](CAPABILITIES.md)**.
 
 ## Live deployment (`master`)
 
@@ -32,14 +34,16 @@ cd backend && ./venv/bin/python -m scripts.test_genblaze_smoke
 
 ## The Wow Moment
 
-Upload a selfie → add clothes from Amazon URLs → see yourself wearing them via Runway → place yourself at a "beach wedding" → animate as a 5-second runway video → talk to an AI stylist that knows your entire wardrobe.
+Upload a selfie → get your colour season, Kibbe line, and measured face shape → add clothes from a URL or photo → see yourself wearing them, with a verdict on whether they actually suit you → place yourself at a "beach wedding" → animate it into a runway video → talk to an AI stylist that knows your entire wardrobe.
 
 ## Features
 
-- **Virtual Try-On** — Runway `gen4_image` composites your face onto any outfit
+- **Personal style analysis** — Measured, not guessed: YouCam face-attr-analysis for face shape, Fitzpatrick skin typing, and photo-lighting normalisation, translated into a seasonal colour palette and Kibbe line. Failures surface a retry instead of an empty page.
+- **Suitability verdicts** — Every try-on gets a deterministic colour + silhouette read against your measured profile (`suitability_service`) — no LLM call, no credits
+- **Virtual Try-On** — Choose your engine: Runway `gen4_image` (default, best face match), `gemini_2.5_flash` (fast full-body), or YouCam cloth-v3 (garment-specialised)
 - **Event Scene Placement** — `gen4_image` puts your try-on in any setting ("rooftop cocktail party at night")
-- **Runway Walk Video** — `gen4.5` image-to-video animates any try-on into a 5-second catwalk clip
-- **AI Stylist (Aria)** — **Agentic** LangGraph stylist: wardrobe-aware picks, tool calling (`generate_tryon`, product URL lookup), human-in-the-loop pending actions — not basic chat
+- **Runway Walk Video** — `veo3.1` image-to-video animates any try-on into a runway clip (`gen4_turbo` fallback)
+- **AI Stylist (Aria)** — **Agentic** LangGraph stylist, text chat: wardrobe-aware picks, tool calling (`generate_tryon`, product URL lookup), human-in-the-loop pending actions, preference memory, and trip-capsule planning — not basic chat
 - **Durable media (B2 + Genblaze)** — Try-ons and runway videos archived to Backblaze B2 with SHA-256 provenance manifests (hackathon integration)
 - **Smart Wardrobe** — Add items by URL (Myntra, Amazon, Uniqlo) or photo upload; Claude vision auto-categorizes multi-item hauls
 - **Social Loop** — Friends, real-time chat, share outfits and try-ons with friends
@@ -50,9 +54,8 @@ Upload a selfie → add clothes from Amazon URLs → see yourself wearing them v
 |-----|--------------|
 | `gen4_image_turbo` | Garment background removal + isolation (2 cr each) |
 | `gen4_image` | Try-on compositing + event scene placement (5 cr each) |
-| `gen4.5` (image-to-video) | Animate try-on → 5s runway walk video (60–100 cr) |
-| Characters / `gwm1_avatars` | Aria voice avatar with wardrobe knowledge via WebRTC |
-| Knowledge Base | Wardrobe text sync → Aria answers with specific item IDs |
+| `veo3.1` (image-to-video) | Animate try-on → runway walk video (60–100 cr). Falls back to `gen4_turbo` |
+| Characters / `gwm1_avatars` | One-time provisioning of Aria's static portrait + ramp-walk hero video |
 
 ## Tech Stack
 
@@ -63,7 +66,7 @@ Upload a selfie → add clothes from Amazon URLs → see yourself wearing them v
 | Auth | Supabase Auth (JWT, email/password) |
 | Database | Supabase (single project DB for core + auth + social) |
 | Storage | Supabase Storage (public HTTPS for Runway) + Realtime |
-| AI | Runway SDK · Anthropic Claude (claude-haiku-4-5 stylist chat + vision) |
+| AI | Two-model pipeline: **Anthropic Claude** (`claude-haiku-4-5`) for all reasoning + vision · **Runway SDK** and **Gemini** (`gemini_2.5_flash`) for pixels · **YouCam** for measured face/skin analysis and garment try-on |
 
 ## Architecture
 
@@ -101,7 +104,7 @@ flowchart TD
     subgraph RUNWAY [Runway AI]
         Characters[Characters API — Aria's static portrait + hero video]
         Gen4[gen4_image / turbo — Try-On + Scene]
-        Gen45[gen4.5 — Image-to-Video]
+        Gen45[veo3.1 — Image-to-Video]
     end
     RUNWAY:::runway
 
@@ -188,7 +191,7 @@ NEXT_PUBLIC_STYLIST_HERO_VIDEO_URL= # from: python -m scripts.animate_admin_styl
 ### One-time Admin Setup
 
 ```powershell
-# Create Aria (shared AI stylist voice avatar)
+# Create Aria (shared AI stylist — static portrait asset, not a live avatar session)
 cd backend
 .\venv\Scripts\python.exe -m scripts.setup_admin_stylist
 # Paste STYLIST_CHARACTER_ID into both .env files
@@ -224,7 +227,7 @@ cd backend
 |-----------|---------|
 | `gen4_image_turbo` (garment cleanup) | 2 cr |
 | `gen4_image` (try-on / event scene) | 5 cr |
-| `gen4.5` (5s video) | 60–100 cr |
+| `veo3.1` (video) | 60–100 cr |
 | Character creation (one-time) | ~5 cr |
 
 Total budget: 50,000 cr. Use turbo during dev; switch to full quality for demo recording.

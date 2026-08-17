@@ -163,7 +163,7 @@ def _to_aspect_ratio(model: str) -> str:
     # gemini_2.5_flash only accepts a fixed list (e.g. 832:1248, 896:1152, 1024:1024).
     if model == "gemini_2.5_flash":
         return "832:1248"
-    # gen4_image / gen4_image_turbo / gen4.5 portrait
+    # gen4_image / gen4_image_turbo portrait
     return "720:1280"
 
 

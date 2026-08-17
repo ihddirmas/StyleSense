@@ -5,7 +5,7 @@ Tests every Runway endpoint we use:
   1. Garment cleaner (gen4_image_turbo with garment ref) - re-synthesizes a clean shot
   2. Single-item try-on (gen4_image_turbo with selfie + garment refs)
   3. Event scene (gen4_image with try-on as ref)
-  4. Animate (gen4.5 image-to-video, 5s clip - ~60 credits)
+  4. Animate (veo3.1 image-to-video, short clip - ~60 credits)
 
 Total credit cost: ~70-80 credits (heavy on the animate step).
 Skip animate if you want to save credits: pass SKIP_ANIMATE=1 env var.
@@ -159,7 +159,7 @@ def main():
     results['cleaner']   = step("[1/4] Cleaner via Runway re-synthesis (~3 credits)",  test_cleaner)
     results['tryon']     = step("[2/4] Try-on (gen4_image_turbo, ~3 credits)",         test_tryon)
     results['event']     = step("[3/4] Event scene (gen4_image, ~5 credits)",          test_event_scene)
-    results['video']     = step("[4/4] Animate (gen4.5, ~60 credits)",                 test_animate)
+    results['video']     = step("[4/4] Animate (veo3.1, ~60 credits)",                 test_animate)
 
     print("\n" + "="*72)
     print("RESULTS - open these URLs to verify quality:")

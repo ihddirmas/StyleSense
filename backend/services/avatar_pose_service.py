@@ -319,7 +319,7 @@ async def generate_stylized_video(
     Animate the user's stylized 3D portrait into a 5s editorial catwalk loop.
     Persists on the users row. Returns {url, source} on success, raises on failure.
 
-    ~60cr per call (gen4.5 / veo3.1 image-to-video). Idempotent guard is the
+    ~60cr per call (veo3.1 image-to-video). Idempotent guard is the
     caller's responsibility - check stylized_avatar_video_source == source
     before calling.
     """

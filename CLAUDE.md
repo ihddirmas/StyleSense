@@ -17,7 +17,7 @@
 - **Frontend**: Next.js 14 App Router + TypeScript + Tailwind + framer-motion + Zustand
 - **Auth**: Supabase Auth (email/password; Google OAuth wired but not enabled)
 - **DB + Storage + Realtime**: Supabase
-- **AI**: Runway API (gen4_image, gen4.5 video, characters) + Anthropic Claude (claude-haiku-4-5 for stylist chat)
+- **AI**: Runway API (gen4_image try-on default, veo3.1 video, characters) + Gemini (`gemini_2.5_flash`, default for avatar stills) + YouCam (measured face/skin analysis, garment try-on) + Anthropic Claude (claude-haiku-4-5 for all reasoning + vision). Claims must stay in sync with `CAPABILITIES.md`.
 - **Garment cleanup**: Runway gen4_image_turbo re-synthesis (primary) + rembg local segmentation (fallback)
 
 ## File layout
@@ -150,13 +150,13 @@ Set-Location backend
 
 ## Important constraints
 
-- **Runway credit budget**: 50,000 total. gen4_image_turbo = 2cr, gen4_image = 5cr, gen4.5 video = 60cr per 5s. Use turbo during dev, switch to full quality only for demo recording.
+- **Runway credit budget**: 50,000 total. gen4_image_turbo = 2cr, gen4_image = 5cr, veo3.1 video = 60-100cr per clip. Use turbo during dev, switch to full quality only for demo recording.
 - **Email confirmation must be OFF in Supabase** (Auth → Providers → Email → "Confirm email" OFF) or signup hits a 4/hour rate limit.
 - **The handle_new_user() trigger** auto-creates a `profiles` row + a legacy `users` row when an `auth.users` row is inserted. If signup fails with "database error", run `supabase_schema_v2b_fix.sql`.
 - **Google OAuth is not enabled** in the Supabase dashboard. Sign-in via email/password only unless you set up the Google Cloud OAuth client.
 - **Aria has no voice/video avatar session anymore.** The Runway custom-character voice widget (`AvatarWidget.tsx`, `POST /api/avatar/connect`, per-user `create-character`/`sync-stylist-kb` routes) was removed 2026-08-07 — it was never mounted on any page and was unreachable by users. `character_service.py` now only backs the one-time `setup_admin_stylist` script that provisions Aria's static portrait (see below). All user-facing Aria interaction is the text chat (`stylist/page.tsx` → `POST /api/stylist/chat` → `aria_graph.run_aria`).
 - **Each user gets a stylized full-body editorial-3D avatar** auto-generated from their primary selfie (`avatar_pose_service.generate_stylized_avatar`). Stored on `users.stylized_avatar_url`. Used as the Studio idle hero + the "before" in the compare slider. Photoreal try-ons still use the raw selfie for face accuracy. Requires `supabase_schema_v2e_stylized.sql` to be applied.
-- **Each user also gets a 5s ramp-walking video** chained off the still (`avatar_pose_service.generate_stylized_video`). Auto-fires after the still is ready. Stored on `users.stylized_avatar_video_url`. Shown as the Dashboard hero. ~60-100cr per primary-selfie change (gen4.5/veo3.1). Requires `supabase_schema_v2f_stylized_video.sql`.
+- **Each user also gets a 5s ramp-walking video** chained off the still (`avatar_pose_service.generate_stylized_video`). Auto-fires after the still is ready. Stored on `users.stylized_avatar_video_url`. Shown as the Dashboard hero. ~60-100cr per primary-selfie change (veo3.1). Requires `supabase_schema_v2f_stylized_video.sql`.
 - **Aria has her own ramp video** (`STYLIST_HERO_VIDEO_URL` env var, read server-side by `GET /api/avatar/stylist`). Shown on the dashboard when the user has no selfie OR while their per-user video is still generating. Generated once via `python -m scripts.animate_admin_stylist`.
 - **rembg is NOT a substitute for Runway** for occluded photos (person wearing clothes). It only cuts out what's visible.
 
@@ -186,7 +186,7 @@ Fetches Aria's portrait, animates with the shared `RAMP_WALK_PROMPT` at landscap
 
 ## Known not-yet-tested
 
-- Animate endpoint (gen4.5 image-to-video, ~60cr per 5s)
+- Animate endpoint (veo3.1 image-to-video, ~60cr per clip)
 - The full social loop (sign up two users → friend → chat → share outfit) — built but not user-verified end-to-end
 
 ## How to debug
