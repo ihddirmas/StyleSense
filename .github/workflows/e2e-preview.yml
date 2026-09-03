@@ -8,7 +8,8 @@ name: E2E against Vercel preview
 # Vercel setup does not auto-promote on push, see docs/manual-test-checklist.md).
 #
 # Requires repo secrets (Settings -> Secrets and variables -> Actions):
-#   E2E_TEST_EMAIL, E2E_TEST_PASSWORD -- a seeded QA account with wardrobe items
+#   E2E_TEST_EMAIL + E2E_TEST_PASSWORD  (preferred)
+#   — or TEST_USER_EMAIL + TEST_USER_PASSWORD (same seed QA account; see AGENTS.md)
 # The preview's backend target (NEXT_PUBLIC_API_URL) is whatever Vercel's
 # Preview environment variables point at -- normally the same always-on
 # Render backend used by production, so no backend to spin up here.
@@ -61,7 +62,16 @@ jobs:
           PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
-        run: npx playwright test
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        run: |
+          export E2E_TEST_EMAIL="${E2E_TEST_EMAIL:-$TEST_USER_EMAIL}"
+          export E2E_TEST_PASSWORD="${E2E_TEST_PASSWORD:-$TEST_USER_PASSWORD}"
+          if [ -z "$E2E_TEST_EMAIL" ] || [ -z "$E2E_TEST_PASSWORD" ]; then
+            echo "::error title=E2E credentials missing::Add E2E_TEST_EMAIL and E2E_TEST_PASSWORD (or TEST_USER_EMAIL and TEST_USER_PASSWORD) under Settings → Secrets and variables → Actions. Use the ellbit seed account with wardrobe data — see AGENTS.md."
+            exit 1
+          fi
+          npx playwright test
 
       - name: Upload Playwright report
         if: always()
