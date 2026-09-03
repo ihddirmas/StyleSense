@@ -11,10 +11,17 @@ import { apiGet, apiPost, apiUpload, apiDelete } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
+interface SkinConcernScore {
+  type: string;
+  ui_score?: number | null;
+  raw_score?: number | null;
+}
+
 interface SkinAnalysisResult {
   colors?: Record<string, string>;
   fitzpatrick?: { fitzpatrick_type?: string; fitzpatrick_label?: string } | null;
   face_shape?: { face_shape?: string | null } | null;
+  skin_concerns?: { concerns?: SkinConcernScore[] } | null;
 }
 
 const PORTRAIT_SAMPLES = [
@@ -45,6 +52,8 @@ export default function SettingsPage() {
   const [skinColors, setSkinColors] = useState<Record<string, string> | null>(null);
   const [fitzpatrick, setFitzpatrick] = useState<string | null>(null);
   const [faceShape, setFaceShape] = useState<string | null>(null);
+  const [skinConcerns, setSkinConcerns] = useState<SkinConcernScore[] | null>(null);
+  const [skinConcernsError, setSkinConcernsError] = useState<string | null>(null);
   const [analyzingSkin, setAnalyzingSkin] = useState(false);
   const avatarTask = useTasks((s) =>
     s.tasks.find((t) => (t.kind === "avatar_still" || t.kind === "avatar_video") && t.status === "running")
@@ -76,17 +85,30 @@ export default function SettingsPage() {
         setSkinColors(d.result?.colors ?? null);
         setFitzpatrick(d.result?.fitzpatrick?.fitzpatrick_label ?? null);
         setFaceShape(d.result?.face_shape?.face_shape ?? null);
+        const concerns = d.result?.skin_concerns?.concerns ?? null;
+        setSkinConcerns(concerns?.length ? concerns : null);
+        setSkinConcernsError(
+          d.result && d.result.skin_concerns === null && d.status === "ready"
+            ? "Skin concern scores unavailable."
+            : null,
+        );
       })
       .catch(() => {});
   }, [user, refreshSelfies]);
 
   async function handleAnalyzeSkin() {
     setAnalyzingSkin(true);
+    setSkinConcernsError(null);
     try {
       const result = await apiPost<SkinAnalysisResult>("/api/skin/analyze", {});
       setSkinColors(result.colors ?? null);
       setFitzpatrick(result.fitzpatrick?.fitzpatrick_label ?? null);
       setFaceShape(result.face_shape?.face_shape ?? null);
+      const concerns = result.skin_concerns?.concerns ?? null;
+      setSkinConcerns(concerns?.length ? concerns : null);
+      if (!concerns?.length) {
+        setSkinConcernsError("Skin concern scores unavailable.");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Skin analysis failed.");
     } finally {
@@ -385,6 +407,28 @@ export default function SettingsPage() {
                   }
                 </button>
             }
+            {(analyzingSkin || skinConcerns || skinConcernsError) && (
+              <div className="mt-3 p-3" style={{ border: "1px solid var(--border)", background: "var(--surface2)" }}>
+                <div className="text-2xs uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>
+                  Skin concern scores (YouCam Skin AI)
+                </div>
+                {analyzingSkin && !skinConcerns
+                  ? <div className="text-xs flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+                      <Loader2 size={13} className="spin" /> Analyzing skin concerns...
+                    </div>
+                  : skinConcerns
+                  ? <div className="flex flex-col gap-1">
+                      {skinConcerns.map((c) => (
+                        <div key={c.type} className="text-xs flex justify-between gap-4" style={{ color: "var(--text)" }}>
+                          <span className="capitalize">{c.type}</span>
+                          <span className="font-mono">{c.ui_score ?? "—"}/100</span>
+                        </div>
+                      ))}
+                    </div>
+                  : <p className="text-xs" style={{ color: "var(--text-muted)" }}>{skinConcernsError}</p>
+                }
+              </div>
+            )}
             {!primaryUrl && <p className="text-2xs mt-2" style={{ color: "var(--text-dim)" }}>Add a selfie above first.</p>}
           </motion.div>
         </div>
