@@ -61,6 +61,7 @@ PROVIDER_ERROR_MESSAGES = {
     "error_invalid_ref": "The garment reference could not be recognized.",
     "error_apply_region_mismatch": "The photo and garment cover different body regions.",
     "error_face_position_invalid": "Center one forward-facing face in even lighting and try again.",
+    "error_src_face_too_small": "Use a closer selfie so your face fills more of the frame.",
     "error_below_min_image_size": "The image is too small for a reliable result.",
     "exceed_max_filesize": "The image is too large (max 10MB).",
     "error_nsfw_content_detected": "The provider's safety checks blocked this result.",
