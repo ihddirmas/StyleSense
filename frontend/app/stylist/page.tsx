@@ -36,8 +36,8 @@ import type { CapsulePlan } from "@/types";
 const SUGGESTION_PROMPTS = [
   "What am I missing for a 5-day business trip?",
   "Plan a 5-day Milan work capsule from my closet",
-  "Would this suit me? https://www.uniqlo.com/us/en/products/E455532-000/00",
-  "Propose a try-on of a beach wedding look from my wardrobe",
+  "Would this suit me? https://www.amazon.com/dp/B07X1CSPHP",
+  "Generate a try-on of a beach wedding look from my wardrobe",
 ];
 
 export default function StylistPage() {
