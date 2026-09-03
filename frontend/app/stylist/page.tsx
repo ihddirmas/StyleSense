@@ -34,10 +34,10 @@ import { CapsulePlanCard } from "@/components/stylist/CapsulePlanCard";
 import type { CapsulePlan } from "@/types";
 
 const SUGGESTION_PROMPTS = [
-  "Does this suit my color season?",
-  "Paste a Myntra URL — verdict please",
-  "5-day work trip to Milan — capsule from my closet",
-  "What am I missing for a business trip?",
+  "What am I missing for a 5-day business trip?",
+  "Plan a 5-day Milan work capsule from my closet",
+  "Would this suit me? https://www.uniqlo.com/us/en/products/E455532-000/00",
+  "Propose a try-on of a beach wedding look from my wardrobe",
 ];
 
 export default function StylistPage() {
