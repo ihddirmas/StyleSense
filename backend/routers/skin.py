@@ -63,6 +63,15 @@ async def analyze_skin(user=Depends(current_user)):
         logger.warning(f"Face shape analysis failed for {user['id']} (non-fatal): {e}")
         result["face_shape"] = None
 
+    # Fourth call — YouCam skin-analysis concern scores (wrinkle/pore/acne).
+    # Non-fatal: tone + Fitzpatrick are the primary hackathon Skin AI outputs.
+    try:
+        skin_concerns = await _run_blocking(youcam_service.youcam_skin_concern_analysis, selfie_url)
+        result["skin_concerns"] = skin_concerns
+    except Exception as e:
+        logger.warning(f"Skin concern analysis failed for {user['id']} (non-fatal): {e}")
+        result["skin_concerns"] = None
+
     from datetime import datetime, timezone
 
     update_fields = {

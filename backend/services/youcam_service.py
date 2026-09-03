@@ -315,6 +315,54 @@ def youcam_photo_lighting(image_url: str) -> str | None:
 # src_file_url like the other two features above), so this downloads our own
 # Supabase-hosted selfie and re-uploads it via _upload_file first.
 
+# ───────────────────────────── SKIN CONCERN ANALYSIS ───────────────────────────── #
+# Contract from docs.perfectcorp.com/reference/ai_skin_analysis — wrinkle/pore/
+# acne concern scores (ui_score 0-100, higher = healthier). SD actions only;
+# do not mix HD and SD dst_actions in one request.
+
+SKIN_CONCERN_ACTIONS = ("wrinkle", "pore", "acne")
+
+
+def youcam_skin_concern_analysis(image_url: str) -> dict:
+    """Run YouCam's skin-analysis task for dermatology-style concern scores."""
+    with httpx.Client(timeout=30.0) as client:
+        img_resp = client.get(image_url)
+        img_resp.raise_for_status()
+        image_bytes = img_resp.content
+
+    content_type = "image/png" if image_url.lower().endswith(".png") else "image/jpeg"
+    filename = "selfie.png" if content_type == "image/png" else "selfie.jpg"
+    file_id = _upload_file("skin-analysis", image_bytes, filename, content_type)
+
+    data = _create_task_and_poll(
+        "skin-analysis",
+        {
+            "src_file_id": file_id,
+            "dst_actions": list(SKIN_CONCERN_ACTIONS),
+            "format": "json",
+        },
+        timeout=180.0,
+    )
+    output = (data.get("results") or {}).get("output") or []
+    concerns = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        concern_type = item.get("type")
+        if concern_type not in SKIN_CONCERN_ACTIONS:
+            continue
+        concerns.append({
+            "type": concern_type,
+            "ui_score": item.get("ui_score"),
+            "raw_score": item.get("raw_score"),
+        })
+    return {
+        "concerns": concerns,
+        "task_id": data.get("task_id"),
+        "provider": "youcam",
+    }
+
+
 def youcam_face_shape_analysis(image_url: str) -> dict:
     """Run YouCam's face-attr-analysis on a selfie, requesting only the
     faceShape feature (of 30+ available) -- Kibbe/stylist advice (necklines,
