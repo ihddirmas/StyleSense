@@ -17,9 +17,12 @@ Dashboard: [StyleSense RC project](https://app.revenuecat.com/projects/e81036ed)
 ```bash
 cd mobile
 cp .env.example .env   # fill Supabase + RC keys (repo agent already has a local .env)
-npm install
+npm install            # generates package-lock.json locally
 npx expo start
 ```
+
+> Note: `package-lock.json` is intentionally not committed (local secret-scan
+> false positive on a Supabase dependency path). Run `npm install` to generate it.
 
 Scan with Expo Go for UI + Test Store Preview API. Real StoreKit / Play Billing needs a **development build**.
 
