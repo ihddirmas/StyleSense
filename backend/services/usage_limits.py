@@ -1,14 +1,12 @@
 """Monthly usage caps for credit-spending generation endpoints.
 
-There is no billing/tier system live yet (see frontend/app/pricing/page.tsx for the
-tiers that are only marketing copy today) so every user is enforced against the
-Free tier's advertised cap. Once a real `plan` column + payment flow exists, swap
-the flat FREE_TRYON_MONTHLY_LIMIT for a per-user lookup keyed on that column.
+Free tier uses FREE_TRYON_MONTHLY_LIMIT. When REVENUECAT_SECRET_API_KEY is set,
+studio/pro entitlements raise the try-on cap (see revenuecat_service).
 """
 import os
 from fastapi import HTTPException
 
-from services import supabase_service, analytics_service, email_service
+from services import supabase_service, analytics_service, email_service, revenuecat_service
 
 FREE_TRYON_MONTHLY_LIMIT = int(os.getenv("FREE_TRYON_MONTHLY_LIMIT", "5"))
 FREE_EVENT_SCENE_MONTHLY_LIMIT = int(os.getenv("FREE_EVENT_SCENE_MONTHLY_LIMIT", "3"))
@@ -37,37 +35,43 @@ def _notify_cap_hit(user_id: str, dedupe_key: str, subject: str, body: str) -> N
     supabase_service.record_usage_event(user_id, dedupe_key)
 
 
+def tryon_limit(user_id: str) -> int:
+    return revenuecat_service.tryon_limit_for(user_id, FREE_TRYON_MONTHLY_LIMIT)
+
+
 def tryon_capped(user_id: str) -> bool:
     """Non-raising check so a caller (Aria) can decide whether to even propose a
     try-on before the user tries to confirm it, instead of catching an exception."""
     if user_id in UNLIMITED_TESTER_USER_IDS:
         return False
-    return supabase_service.count_tryons_this_month(user_id) >= FREE_TRYON_MONTHLY_LIMIT
+    return supabase_service.count_tryons_this_month(user_id) >= tryon_limit(user_id)
 
 
 def tryon_cap_message() -> str:
     return (
-        f"You've used all {FREE_TRYON_MONTHLY_LIMIT} free try-ons this month. "
-        "Upgrade for more (coming soon)."
+        f"You've used all your try-ons this month. "
+        "Upgrade in the StyleSense app (RevenueCat) for Studio or Pro."
     )
 
 
 def check_tryon_cap(user_id: str) -> None:
     if user_id in UNLIMITED_TESTER_USER_IDS:
         return
+    limit = tryon_limit(user_id)
     used = supabase_service.count_tryons_this_month(user_id)
-    if used >= FREE_TRYON_MONTHLY_LIMIT:
-        analytics_service.capture(user_id, "tryon_cap_hit", {"limit": FREE_TRYON_MONTHLY_LIMIT})
+    if used >= limit:
+        plan = revenuecat_service.get_plan(user_id)
+        analytics_service.capture(user_id, "tryon_cap_hit", {"limit": limit, "plan": plan})
         _notify_cap_hit(
             user_id, "cap_email_tryon",
-            "You've used all your free try-ons this month",
-            f"<p>You've used all {FREE_TRYON_MONTHLY_LIMIT} try-ons on the StyleSenseAI free plan this month. "
-            "More capacity is coming soon on paid plans -- we'll let you know when upgrades go live.</p>",
+            "You've used all your try-ons this month",
+            f"<p>You've used all {limit} try-ons on the StyleSenseAI {plan} plan this month. "
+            "Upgrade in the mobile app for more capacity.</p>",
         )
         raise HTTPException(
             402,
-            f"You've used all {FREE_TRYON_MONTHLY_LIMIT} try-ons on the free plan this month. "
-            "Upgrade for more (coming soon).",
+            f"You've used all {limit} try-ons on the {plan} plan this month. "
+            "Upgrade in the StyleSense app for more.",
         )
 
 

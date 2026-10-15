@@ -256,18 +256,23 @@ async def recent(limit: int = 12, all: bool = False, user = Depends(current_user
 
 @router.get("/usage-status")
 async def usage_status(user = Depends(current_user)):
+    from services import revenuecat_service
+
     is_unlimited = user["id"] in usage_limits.UNLIMITED_TESTER_USER_IDS
+    plan = "unlimited" if is_unlimited else revenuecat_service.get_plan(user["id"])
     if is_unlimited:
         return {
             "tryon": {"used": 0, "limit": 0},
             "event_scene": {"used": 0, "limit": 0},
             "animate": {"used": 0, "limit": 0},
+            "plan": plan,
         }
     tryon_used = supabase_service.count_tryons_this_month(user["id"])
     event_used = supabase_service.count_usage_events_this_month(user["id"], "event_scene")
     animate_used = supabase_service.count_usage_events_this_month(user["id"], "animate")
     return {
-        "tryon": {"used": tryon_used, "limit": usage_limits.FREE_TRYON_MONTHLY_LIMIT},
+        "tryon": {"used": tryon_used, "limit": usage_limits.tryon_limit(user["id"])},
         "event_scene": {"used": event_used, "limit": usage_limits.FREE_EVENT_SCENE_MONTHLY_LIMIT},
         "animate": {"used": animate_used, "limit": usage_limits.FREE_ANIMATE_MONTHLY_LIMIT},
+        "plan": plan,
     }
