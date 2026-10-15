@@ -32,7 +32,14 @@ router = APIRouter()
 CleanPref = Literal["auto", "runway", "rembg", "none"]
 
 
-def _generate_cutout(user_id: str, image_url: str, category: Optional[str] = None, image_bytes: Optional[bytes] = None) -> Optional[str]:
+def _generate_cutout(
+    user_id: str,
+    image_url: str,
+    category: Optional[str] = None,
+    image_bytes: Optional[bytes] = None,
+    *,
+    skip_occlusion_check: bool = False,
+) -> Optional[str]:
     """Best-effort transparent PNG cutout for the closet display. Returns a public URL
     or None (callers fall back to image_url). Pass image_bytes to skip the re-download.
     category picks the segmentation model (clothing vs general object)."""
@@ -40,7 +47,7 @@ def _generate_cutout(user_id: str, image_url: str, category: Optional[str] = Non
         data = image_bytes if image_bytes is not None else httpx.get(
             image_url, timeout=30, follow_redirects=True
         ).content
-        png = make_cutout(data, category=category)
+        png = make_cutout(data, category=category, skip_occlusion_check=skip_occlusion_check)
         if not png:
             return None
         return supabase_service.upload_to_storage("wardrobe", user_id, png, "cutout.png", "image/png")
@@ -133,6 +140,7 @@ async def upload_item(
     # are capped on Free tier; 'rembg' is local-only and free.
     final_url = original_url
     method_used = "skipped"
+    cleaned_bytes: Optional[bytes] = None
     if clean != "none":
         if clean in ("runway", "auto"):
             check_wardrobe_clean_cap(user["id"])
@@ -158,7 +166,15 @@ async def upload_item(
                 # Cleaning succeeded but storage upload failed - keep original
                 final_url = original_url
                 method_used = f"original (clean upload failed: {e})"
+                cleaned_bytes = None
 
+    cutout_url = _generate_cutout(
+        user["id"],
+        final_url,
+        category=category,
+        image_bytes=cleaned_bytes if method_used in ("runway", "rembg") else None,
+        skip_occlusion_check=method_used in ("runway", "rembg"),
+    )
     item = supabase_service.insert_wardrobe_item(
         user_id=user["id"],
         name=name,
@@ -167,7 +183,7 @@ async def upload_item(
         occasion=occasion,
         color=color,
         brand=brand,
-        cutout_url=None,  # cutouts disabled - the closet grid uses the clean image_url
+        cutout_url=cutout_url,
     )
     item["clean_method"] = method_used
     item["original_url"] = original_url if final_url != original_url else None
@@ -224,6 +240,12 @@ async def add_from_url(req: AddWardrobeFromUrl, user = Depends(current_user)):
             final_url = original_url
             method_used = f"original (clean failed: {e})"
 
+    cutout_url = _generate_cutout(
+        user["id"],
+        final_url,
+        category=req.category,
+        skip_occlusion_check=method_used in ("runway", "rembg") or clean_pref == "none",
+    )
     item = supabase_service.insert_wardrobe_item(
         user_id=user["id"],
         name=req.name,
@@ -234,7 +256,7 @@ async def add_from_url(req: AddWardrobeFromUrl, user = Depends(current_user)):
         brand=req.brand,
         source_url=req.source_url or req.image_url,
         tags=req.tags,
-        cutout_url=None,  # cutouts disabled - the grid uses the clean image_url
+        cutout_url=cutout_url,
     )
     item["clean_method"] = method_used
     item["original_url"] = original_url if final_url != original_url else None
@@ -274,6 +296,13 @@ async def extract_from_image(req: ExtractFromImage, user = Depends(current_user)
     except Exception as e:
         raise HTTPException(500, f"Could not save extracted image: {e}")
 
+    cutout_url = _generate_cutout(
+        user["id"],
+        permanent_url,
+        category=req.category,
+        image_bytes=r.content,
+        skip_occlusion_check=True,
+    )
     item = supabase_service.insert_wardrobe_item(
         user_id=user["id"],
         name=req.name,
@@ -282,7 +311,7 @@ async def extract_from_image(req: ExtractFromImage, user = Depends(current_user)
         occasion=req.occasion or "casual",
         source_url=req.image_url,
         tags=["extracted-from-friend"],
-        cutout_url=None,  # cutouts disabled - the grid uses the clean image_url
+        cutout_url=cutout_url,
     )
     item["clean_method"] = "runway-extract"
     return item
@@ -405,6 +434,13 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
             return None, AddMultiFailure(name=item.name, reason=f"Storage rehost failed: {e}")
 
         try:
+            cutout_url = _generate_cutout(
+                user["id"],
+                permanent_url,
+                category=item.category,
+                image_bytes=r.content,
+                skip_occlusion_check=True,
+            )
             row = supabase_service.insert_wardrobe_item(
                 user_id=user["id"],
                 name=item.name,
@@ -415,7 +451,7 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
                 brand=item.brand,
                 source_url=req.source_image_url,
                 tags=["multi-item-detected"],
-                cutout_url=None,  # cutouts disabled - the grid uses the clean image_url
+                cutout_url=cutout_url,
             )
             return row, None
         except Exception as e:
