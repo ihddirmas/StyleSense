@@ -119,35 +119,31 @@ def _cutout_with_model(image_bytes: bytes, model: str, category: Optional[str] =
     return rgba, _opaque_ratio(rgba)
 
 
-def make_cutout(image_bytes: bytes, category: Optional[str] = None) -> bytes | None:
+def make_cutout(
+    image_bytes: bytes,
+    category: Optional[str] = None,
+    *,
+    skip_occlusion_check: bool = False,
+) -> bytes | None:
     """
     Produce a TRANSPARENT PNG cutout for the closet display (NOT for try-on - try-on
     keeps using the white-bg image). Picks the clothing model for garments and a
     general object segmenter for accessories/shoes; if the primary model returns a
     near-empty result, retries with the other model. Returns PNG bytes, or None on
     failure / empty cutout (so the UI falls back to the white-bg image).
-    
-    WHY the critical fixes:
-    1. Occluded-photo detection: rejects photos of people wearing clothes (rembg can't
-       remove what's underneath). Prevents transparent cutouts showing body parts.
-    2. Alpha matting + feathering: removes background color bleed and smooths edges
-       for professional cutout quality.
-    3. 768×1024 normalization: consistent aspect ratio across all wardrobe items for
-       uniform grid display.
-    4. PNG compression level 9: smaller file size without quality loss.
+
+    skip_occlusion_check: set True for already-isolated studio shots (add-multi /
+    chat-added) so we skip the Claude vision gate (~$0.01) and go straight to rembg.
     """
-    # CRITICAL FIX #1: Detect occluded photos (person wearing clothes) BEFORE cutout
-    # WHY: rembg removes backgrounds, not occlusions. If the source shows a person
-    # wearing the garment, the cutout will show transparent body parts underneath,
-    # which looks broken. Reject these upfront and let the UI fall back to white-bg.
-    try:
-        is_clean, problems = verify_clean_garment(image_bytes, content_type="image/jpeg")
-        if not is_clean:
-            logger.info(f"make_cutout: rejecting occluded photo (category={category}, problems={problems})")
-            return None
-    except Exception as e:
-        # Don't block cutout pipeline on vision check errors
-        logger.warning(f"make_cutout: occluded-photo check failed ({e}); proceeding anyway")
+    if not skip_occlusion_check:
+        # Reject person-wearing-clothes photos — rembg can't remove occlusions.
+        try:
+            is_clean, problems = verify_clean_garment(image_bytes, content_type="image/jpeg")
+            if not is_clean:
+                logger.info(f"make_cutout: rejecting occluded photo (category={category}, problems={problems})")
+                return None
+        except Exception as e:
+            logger.warning(f"make_cutout: occluded-photo check failed ({e}); proceeding anyway")
     
     primary = _model_for_category(category)
     fallback = _GENERAL_MODEL if primary == _CLOTH_MODEL else _CLOTH_MODEL
