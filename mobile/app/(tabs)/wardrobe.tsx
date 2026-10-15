@@ -4,10 +4,11 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { apiGet, apiUpload } from "@/lib/api";
 import type { WardrobeItem } from "@/lib/types";
-import { colors } from "@/lib/theme";
+import { colors, fonts, radii } from "@/lib/theme";
 
 export default function WardrobeScreen() {
   const [items, setItems] = useState<WardrobeItem[]>([]);
@@ -64,11 +65,21 @@ export default function WardrobeScreen() {
   }
 
   return (
-    <Screen contentStyle={{ flex: 1, paddingHorizontal: 0 }}>
+    <Screen wash={false} contentStyle={{ flex: 1, paddingHorizontal: 0 }}>
       <View style={styles.header}>
-        <Text style={styles.title}>Closet</Text>
-        <Text style={styles.sub}>{items.length} pieces</Text>
-        <PrimaryButton label={uploading ? "Adding…" : "Add from photos"} onPress={addPhoto} loading={uploading} />
+        <PageHeader
+          eyebrow="Wardrobe"
+          title="Your closet"
+          subtitle={`${items.length} pieces`}
+          action={
+            <PrimaryButton
+              label={uploading ? "…" : "Add"}
+              onPress={addPhoto}
+              loading={uploading}
+              style={{ minWidth: 88, minHeight: 40, paddingHorizontal: 14 }}
+            />
+          }
+        />
       </View>
       <FlatList
         data={items}
@@ -78,7 +89,9 @@ export default function WardrobeScreen() {
         onRefresh={load}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 12 }}
         columnWrapperStyle={{ gap: 12 }}
-        ListEmptyComponent={<Text style={styles.empty}>Your closet is empty. Add a garment photo.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>Your closet is empty. Add a garment photo.</Text>
+        }
         renderItem={({ item }) => (
           <Pressable style={styles.card}>
             <Image source={{ uri: item.cutout_url || item.image_url }} style={styles.image} />
@@ -94,35 +107,36 @@ export default function WardrobeScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingBottom: 12, gap: 6 },
-  title: { fontFamily: "CormorantGaramond_500Medium", fontSize: 34, color: colors.text },
-  sub: { fontFamily: "PublicSans_400Regular", color: colors.textMuted, marginBottom: 8 },
+  header: { paddingHorizontal: 20 },
   card: {
     flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: 4,
   },
-  image: { width: "100%", aspectRatio: 0.85, backgroundColor: colors.bgSoft },
+  image: { width: "100%", aspectRatio: 0.85, backgroundColor: colors.surface2 },
   name: {
-    fontFamily: "PublicSans_500Medium",
-    color: colors.text,
+    fontFamily: fonts.bodyMedium,
+    color: colors.ink,
     paddingHorizontal: 10,
     paddingTop: 8,
+    fontSize: 13,
   },
   cat: {
-    fontFamily: "PublicSans_400Regular",
-    color: colors.textDim,
+    fontFamily: fonts.body,
+    color: colors.textMuted,
     paddingHorizontal: 10,
     paddingBottom: 10,
-    fontSize: 12,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   empty: {
-    fontFamily: "PublicSans_400Regular",
-    color: colors.textDim,
+    fontFamily: fonts.body,
+    color: colors.textMuted,
     padding: 20,
     textAlign: "center",
   },

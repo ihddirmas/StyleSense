@@ -1,14 +1,15 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
-import { colors } from "@/lib/theme";
+import { Text, View } from "react-native";
+import { colors, fonts } from "@/lib/theme";
 
 function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   return (
     <Text
       style={{
-        fontFamily: focused ? "PublicSans_600SemiBold" : "PublicSans_400Regular",
+        fontFamily: focused ? fonts.bodySemi : fonts.body,
         fontSize: 11,
-        color: focused ? colors.accentSoft : colors.textDim,
+        color: focused ? colors.ink : colors.textMuted,
+        letterSpacing: 0.3,
       }}
     >
       {label}
@@ -22,14 +23,18 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.bgElevated,
+          backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          borderTopWidth: 1,
           height: 64,
-          paddingTop: 6,
-          paddingBottom: 8,
+          paddingTop: 8,
+          paddingBottom: 10,
         },
-        tabBarActiveTintColor: colors.accentSoft,
-        tabBarInactiveTintColor: colors.textDim,
+        tabBarActiveTintColor: colors.ink,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarBackground: () => (
+          <View style={{ flex: 1, backgroundColor: colors.surface }} />
+        ),
       }}
     >
       <Tabs.Screen
@@ -43,14 +48,14 @@ export default function TabsLayout() {
         name="wardrobe"
         options={{
           title: "Wardrobe",
-          tabBarLabel: ({ focused }) => <TabLabel label="Closet" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Wardrobe" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="studio"
         options={{
           title: "Studio",
-          tabBarLabel: ({ focused }) => <TabLabel label="Try-On" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Studio" focused={focused} />,
         }}
       />
       <Tabs.Screen

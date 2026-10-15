@@ -9,16 +9,19 @@ export function Screen({
   scroll,
   style,
   contentStyle,
+  wash = true,
 }: {
   children: ReactNode;
   scroll?: boolean;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
+  wash?: boolean;
 }) {
   const body = scroll ? (
     <ScrollView
       contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       {children}
     </ScrollView>
@@ -28,7 +31,7 @@ export function Screen({
 
   return (
     <View style={[styles.root, style]}>
-      <LinearGradient />
+      {wash ? <LinearGradient /> : null}
       <SafeAreaView style={styles.safe}>{body}</SafeAreaView>
     </View>
   );

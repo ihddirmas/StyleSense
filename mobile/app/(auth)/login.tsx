@@ -5,7 +5,7 @@ import { Screen } from "@/components/Screen";
 import { BrandMark } from "@/components/BrandMark";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useAuth } from "@/providers/AuthProvider";
-import { colors } from "@/lib/theme";
+import { colors, fonts, radii } from "@/lib/theme";
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -25,16 +25,16 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen scroll contentStyle={{ justifyContent: "center", flexGrow: 1, gap: 28 }}>
-      <BrandMark />
+    <Screen scroll contentStyle={{ justifyContent: "center", flexGrow: 1, gap: 24 }}>
+      <View style={{ alignItems: "center" }}>
+        <BrandMark subtitle="Sign in to your closet" />
+      </View>
       <View style={styles.card}>
-        <Text style={styles.heading}>Welcome back</Text>
-        <Text style={styles.hint}>Sign in to your wardrobe and Aria.</Text>
         <TextInput
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder="Email"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={colors.textMuted}
           value={email}
           onChangeText={setEmail}
           style={styles.input}
@@ -42,7 +42,7 @@ export default function LoginScreen() {
         <TextInput
           secureTextEntry
           placeholder="Password"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={colors.textMuted}
           value={password}
           onChangeText={setPassword}
           style={styles.input}
@@ -60,37 +60,29 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    padding: 24,
     borderWidth: 1,
     borderColor: colors.border,
     gap: 12,
   },
-  heading: {
-    fontFamily: "CormorantGaramond_500Medium",
-    fontSize: 32,
-    color: colors.text,
-  },
-  hint: {
-    fontFamily: "PublicSans_400Regular",
-    color: colors.textMuted,
-    marginBottom: 4,
-  },
   input: {
-    backgroundColor: colors.bgSoft,
-    borderRadius: 12,
+    backgroundColor: colors.surface2,
+    borderRadius: radii.sm,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    color: colors.text,
-    fontFamily: "PublicSans_400Regular",
+    color: colors.ink,
+    fontFamily: fonts.body,
     borderWidth: 1,
     borderColor: colors.border,
+    fontSize: 15,
   },
   link: {
     textAlign: "center",
-    color: colors.accentSoft,
-    fontFamily: "PublicSans_500Medium",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyMedium,
     marginTop: 4,
+    fontSize: 13,
   },
 });

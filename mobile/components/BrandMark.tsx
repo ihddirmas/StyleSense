@@ -1,13 +1,15 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors } from "@/lib/theme";
+import { colors, fonts } from "@/lib/theme";
 
-export function BrandMark({ size = "lg" }: { size?: "sm" | "lg" }) {
-  const titleSize = size === "lg" ? 42 : 22;
+export function BrandMark({ size = "lg", subtitle }: { size?: "sm" | "lg"; subtitle?: string }) {
+  const titleSize = size === "lg" ? 40 : 22;
   return (
     <View>
-      <Text style={[styles.title, { fontSize: titleSize }]}>StyleSense</Text>
-      {size === "lg" ? (
-        <Text style={styles.sub}>AI wardrobe · try-on · stylist</Text>
+      <Text style={[styles.title, { fontSize: titleSize }]}>StyleSenseAI</Text>
+      {size === "lg" || subtitle ? (
+        <Text style={styles.sub}>
+          {subtitle ?? "AI wardrobe · try-on · stylist"}
+        </Text>
       ) : null}
     </View>
   );
@@ -15,14 +17,16 @@ export function BrandMark({ size = "lg" }: { size?: "sm" | "lg" }) {
 
 const styles = StyleSheet.create({
   title: {
-    fontFamily: "CormorantGaramond_500Medium",
-    color: colors.text,
-    letterSpacing: 0.5,
+    fontFamily: fonts.display,
+    color: colors.ink,
+    letterSpacing: -0.3,
   },
   sub: {
     marginTop: 4,
-    fontFamily: "PublicSans_400Regular",
+    fontFamily: fonts.body,
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
 });

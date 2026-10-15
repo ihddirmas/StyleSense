@@ -5,7 +5,7 @@ import {
   Text,
   type ViewStyle,
 } from "react-native";
-import { colors } from "@/lib/theme";
+import { colors, fonts, radii } from "@/lib/theme";
 
 export function PrimaryButton({
   label,
@@ -18,27 +18,36 @@ export function PrimaryButton({
   label: string;
   onPress: () => void;
   loading?: boolean;
-  variant?: "primary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost";
   style?: ViewStyle;
   disabled?: boolean;
 }) {
-  const bg =
-    variant === "primary" ? colors.accent : variant === "danger" ? colors.danger : "transparent";
-  const border = variant === "ghost" ? colors.border : "transparent";
+  const isPrimary = variant === "primary";
+  const isGhost = variant === "ghost";
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.btn,
-        { backgroundColor: bg, borderColor: border, opacity: pressed || disabled ? 0.7 : 1 },
+        isPrimary && styles.primary,
+        variant === "secondary" && styles.secondary,
+        isGhost && styles.ghost,
+        { opacity: pressed || disabled ? 0.7 : 1 },
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.text} />
+        <ActivityIndicator color={isPrimary ? colors.parchment : colors.ink} />
       ) : (
-        <Text style={styles.label}>{label}</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: isPrimary ? colors.parchment : isGhost ? colors.textMuted : colors.ink },
+          ]}
+        >
+          {label}
+        </Text>
       )}
     </Pressable>
   );
@@ -46,16 +55,27 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   btn: {
-    minHeight: 52,
-    borderRadius: 14,
+    minHeight: 48,
+    borderRadius: radii.btn,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 18,
-    borderWidth: 1,
+    paddingHorizontal: 22,
+    borderWidth: 2,
+  },
+  primary: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  secondary: {
+    backgroundColor: "transparent",
+    borderColor: colors.ink,
+  },
+  ghost: {
+    backgroundColor: "transparent",
+    borderColor: "transparent",
   },
   label: {
-    color: colors.text,
-    fontFamily: "PublicSans_600SemiBold",
-    fontSize: 16,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
   },
 });

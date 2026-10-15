@@ -2,15 +2,16 @@ import { useMemo, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import type { PurchasesPackage } from "react-native-purchases";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { usePurchases } from "@/providers/PurchasesProvider";
-import { colors } from "@/lib/theme";
+import { colors, fonts, radii } from "@/lib/theme";
 
 const FEATURES = [
-  { plan: "studio", label: "Studio — 40 AI try-ons / month" },
-  { plan: "studio", label: "Unlimited wardrobe items" },
-  { plan: "pro", label: "Pro — 100 AI try-ons / month" },
-  { plan: "pro", label: "Priority generation queue" },
+  "Studio — 40 AI try-ons / month",
+  "Unlimited wardrobe items",
+  "Pro — 100 AI try-ons / month",
+  "Priority generation queue",
 ];
 
 export default function PaywallScreen() {
@@ -50,25 +51,25 @@ export default function PaywallScreen() {
   }
 
   return (
-    <Screen scroll contentStyle={{ gap: 18 }}>
-      <Text style={styles.kicker}>REVENUECAT · SHIPATON 2026</Text>
-      <Text style={styles.title}>Unlock your wardrobe</Text>
-      <Text style={styles.sub}>
-        See yourself in every outfit before you buy. Powered by RevenueCat subscriptions.
-      </Text>
+    <Screen scroll contentStyle={{ gap: 14 }}>
+      <PageHeader
+        eyebrow="Pricing · RevenueCat"
+        title="Unlock your wardrobe"
+        subtitle="See yourself in every outfit before you buy."
+      />
 
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>Current plan: {plan}</Text>
+        <Text style={styles.badgeText}>Current plan · {plan}</Text>
       </View>
 
       {FEATURES.map((f) => (
-        <Text key={f.label} style={styles.feature}>
-          · {f.label}
+        <Text key={f} style={styles.feature}>
+          · {f}
         </Text>
       ))}
 
       <PrimaryButton
-        label={isPremium ? "Manage / refresh entitlement" : "Open RevenueCat Paywall"}
+        label={isPremium ? "Refresh entitlement" : "Open RevenueCat Paywall"}
         onPress={() => void presentPaywall()}
       />
 
@@ -106,40 +107,27 @@ export default function PaywallScreen() {
 }
 
 const styles = StyleSheet.create({
-  kicker: {
-    fontFamily: "PublicSans_600SemiBold",
-    color: colors.textDim,
-    letterSpacing: 2,
-    fontSize: 11,
-  },
-  title: {
-    fontFamily: "CormorantGaramond_500Medium",
-    fontSize: 40,
-    color: colors.text,
-    lineHeight: 44,
-  },
-  sub: { fontFamily: "PublicSans_400Regular", color: colors.textMuted, lineHeight: 22 },
   badge: {
     alignSelf: "flex-start",
-    backgroundColor: colors.bgSoft,
-    borderRadius: 999,
+    backgroundColor: colors.gold,
+    borderRadius: radii.sm,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  badgeText: { fontFamily: "PublicSans_600SemiBold", color: colors.accentSoft },
-  feature: { fontFamily: "PublicSans_400Regular", color: colors.text, fontSize: 15 },
+  badgeText: { fontFamily: fonts.bodySemi, color: colors.ink, fontSize: 12 },
+  feature: { fontFamily: fonts.body, color: colors.ink, fontSize: 15 },
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
     gap: 8,
   },
-  pkgTitle: { fontFamily: "CormorantGaramond_500Medium", fontSize: 26, color: colors.text },
-  pkgPrice: { fontFamily: "PublicSans_700Bold", color: colors.accentSoft, fontSize: 18 },
-  pkgDesc: { fontFamily: "PublicSans_400Regular", color: colors.textMuted, marginBottom: 4 },
-  hint: { fontFamily: "PublicSans_400Regular", color: colors.textDim, lineHeight: 20 },
+  pkgTitle: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
+  pkgPrice: { fontFamily: fonts.bodyBold, color: colors.ink, fontSize: 18 },
+  pkgDesc: { fontFamily: fonts.body, color: colors.textMuted, marginBottom: 4 },
+  hint: { fontFamily: fonts.body, color: colors.textMuted, lineHeight: 20, fontSize: 13 },
 });

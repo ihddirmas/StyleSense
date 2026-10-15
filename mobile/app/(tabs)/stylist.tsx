@@ -9,10 +9,11 @@ import {
   View,
 } from "react-native";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { apiPost } from "@/lib/api";
 import type { ChatMessage } from "@/lib/types";
-import { colors } from "@/lib/theme";
+import { colors, fonts, radii } from "@/lib/theme";
 
 type Msg = ChatMessage & { id: string };
 
@@ -44,8 +45,10 @@ export default function StylistScreen() {
       const res = await apiPost<{ reply: string }>("/api/stylist/chat", {
         messages: msgs,
       });
-      const reply = res.reply ?? "…";
-      setMessages((m) => [...m, { id: `a-${Date.now()}`, role: "assistant", content: reply }]);
+      setMessages((m) => [
+        ...m,
+        { id: `a-${Date.now()}`, role: "assistant", content: res.reply ?? "…" },
+      ]);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
@@ -62,10 +65,9 @@ export default function StylistScreen() {
   }
 
   return (
-    <Screen contentStyle={{ flex: 1, paddingHorizontal: 0 }}>
+    <Screen wash={false} contentStyle={{ flex: 1, paddingHorizontal: 0 }}>
       <View style={styles.header}>
-        <Text style={styles.title}>Aria</Text>
-        <Text style={styles.sub}>Personal AI stylist</Text>
+        <PageHeader eyebrow="Stylist" title="Aria" subtitle="Personal AI stylist" />
       </View>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -79,7 +81,14 @@ export default function StylistScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 10 }}
           renderItem={({ item }) => (
             <View style={[styles.bubble, item.role === "user" ? styles.user : styles.assistant]}>
-              <Text style={styles.bubbleText}>{item.content}</Text>
+              <Text
+                style={[
+                  styles.bubbleText,
+                  { color: item.role === "user" ? colors.parchment : colors.ink },
+                ]}
+              >
+                {item.content}
+              </Text>
             </View>
           )}
         />
@@ -88,11 +97,16 @@ export default function StylistScreen() {
             value={input}
             onChangeText={setInput}
             placeholder="Ask Aria anything about your style…"
-            placeholderTextColor={colors.textDim}
+            placeholderTextColor={colors.textMuted}
             style={styles.input}
             multiline
           />
-          <PrimaryButton label={busy ? "…" : "Send"} onPress={send} loading={busy} style={{ minWidth: 96 }} />
+          <PrimaryButton
+            label={busy ? "…" : "Send"}
+            onPress={send}
+            loading={busy}
+            style={{ minWidth: 88 }}
+          />
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -100,41 +114,41 @@ export default function StylistScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingBottom: 8 },
-  title: { fontFamily: "CormorantGaramond_500Medium", fontSize: 34, color: colors.text },
-  sub: { fontFamily: "PublicSans_400Regular", color: colors.textMuted },
+  header: { paddingHorizontal: 20 },
   bubble: {
     maxWidth: "88%",
-    borderRadius: 16,
+    borderRadius: radii.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  user: { alignSelf: "flex-end", backgroundColor: colors.accent },
+  user: { alignSelf: "flex-end", backgroundColor: colors.ink },
   assistant: {
     alignSelf: "flex-start",
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  bubbleText: { fontFamily: "PublicSans_400Regular", color: colors.text, lineHeight: 21 },
+  bubbleText: { fontFamily: fonts.body, lineHeight: 21, fontSize: 14 },
   composer: {
     flexDirection: "row",
     gap: 10,
     padding: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.surface,
     alignItems: "flex-end",
   },
   input: {
     flex: 1,
     minHeight: 48,
     maxHeight: 120,
-    borderRadius: 14,
+    borderRadius: radii.sm,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: colors.bgSoft,
-    color: colors.text,
-    fontFamily: "PublicSans_400Regular",
+    backgroundColor: colors.surface2,
+    color: colors.ink,
+    fontFamily: fonts.body,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

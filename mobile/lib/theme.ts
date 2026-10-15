@@ -1,22 +1,36 @@
+/** Mirrors frontend/app/globals.css :root tokens. */
 export const colors = {
-  bg: "#1A1714",
-  bgElevated: "#24201C",
-  bgSoft: "#2E2924",
-  text: "#F4EFE6",
-  textMuted: "#B8AFA3",
-  textDim: "#8B8175",
-  accent: "#C45C26",
-  accentSoft: "#E08A55",
-  border: "rgba(244,239,230,0.12)",
-  success: "#6B9E6E",
-  danger: "#C45C4A",
-  card: "#211E1A",
+  bg: "#DDD9CE",
+  surface: "#E5E1D6",
+  surface2: "#D4CFBF",
+  surface3: "#C6C0AE",
+  border: "rgba(60, 36, 21, 0.10)",
+  borderHover: "rgba(60, 36, 21, 0.32)",
+  text: "#3C2415",
+  textMuted: "#6B4B38",
+  textDim: "#6B4B38",
+  ink: "#3C2415",
+  parchment: "#DDD9CE",
+  gold: "#E7E2BC",
+  goldLight: "#EDE9CC",
+  onGold: "#3C2415",
+  green: "#6b8e5f",
+  red: "#e85c5c",
+  teal: "#5cb8b2",
 };
 
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
+export const radii = {
+  sm: 6,
+  md: 10,
+  lg: 14,
+  btn: 2,
+};
+
+export const fonts = {
+  display: "CormorantGaramond_400Regular",
+  displayMedium: "CormorantGaramond_500Medium",
+  body: "PublicSans_400Regular",
+  bodyMedium: "PublicSans_500Medium",
+  bodySemi: "PublicSans_600SemiBold",
+  bodyBold: "PublicSans_700Bold",
 };

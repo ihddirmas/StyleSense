@@ -1,33 +1,33 @@
 import { StyleSheet, View } from "react-native";
 import { colors } from "@/lib/theme";
 
-/** Soft atmospheric wash without an extra native gradient dependency. */
+/** Soft parchment atmosphere — matches the web FashionBackground wash. */
 export function LinearGradient() {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View style={styles.top} />
-      <View style={styles.bottom} />
+      <View style={styles.gold} />
+      <View style={styles.ink} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  top: {
+  gold: {
     position: "absolute",
-    top: -80,
-    left: -40,
+    top: -100,
+    right: -60,
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: "rgba(196,92,38,0.18)",
+    backgroundColor: "rgba(231, 226, 188, 0.55)",
   },
-  bottom: {
+  ink: {
     position: "absolute",
-    bottom: -60,
-    right: -50,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "rgba(139,115,85,0.16)",
+    bottom: -80,
+    left: -40,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: "rgba(60, 36, 21, 0.04)",
   },
 });

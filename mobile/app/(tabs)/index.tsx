@@ -6,11 +6,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "@/components/LinearFallback";
 import { BrandMark } from "@/components/BrandMark";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/providers/AuthProvider";
 import { usePurchases } from "@/providers/PurchasesProvider";
 import { apiGet } from "@/lib/api";
 import type { TryOnResult, UsageStatus, WardrobeItem } from "@/lib/types";
-import { colors } from "@/lib/theme";
+import { colors, fonts, radii } from "@/lib/theme";
 
 export default function HomeScreen() {
   const { user, signOut } = useAuth();
@@ -48,118 +49,138 @@ export default function HomeScreen() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <LinearGradient />
       <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28, paddingTop: 8, gap: 20 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            tintColor={colors.accentSoft}
-            onRefresh={async () => {
-              setRefreshing(true);
-              await load();
-              setRefreshing(false);
-            }}
-          />
-        }
-      >
-      <View style={styles.topRow}>
-        <BrandMark size="sm" />
-        <Pressable onPress={() => signOut()}>
-          <Text style={styles.signOut}>Sign out</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Your wardrobe,{"\n"}proven on you.</Text>
-        <Text style={styles.heroBody}>
-          {user?.email ?? "Signed in"} · plan {plan}
-        </Text>
-        {usage ? (
-          <Text style={styles.meter}>
-            Try-ons this month: {usage.tryon.used}/{usage.tryon.limit}
-          </Text>
-        ) : null}
-        <View style={styles.actions}>
-          <PrimaryButton label="Open Studio" onPress={() => router.push("/(tabs)/studio")} />
-          {plan === "free" ? (
-            <PrimaryButton
-              label="Upgrade with RevenueCat"
-              variant="ghost"
-              onPress={() => void presentPaywall()}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              tintColor={colors.ink}
+              onRefresh={async () => {
+                setRefreshing(true);
+                await load();
+                setRefreshing(false);
+              }}
             />
-          ) : null}
-        </View>
-      </View>
+          }
+        >
+          <View style={styles.topRow}>
+            <BrandMark size="sm" />
+            <Pressable onPress={() => signOut()}>
+              <Text style={styles.signOut}>Sign out</Text>
+            </Pressable>
+          </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+          <PageHeader
+            eyebrow="Dashboard"
+            title="Your wardrobe, proven on you."
+            subtitle={`${user?.email ?? "Signed in"} · plan ${plan}`}
+          />
 
-      <View>
-        <Text style={styles.section}>Closet snapshot</Text>
-        <Text style={styles.meta}>{items.length} items</Text>
-        <View style={styles.grid}>
-          {items.slice(0, 6).map((item) => (
-            <View key={item.id} style={styles.tile}>
-              <Image source={{ uri: item.cutout_url || item.image_url }} style={styles.thumb} />
-              <Text numberOfLines={1} style={styles.tileName}>
-                {item.name}
+          <View style={styles.card}>
+            {usage ? (
+              <Text style={styles.meter}>
+                Try-ons this month · {usage.tryon.used}/{usage.tryon.limit}
               </Text>
+            ) : null}
+            <View style={styles.actions}>
+              <PrimaryButton label="Open Studio" onPress={() => router.push("/(tabs)/studio")} />
+              {plan === "free" ? (
+                <PrimaryButton
+                  label="Upgrade"
+                  variant="secondary"
+                  onPress={() => void presentPaywall()}
+                />
+              ) : null}
             </View>
-          ))}
-          {!items.length ? (
-            <Text style={styles.empty}>Add pieces in Closet to start trying on.</Text>
-          ) : null}
-        </View>
-      </View>
+          </View>
 
-      <View>
-        <Text style={styles.section}>Recent try-ons</Text>
-        <View style={styles.row}>
-          {tryons.map((t) => (
-            <Image key={t.id} source={{ uri: t.result_image_url }} style={styles.tryon} />
-          ))}
-          {!tryons.length ? <Text style={styles.empty}>No try-ons yet.</Text> : null}
-        </View>
-      </View>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      </ScrollView>
+          <Text style={styles.sectionEyebrow}>Closet snapshot</Text>
+          <Text style={styles.meta}>{items.length} items</Text>
+          <View style={styles.grid}>
+            {items.slice(0, 6).map((item) => (
+              <View key={item.id} style={styles.tile}>
+                <Image source={{ uri: item.cutout_url || item.image_url }} style={styles.thumb} />
+                <Text numberOfLines={1} style={styles.tileName}>
+                  {item.name}
+                </Text>
+              </View>
+            ))}
+            {!items.length ? (
+              <Text style={styles.empty}>Add pieces in Wardrobe to start trying on.</Text>
+            ) : null}
+          </View>
+
+          <Text style={[styles.sectionEyebrow, { marginTop: 20 }]}>Recent try-ons</Text>
+          <View style={styles.row}>
+            {tryons.map((t) => (
+              <Image key={t.id} source={{ uri: t.result_image_url }} style={styles.tryon} />
+            ))}
+            {!tryons.length ? <Text style={styles.empty}>No try-ons yet.</Text> : null}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  signOut: { color: colors.textMuted, fontFamily: "PublicSans_500Medium" },
-  hero: {
-    backgroundColor: colors.card,
-    borderRadius: 22,
-    padding: 22,
+  content: { paddingHorizontal: 20, paddingBottom: 28, paddingTop: 8, gap: 8 },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  signOut: { color: colors.textMuted, fontFamily: fonts.bodyMedium, fontSize: 13 },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    padding: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 10,
+    gap: 12,
+    marginBottom: 12,
   },
-  heroTitle: {
-    fontFamily: "CormorantGaramond_500Medium",
-    fontSize: 36,
-    color: colors.text,
-    lineHeight: 40,
+  meter: { fontFamily: fonts.bodySemi, color: colors.ink, fontSize: 14 },
+  actions: { gap: 10 },
+  sectionEyebrow: {
+    fontFamily: fonts.body,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 2.2,
+    fontSize: 11,
+    marginTop: 8,
   },
-  heroBody: { fontFamily: "PublicSans_400Regular", color: colors.textMuted },
-  meter: { fontFamily: "PublicSans_600SemiBold", color: colors.accentSoft },
-  actions: { gap: 10, marginTop: 8 },
-  section: {
-    fontFamily: "CormorantGaramond_500Medium",
-    fontSize: 26,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  meta: { fontFamily: "PublicSans_400Regular", color: colors.textDim, marginBottom: 10 },
+  meta: { fontFamily: fonts.body, color: colors.textMuted, marginBottom: 10, fontSize: 13 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  tile: { width: "30%", gap: 4 },
-  thumb: { width: "100%", aspectRatio: 0.8, borderRadius: 12, backgroundColor: colors.bgSoft },
-  tileName: { fontFamily: "PublicSans_400Regular", color: colors.textMuted, fontSize: 12 },
-  row: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-  tryon: { width: 110, height: 150, borderRadius: 14, backgroundColor: colors.bgSoft },
-  empty: { fontFamily: "PublicSans_400Regular", color: colors.textDim },
-  error: { color: colors.danger, fontFamily: "PublicSans_500Medium" },
+  tile: {
+    width: "30%",
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  thumb: { width: "100%", aspectRatio: 0.8, backgroundColor: colors.surface2 },
+  tileName: {
+    fontFamily: fonts.body,
+    color: colors.textMuted,
+    fontSize: 11,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  row: { flexDirection: "row", gap: 10, flexWrap: "wrap", marginTop: 8 },
+  tryon: {
+    width: 110,
+    height: 150,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  empty: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 13 },
+  error: { color: colors.red, fontFamily: fonts.bodyMedium, marginBottom: 8 },
 });

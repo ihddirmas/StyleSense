@@ -67,7 +67,7 @@ export default function RootLayout() {
       <AuthProvider>
         <PurchasesProvider>
           <AuthGate>
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
             <Stack
               screenOptions={{
                 headerShown: false,

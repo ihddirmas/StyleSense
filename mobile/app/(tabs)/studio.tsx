@@ -11,11 +11,12 @@ import {
 import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { apiGet, apiPost, ApiError } from "@/lib/api";
 import type { WardrobeItem } from "@/lib/types";
 import { usePurchases } from "@/providers/PurchasesProvider";
-import { colors } from "@/lib/theme";
+import { colors, fonts, radii } from "@/lib/theme";
 
 type TryOnOut = { result_image_url: string; result_id?: string };
 
@@ -65,7 +66,7 @@ export default function StudioScreen() {
       return;
     }
     if (!selfieUrl) {
-      Alert.alert("Selfie required", "Upload a selfie on the web app or Home selfie flow first.");
+      Alert.alert("Selfie required", "Upload a selfie on the web app first, then return here.");
       return;
     }
     setBusy(true);
@@ -96,12 +97,7 @@ export default function StudioScreen() {
       if (e instanceof ApiError && e.status === 402) {
         Alert.alert("Free try-ons used", e.message, [
           { text: "Not now", style: "cancel" },
-          {
-            text: "Upgrade",
-            onPress: () => {
-              void presentPaywall();
-            },
-          },
+          { text: "Upgrade", onPress: () => void presentPaywall() },
         ]);
       } else {
         Alert.alert("Try-on failed", e?.message ?? "Try again");
@@ -112,16 +108,17 @@ export default function StudioScreen() {
   }
 
   return (
-    <Screen contentStyle={{ flex: 1, gap: 12 }}>
-      <Text style={styles.title}>Studio</Text>
-      <Text style={styles.sub}>
-        Select up to 3 pieces · plan {plan}. AI try-on uses your selfie.
-      </Text>
+    <Screen wash={false} contentStyle={{ flex: 1, gap: 10 }}>
+      <PageHeader
+        eyebrow="Studio"
+        title="Try it on"
+        subtitle={`Select up to 3 pieces · plan ${plan}`}
+      />
 
       <View style={styles.canvas}>
         {busy ? (
           <View style={styles.center}>
-            <ActivityIndicator color={colors.accentSoft} size="large" />
+            <ActivityIndicator color={colors.ink} size="large" />
             <Text style={styles.busy}>Generating look…</Text>
           </View>
         ) : result?.result_image_url ? (
@@ -164,37 +161,45 @@ export default function StudioScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontFamily: "CormorantGaramond_500Medium", fontSize: 34, color: colors.text },
-  sub: { fontFamily: "PublicSans_400Regular", color: colors.textMuted, marginBottom: 4 },
   canvas: {
     flex: 1,
     minHeight: 320,
-    borderRadius: 22,
+    borderRadius: radii.lg,
     overflow: "hidden",
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
   result: { width: "100%", height: "100%" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20, gap: 8 },
-  placeholder: { fontFamily: "CormorantGaramond_500Medium", fontSize: 24, color: colors.textMuted },
-  selectedHint: { fontFamily: "PublicSans_400Regular", color: colors.textDim, textAlign: "center" },
-  busy: { fontFamily: "PublicSans_500Medium", color: colors.textMuted },
+  placeholder: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
+  selectedHint: {
+    fontFamily: fonts.body,
+    color: colors.textMuted,
+    textAlign: "center",
+    fontSize: 13,
+  },
+  busy: { fontFamily: fonts.bodyMedium, color: colors.textMuted },
   chip: {
     width: 108,
-    backgroundColor: colors.bgElevated,
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
   },
-  chipOn: { borderColor: colors.accent, borderWidth: 2 },
-  chipImg: { width: "100%", height: 96, backgroundColor: colors.bgSoft },
+  chipOn: { borderColor: colors.ink, borderWidth: 2 },
+  chipImg: { width: "100%", height: 96, backgroundColor: colors.surface2 },
   chipText: {
-    fontFamily: "PublicSans_400Regular",
-    color: colors.text,
+    fontFamily: fonts.body,
+    color: colors.ink,
     fontSize: 11,
     padding: 8,
   },
-  empty: { fontFamily: "PublicSans_400Regular", color: colors.textDim },
+  empty: { fontFamily: fonts.body, color: colors.textMuted },
 });
