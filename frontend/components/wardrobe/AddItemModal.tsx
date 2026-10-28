@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import { Plus, Loader2, Link as LinkIcon, Upload, Check, X, Trash2, Sparkles, Image as ImageIcon } from "lucide-react";
+import { Plus, Loader2, Link as LinkIcon, Upload, Check, X, Trash2 } from "lucide-react";
 import { apiPost, apiUpload } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import type { WardrobeItem, DetectedItem } from "@/types";
@@ -10,6 +9,7 @@ import posthog from "posthog-js";
 
 const CATEGORIES = ["tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"];
 const OCCASIONS = ["any", "casual", "formal", "evening", "sport", "beach"];
+const MAX_GALLERY_PHOTOS = 12;
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -94,17 +94,17 @@ function DetectedItemsChecklist({
                 className="input"
                 value={r.category}
                 onChange={(e) => update(i, { category: e.target.value as DetectedItem["category"] })}
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
               </select>
-                <input
-                  className="input"
-                  placeholder="Color"
-                  value={r.color || ""}
-                  onChange={(e) => update(i, { color: e.target.value })}
-                />
+              <input
+                className="input"
+                placeholder="Color"
+                value={r.color || ""}
+                onChange={(e) => update(i, { color: e.target.value })}
+              />
               {r.position && (
                 <div className="col-span-2 text-xs" style={{ color: "var(--text-dim)" }}>
                   In source: {r.position}
@@ -147,10 +147,11 @@ function DetectedItemsChecklist({
   );
 }
 
+type GalleryEntry = { file: File; preview: string };
+
 export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = false }: AddItemModalProps) {
   const [tab, setTab] = useState<"upload" | "url">("upload");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<GalleryEntry[]>([]);
   const [url, setUrl] = useState("");
   const [scraping, setScraping] = useState(false);
   const [scrapedImage, setScrapedImage] = useState<string | null>(null);
@@ -160,15 +161,15 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
   const [color, setColor] = useState("");
   const [brand, setBrand] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [phase, setPhase] = useState<"form" | "detecting" | "adding" | "checklist">("form");
+  const [phase, setPhase] = useState<"form" | "detecting" | "adding" | "checklist" | "batch">("form");
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, label: "" });
   const [detected, setDetected] = useState<DetectedItem[]>([]);
   const [detectedSourceUrl, setDetectedSourceUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setPhase("form");
-      setFile(null);
-      setPreview(null);
+      setGallery([]);
       setUrl("");
       setScrapedImage(null);
       setName("");
@@ -179,15 +180,34 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
       setSubmitting(false);
       setDetected([]);
       setDetectedSourceUrl(null);
+      setBatchProgress({ current: 0, total: 0, label: "" });
       setTab("upload");
     }
   }, [isOpen]);
 
-  function handleFile(f: File) {
-    setFile(f);
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
-    reader.readAsDataURL(f);
+  function handleFiles(list: FileList | File[]) {
+    const incoming = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    if (!incoming.length) return;
+    const room = MAX_GALLERY_PHOTOS - gallery.length;
+    const slice = incoming.slice(0, Math.max(0, room));
+    if (incoming.length > room) {
+      toast.error(`You can import up to ${MAX_GALLERY_PHOTOS} photos at once.`);
+    }
+    slice.forEach((f) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setGallery((prev) => {
+          if (prev.length >= MAX_GALLERY_PHOTOS) return prev;
+          if (prev.some((g) => g.file.name === f.name && g.file.size === f.size)) return prev;
+          return [...prev, { file: f, preview: reader.result as string }];
+        });
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+
+  function removeGalleryAt(idx: number) {
+    setGallery((prev) => prev.filter((_, i) => i !== idx));
   }
 
   async function scrape() {
@@ -209,6 +229,112 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
     }
   }
 
+  async function addDetectedFromSource(
+    sourceUrl: string,
+    items: DetectedItem[],
+    method: string
+  ): Promise<WardrobeItem[]> {
+    const res = await apiPost<{ created: WardrobeItem[]; failed: { name: string; reason: string }[] }>(
+      "/api/wardrobe/add-multi",
+      { source_image_url: sourceUrl, items }
+    );
+    if (res.created?.length) {
+      posthog.capture("wardrobe_item_added", { method, item_count: res.created.length });
+    }
+    return res.created || [];
+  }
+
+  async function processSingleFile(file: File): Promise<"checklist" | "done" | "empty"> {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await apiUpload<{ image_url: string; detected: DetectedItem[] }>(
+      "/api/wardrobe/detect-items",
+      fd
+    );
+    if (!res.detected || res.detected.length === 0) return "empty";
+
+    if (res.detected.length === 1) {
+      setPhase("adding");
+      const d = res.detected[0];
+      const fd2 = new FormData();
+      fd2.append("file", file);
+      fd2.append("name", name.trim() || d.name);
+      const finalCategory = compact
+        ? d.category || "tops"
+        : category !== "tops"
+          ? category
+          : d.category || "tops";
+      fd2.append("category", finalCategory);
+      if (!compact) fd2.append("occasion", occasion);
+      const finalColor = color.trim() || d.color || "";
+      const finalBrand = brand.trim() || d.brand || "";
+      if (finalColor) fd2.append("color", finalColor);
+      if (finalBrand) fd2.append("brand", finalBrand);
+      const item = await apiUpload<WardrobeItem>("/api/wardrobe/upload", fd2);
+      posthog.capture("wardrobe_item_added", { method: "upload", item_count: 1, category: finalCategory });
+      toast.success("Item added.");
+      onAdded?.(item);
+      onClose();
+      return "done";
+    }
+
+    setDetected(res.detected);
+    setDetectedSourceUrl(res.image_url);
+    setPhase("checklist");
+    return "checklist";
+  }
+
+  async function processGalleryBatch(entries: GalleryEntry[]) {
+    setPhase("batch");
+    const createdAll: WardrobeItem[] = [];
+    let failPhotos = 0;
+    const total = entries.length;
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      setBatchProgress({
+        current: i + 1,
+        total,
+        label: `Scanning photo ${i + 1} of ${total}…`,
+      });
+      try {
+        const fd = new FormData();
+        fd.append("file", entry.file);
+        const res = await apiUpload<{ image_url: string; detected: DetectedItem[] }>(
+          "/api/wardrobe/detect-items",
+          fd
+        );
+        if (!res.detected?.length) {
+          failPhotos += 1;
+          continue;
+        }
+        setBatchProgress({
+          current: i + 1,
+          total,
+          label: `Adding ${res.detected.length} item${res.detected.length === 1 ? "" : "s"} from photo ${i + 1}…`,
+        });
+        const created = await addDetectedFromSource(res.image_url, res.detected, "gallery_batch");
+        createdAll.push(...created);
+        if (!created.length) failPhotos += 1;
+      } catch {
+        failPhotos += 1;
+      }
+    }
+
+    if (createdAll.length) {
+      toast.success(
+        failPhotos > 0
+          ? `${createdAll.length} item${createdAll.length === 1 ? "" : "s"} added. ${failPhotos} photo${failPhotos === 1 ? "" : "s"} skipped.`
+          : `${createdAll.length} item${createdAll.length === 1 ? "" : "s"} added from your gallery.`
+      );
+      onAddedMany?.(createdAll);
+      onClose();
+    } else {
+      toast.error("Could not add items from those photos. Try clearer shots or add one at a time.");
+      setPhase("form");
+    }
+  }
+
   async function submit() {
     if (tab === "url") {
       if (!scrapedImage) { toast.error("Scrape a URL or paste an image link first."); return; }
@@ -224,15 +350,15 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
           return;
         }
         if (res.detected.length === 1) {
-          const r2 = await apiPost<{ created: WardrobeItem[]; failed: { name: string; reason: string }[] }>(
-            "/api/wardrobe/add-multi",
-            { source_image_url: res.image_url, items: res.detected }
-          );
-          if (r2.created?.length) {
-            posthog.capture("wardrobe_item_added", { method: "url", item_count: r2.created.length, category: r2.created[0]?.category });
-            toast.success("Item added."); onAddedMany?.(r2.created); onClose();
+          const created = await addDetectedFromSource(res.image_url, res.detected, "url");
+          if (created.length) {
+            toast.success("Item added.");
+            onAddedMany?.(created);
+            onClose();
+          } else {
+            toast.error("Could not add item.");
+            setPhase("form");
           }
-          else { toast.error(`Could not add: ${r2.failed?.[0]?.reason || "unknown"}`); setPhase("form"); }
           return;
         }
         setDetected(res.detected);
@@ -245,43 +371,20 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
       return;
     }
 
-    if (!file) { toast.error("Upload a file first."); return; }
+    if (!gallery.length) { toast.error("Upload a file first."); return; }
+
+    if (gallery.length > 1) {
+      await processGalleryBatch(gallery);
+      return;
+    }
+
     setPhase("detecting");
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await apiUpload<{ image_url: string; detected: DetectedItem[] }>(
-        "/api/wardrobe/detect-items",
-        fd
-      );
-      if (!res.detected || res.detected.length === 0) {
+      const result = await processSingleFile(gallery[0].file);
+      if (result === "empty") {
         toast.error("No clothing items detected. Try a clearer photo.");
         setPhase("form");
-        return;
       }
-      if (res.detected.length === 1) {
-        setPhase("adding");
-        const d = res.detected[0];
-        const fd2 = new FormData();
-        fd2.append("file", file);
-        fd2.append("name", name.trim() || d.name);
-        const finalCategory = compact ? (d.category || "tops") : (category !== "tops" ? category : (d.category || "tops"));
-        fd2.append("category", finalCategory);
-        if (!compact) fd2.append("occasion", occasion);
-        const finalColor = color.trim() || d.color || "";
-        const finalBrand = brand.trim() || d.brand || "";
-        if (finalColor) fd2.append("color", finalColor);
-        if (finalBrand) fd2.append("brand", finalBrand);
-        const item = await apiUpload<WardrobeItem>("/api/wardrobe/upload", fd2);
-        posthog.capture("wardrobe_item_added", { method: "upload", item_count: 1, category: finalCategory });
-        toast.success("Item added.");
-        onAdded?.(item);
-        onClose();
-        return;
-      }
-      setDetected(res.detected);
-      setDetectedSourceUrl(res.image_url);
-      setPhase("checklist");
     } catch (e) {
       toast.error(`Detection failed: ${e instanceof Error ? e.message : "unknown"}`);
       setPhase("form");
@@ -292,23 +395,14 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
     if (!detectedSourceUrl || picked.length === 0) return;
     setSubmitting(true);
     try {
-      const res = await apiPost<{ created: WardrobeItem[]; failed: { name: string; reason: string }[] }>(
-        "/api/wardrobe/add-multi",
-        { source_image_url: detectedSourceUrl, items: picked }
-      );
-      const okCount = res.created?.length || 0;
-      const failCount = res.failed?.length || 0;
+      const created = await addDetectedFromSource(detectedSourceUrl, picked, "multi_detect");
+      const okCount = created.length;
       if (okCount > 0) {
-        posthog.capture("wardrobe_item_added", { method: "multi_detect", item_count: okCount });
-        toast.success(
-          failCount > 0
-            ? `${okCount} item${okCount === 1 ? "" : "s"} added. ${failCount} failed.`
-            : `${okCount} item${okCount === 1 ? "" : "s"} added.`
-        );
-        onAddedMany?.(res.created);
+        toast.success(`${okCount} item${okCount === 1 ? "" : "s"} added.`);
+        onAddedMany?.(created);
         onClose();
       } else {
-        toast.error(`Could not add any items: ${res.failed?.[0]?.reason || "unknown error"}. Try again or upload individually.`);
+        toast.error("Could not add any items. Try again or upload individually.");
       }
     } catch (e) {
       toast.error(`Failed: ${e instanceof Error ? e.message : "unknown"}`);
@@ -316,6 +410,8 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
       setSubmitting(false);
     }
   }
+
+  const singlePreview = gallery.length === 1 ? gallery[0].preview : null;
 
   return (
     <AnimatePresence>
@@ -345,6 +441,29 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
                 <Loader2 size={32} className="spin mb-4" style={{ color: "var(--on-gold)" }} />
                 <h2 className="font-display text-2xl mb-1">Adding to your closet...</h2>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>Cleaning up the garment and saving it.</p>
+              </div>
+            )}
+
+            {phase === "batch" && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Loader2 size={32} className="spin mb-4" style={{ color: "var(--on-gold)" }} />
+                <h2 className="font-display text-2xl mb-1">
+                  Importing gallery
+                </h2>
+                <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+                  {batchProgress.label || "Working through your photos…"}
+                </p>
+                <div className="w-full max-w-xs h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
+                  <div
+                    className="h-full transition-all"
+                    style={{
+                      width: batchProgress.total
+                        ? `${Math.round((batchProgress.current / batchProgress.total) * 100)}%`
+                        : "8%",
+                      background: "var(--ink)",
+                    }}
+                  />
+                </div>
               </div>
             )}
 
@@ -385,29 +504,73 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
                 {tab === "upload" ? (
                   <>
                     {!compact && (
-                      <p className="text-xs mb-3" style={{ color: "var(--text-dim)" }}>
-                        Upload a single item on a clean background, a flat lay of multiple items, or a photo of someone wearing an outfit — we&apos;ll detect and isolate each piece.
+                      <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+                        Pick one photo or a whole batch from your camera roll — we detect and isolate each piece.
                       </p>
                     )}
                     <label
-                      className="surface flex items-center justify-center cursor-pointer overflow-hidden mb-4"
-                      style={{ width: "100%", height: 180, borderStyle: file ? "solid" : "dashed" }}
+                      className="surface flex items-center justify-center cursor-pointer overflow-hidden mb-3"
+                      style={{ width: "100%", height: gallery.length > 1 ? 120 : 180, borderStyle: gallery.length ? "solid" : "dashed" }}
                     >
-                      {preview ? (
-                        <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+                      {singlePreview ? (
+                        <img src={singlePreview} alt="Preview" className="w-full h-full object-contain" />
+                      ) : gallery.length > 1 ? (
+                        <div className="text-center" style={{ color: "var(--text-dim)" }}>
+                          <Upload size={22} className="mx-auto mb-2" />
+                          <div className="text-xs">{gallery.length} photos selected — tap to add more</div>
+                        </div>
                       ) : (
                         <div className="text-center" style={{ color: "var(--text-dim)" }}>
                           <Upload size={24} className="mx-auto mb-2" />
-                          <div className="text-xs">JPG · JPG · PNG · WebP</div>
+                          <div className="text-xs">JPG · PNG · WebP — one or many</div>
                         </div>
                       )}
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
+                        multiple
                         className="hidden"
-                        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                        onChange={(e) => {
+                          if (e.target.files?.length) handleFiles(e.target.files);
+                          e.target.value = "";
+                        }}
                       />
                     </label>
+
+                    {gallery.length > 1 && (
+                      <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
+                        {gallery.map((g, i) => (
+                          <div key={`${g.file.name}-${i}`} className="relative shrink-0">
+                            <img
+                              src={g.preview}
+                              alt=""
+                              className="rounded-sm"
+                              style={{ width: 56, height: 56, objectFit: "cover" }}
+                            />
+                            <button
+                              type="button"
+                              aria-label="Remove photo"
+                              onClick={() => removeGalleryAt(i)}
+                              className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                              style={{ background: "var(--ink)", color: "var(--parchment)", border: "none", cursor: "pointer" }}
+                            >
+                              <X size={11} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {gallery.length === 1 && (
+                      <button
+                        type="button"
+                        className="text-xs mb-3 flex items-center gap-1"
+                        style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0 }}
+                        onClick={() => setGallery([])}
+                      >
+                        <X size={12} /> Clear photo
+                      </button>
+                    )}
                   </>
                 ) : (
                   <div className="mb-4">
@@ -436,7 +599,7 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
                   </div>
                 )}
 
-                {!compact && (
+                {!compact && gallery.length <= 1 && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="col-span-2">
                       <label className="label">Name *</label>
@@ -465,10 +628,22 @@ export function AddItemModal({ isOpen, onClose, onAdded, onAddedMany, compact = 
                   </div>
                 )}
 
+                {gallery.length > 1 && (
+                  <p className="text-xs mb-3" style={{ color: "var(--text-dim)" }}>
+                    Batch mode adds every item we find in each photo (up to {MAX_GALLERY_PHOTOS} photos).
+                  </p>
+                )}
+
                 <div className="flex justify-end gap-2 mt-6">
                   <button className="btn-secondary" onClick={onClose} disabled={submitting}>Cancel</button>
                   <button className="btn-primary" onClick={submit} disabled={submitting}>
-                    {submitting ? <><Loader2 size={16} className="spin" /> Saving...</> : "Add to wardrobe"}
+                    {submitting ? (
+                      <><Loader2 size={16} className="spin" /> Saving...</>
+                    ) : gallery.length > 1 ? (
+                      <><Plus size={16} /> Import {gallery.length} photos</>
+                    ) : (
+                      "Add to wardrobe"
+                    )}
                   </button>
                 </div>
               </>
