@@ -306,6 +306,7 @@ def _advise(state: AriaState) -> dict:
         "wardrobe": state.get("wardrobe", []),
         "color_profile": state.get("color_profile"),
         "kibbe_analysis": state.get("kibbe_analysis"),
+        "skin_analysis": state.get("skin_analysis"),
         "pending_photo_url": state.get("pending_photo_url"),
         "avatar_selfie_url": state.get("avatar_selfie_url"),
     }
