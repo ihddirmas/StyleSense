@@ -7,6 +7,8 @@ user must explicitly confirm before `execute_confirmed_tool` runs.
 """
 from typing import Optional
 
+from services import look_check_service
+
 VALID_CATEGORIES = {"tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"}
 VALID_OCCASIONS = {"casual", "formal", "evening", "sport", "beach", "any"}
 
@@ -134,10 +136,44 @@ ANTHROPIC_TOOLS = [
             "required": ["destination", "days", "dress_code"],
         },
     },
+    {
+        "name": "check_outfit",
+        "description": (
+            "Run the 'should I wear this today?' check on items the user OWNS: weather, "
+            "clean/ready status (laundry, ironing, stains), color vs their measured skin and "
+            "season palette (CIEDE2000), top+bottom color harmony, body-type fit, occasion "
+            "appropriateness (e.g. no plunging neckline at an office party), and whether the "
+            "shoes survive their commute. Free, read-only, runs immediately. Call it before "
+            "recommending or approving any specific outfit, and quote its numbers. Pass "
+            "whatever context the user gave; checks without data come back 'unknown' -- ask "
+            "for that context instead of guessing."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "item_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 6,
+                    "items": {"type": "string"},
+                    "description": "Wardrobe item ids from the wardrobe list.",
+                },
+                "occasion": {
+                    "type": "string",
+                    "enum": sorted(look_check_service.VALID_OCCASIONS),
+                },
+                "temp_c": {"type": "number", "description": "Temperature in Celsius, if known."},
+                "raining": {"type": "boolean"},
+                "walk_minutes": {"type": "integer", "minimum": 0, "maximum": 180},
+                "transport": {"type": "string", "enum": sorted(look_check_service.VALID_TRANSPORT)},
+            },
+            "required": ["item_ids"],
+        },
+    },
 ]
 
 CONFIRM_REQUIRED_TOOLS = {"add_wardrobe_items", "generate_tryon"}
-READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule"}
+READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule", "check_outfit"}
 
 _DRESS_CODES = {"business", "smart casual", "casual", "formal", "beach", "evening"}
 
@@ -226,6 +262,35 @@ def _validate_plan_capsule(raw_input: dict) -> Optional[dict]:
     }
 
 
+def _validate_check_outfit(raw_input: dict, wardrobe: list) -> Optional[dict]:
+    raw_input = raw_input or {}
+    item_ids = raw_input.get("item_ids")
+    if not isinstance(item_ids, list):
+        return None
+    wardrobe_ids = {w["id"] for w in (wardrobe or []) if w.get("id")}
+    valid_ids = [i for i in item_ids if isinstance(i, str) and i in wardrobe_ids]
+    if not valid_ids:
+        return None
+
+    def _num(key, lo, hi, cast):
+        try:
+            return max(lo, min(cast(raw_input[key]), hi))
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    raining = raw_input.get("raining")
+    occasion = raw_input.get("occasion")
+    transport = raw_input.get("transport")
+    return {
+        "item_ids": valid_ids[:6],
+        "occasion": occasion if occasion in look_check_service.VALID_OCCASIONS else None,
+        "temp_c": _num("temp_c", -40, 55, float),
+        "raining": raining if isinstance(raining, bool) else None,
+        "walk_minutes": _num("walk_minutes", 0, 180, int),
+        "transport": transport if transport in look_check_service.VALID_TRANSPORT else None,
+    }
+
+
 def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[dict]:
     """Re-validate Claude's tool_use input server-side before it's ever shown to the
     user (confirm-required tools) or executed (read-only tools). Returns a cleaned
@@ -240,6 +305,8 @@ def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[
         return _validate_list_gaps(raw_input)
     if name == "plan_trip_capsule":
         return _validate_plan_capsule(raw_input)
+    if name == "check_outfit":
+        return _validate_check_outfit(raw_input, wardrobe)
     return None
 
 
@@ -408,5 +475,19 @@ async def execute_readonly_tool(name: str, tool_input: dict, ctx: Optional[dict]
             kibbe_analysis=ctx.get("kibbe_analysis"),
         )
         return {"capsule_plan": plan, **plan}
+
+    if name == "check_outfit":
+        from services import kibbe_service
+
+        wanted = set(tool_input["item_ids"])
+        items = [w for w in (ctx.get("wardrobe") or []) if w.get("id") in wanted]
+        kibbe_type = (ctx.get("kibbe_analysis") or {}).get("kibbe_type")
+        return look_check_service.check_outfit(
+            items,
+            color_profile=ctx.get("color_profile"),
+            kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
+            skin_analysis=ctx.get("skin_analysis"),
+            **{k: v for k, v in tool_input.items() if k != "item_ids"},
+        )
 
     raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")

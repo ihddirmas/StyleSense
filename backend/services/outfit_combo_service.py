@@ -14,6 +14,7 @@ from collections import defaultdict
 from typing import Optional
 
 from services.suitability_service import score_items, get_silhouette_verdict
+from services.look_check_service import is_wearable
 
 MAX_CANDIDATES = 8
 MAX_CAPTIONED = 5
@@ -42,7 +43,7 @@ def generate_candidate_combos(
     kibbe_ref (kibbe_service.get_type_reference(...) shape) is optional --
     omitting it keeps the original color-only score.
     """
-    groups = _group_by_category(items)
+    groups = _group_by_category([it for it in items if is_wearable(it)])
     tops = groups.get("tops", [])
     bottoms = groups.get("bottoms", [])
     dresses = groups.get("dresses", [])
