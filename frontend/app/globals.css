@@ -550,6 +550,62 @@ button:focus:not(:focus-visible) { outline: none; }
 .closet-cutout { transition: transform 0.18s ease, filter 0.18s ease; }
 .closet-item:hover .closet-cutout { transform: translateY(-6px); }
 
+/* Cutout-style Items grid (Google Photos wardrobe–inspired) */
+.wardrobe-cutout-tile {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: var(--surface2);
+  border: 1px solid transparent;
+  padding: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.wardrobe-cutout-tile:hover {
+  background: color-mix(in srgb, var(--surface2) 85%, var(--ink) 8%);
+  transform: translateY(-2px);
+}
+.wardrobe-cutout-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+.wardrobe-create-fab {
+  position: fixed;
+  right: max(1.25rem, env(safe-area-inset-right));
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: color-mix(in srgb, var(--surface) 40%, #c8e6c9 60%);
+  color: var(--ink);
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.wardrobe-create-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px -10px rgba(0, 0, 0, 0.4);
+}
+.wardrobe-create-fab:active { transform: translateY(0); }
+
+@media (max-width: 640px) {
+  .wardrobe-create-fab {
+    bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem));
+  }
+}
+
 /* Landing page scroll escape — overrides html/body overflow:hidden for the marketing page */
 .landing-scroll {
   height: 100vh;
