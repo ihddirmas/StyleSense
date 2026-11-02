@@ -148,6 +148,26 @@ def test_huge_closet_is_capped_and_reports_how_many_were_checked():
     assert result["checked_combos"] == today_service.MAX_COMBOS
 
 
+def test_enormous_closet_stays_bounded_without_building_every_combination():
+    closet = (
+        [_item(f"t{i}", f"Crew tee {i}", "tops", "olive") for i in range(3000)]
+        + [_item(f"b{i}", f"Jeans {i}", "bottoms", "denim") for i in range(3000)]
+        + [_item(f"s{i}", f"Loafers {i}", "shoes", "tan") for i in range(300)]
+        + [_item(f"o{i}", f"Wool coat {i}", "outerwear", "camel") for i in range(299)]
+    )
+    result = today_service.eliminate(closet, color_profile=PROFILE)
+
+    assert result["total_combos"] == 3000 * 3000 * 300 * 300
+    assert result["checked_combos"] == today_service.MAX_COMBOS
+
+
+def test_every_combination_is_reachable_and_unique_in_a_small_closet():
+    total, combos = today_service._combos(CLOSET + [_item("d", "Rust dress", "dresses", "rust")])
+
+    keys = {tuple(i["id"] for i in combo) for combo in combos}
+    assert total == len(combos) == len(keys) == (3 * 2 + 1) * 2 * 2
+
+
 # -- Aria tool wiring --
 
 def test_tool_is_declared_readonly():

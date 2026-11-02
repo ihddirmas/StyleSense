@@ -12,7 +12,6 @@ because a preference should never leave someone with nothing to wear.
 """
 import random
 from collections import Counter
-from itertools import product
 from typing import Optional
 
 from services import look_check_service as look_check
@@ -32,15 +31,34 @@ def _by_category(items: list[dict], category: str) -> list[dict]:
     return [it for it in items if (it.get("category") or "").lower() == category]
 
 
-def _all_combos(wardrobe: list[dict]) -> list[tuple]:
-    """Every wearable base (top + bottom, or a dress) x shoes x optional outerwear."""
+def _combos(wardrobe: list[dict]) -> tuple[int, list[tuple]]:
+    """Returns (total combinations, the combos to check): every wearable base (top +
+    bottom, or a dress) x shoes x optional outerwear, sampled above MAX_COMBOS.
+
+    Works from indexes so the cost stays bounded however large the closet is: the
+    full product is never built, only counted."""
     tops, bottoms = _by_category(wardrobe, "tops"), _by_category(wardrobe, "bottoms")
-    bases = [(t, b) for t in tops for b in bottoms] + [(d,) for d in _by_category(wardrobe, "dresses")]
-    if not bases:
-        return []
+    dresses = _by_category(wardrobe, "dresses")
     shoes = [(s,) for s in _by_category(wardrobe, "shoes")] or [()]
     outer = [()] + [(o,) for o in _by_category(wardrobe, "outerwear")]
-    return [base + shoe + coat for base, shoe, coat in product(bases, shoes, outer)]
+
+    pairs = len(tops) * len(bottoms)
+    base_count = pairs + len(dresses)
+    total = base_count * len(shoes) * len(outer)
+    if total <= MAX_COMBOS:
+        indexes = range(total)
+    else:
+        indexes = random.Random(_SAMPLE_SEED).sample(range(total), MAX_COMBOS)
+
+    def decode(index: int) -> tuple:
+        rest, coat = divmod(index, len(outer))
+        base, shoe = divmod(rest, len(shoes))
+        if base < pairs:
+            top, bottom = divmod(base, len(bottoms))
+            return (tops[top], bottoms[bottom]) + shoes[shoe] + outer[coat]
+        return (dresses[base - pairs],) + shoes[shoe] + outer[coat]
+
+    return total, [decode(i) for i in indexes]
 
 
 def _status(check_result: dict, check: str) -> dict:
@@ -138,10 +156,7 @@ def eliminate(
 ) -> dict:
     """Returns {total_combos, checked_combos, stages, survivors, survivor_count,
     missing_context, measured_skin, garment_colors_measured}."""
-    combos = _all_combos(wardrobe)
-    total = len(combos)
-    if total > MAX_COMBOS:
-        combos = random.Random(_SAMPLE_SEED).sample(combos, MAX_COMBOS)
+    total, combos = _combos(wardrobe)
 
     results = [
         {
