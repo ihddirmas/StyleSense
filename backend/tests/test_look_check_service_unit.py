@@ -356,3 +356,14 @@ def test_top_with_no_cut_data_is_unknown_for_shape_and_lowers_confidence():
                          color_profile=AUTUMN_INV_TRIANGLE)
     assert _check(plain, "shape")["status"] == "unknown"
     assert "Body shape" in plain["unknowns"]
+
+
+def test_beachwear_fails_at_modest_occasions():
+    for name in ("Orange textured bikini top", "Striped swimsuit", "Knit bandeau", "White tube top"):
+        r = check_outfit([{"id": "1", "name": name, "category": "tops", "color": "orange"}], occasion="office_party")
+        assert _check(r, "occasion")["status"] == "fail", name
+
+
+def test_beachwear_is_fine_at_the_beach():
+    r = check_outfit([{"id": "1", "name": "Orange bikini top", "category": "tops", "color": "orange"}], occasion="beach")
+    assert _check(r, "occasion")["status"] != "fail"
