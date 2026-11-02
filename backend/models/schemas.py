@@ -197,6 +197,7 @@ class StylistChatResponse(BaseModel):
     pending_action: Optional[PendingAction] = None
     product_preview: Optional[ProductPreview] = None
     capsule_plan: Optional[dict] = None
+    look_checks: List[dict] = []
 
 
 class StylistFeedbackRequest(BaseModel):

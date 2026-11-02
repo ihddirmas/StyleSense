@@ -482,12 +482,16 @@ async def execute_readonly_tool(name: str, tool_input: dict, ctx: Optional[dict]
         wanted = set(tool_input["item_ids"])
         items = [w for w in (ctx.get("wardrobe") or []) if w.get("id") in wanted]
         kibbe_type = (ctx.get("kibbe_analysis") or {}).get("kibbe_type")
-        return look_check_service.check_outfit(
+        result = look_check_service.check_outfit(
             items,
             color_profile=ctx.get("color_profile"),
             kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
             skin_analysis=ctx.get("skin_analysis"),
             **{k: v for k, v in tool_input.items() if k != "item_ids"},
         )
+        return {
+            **result,
+            "items": [{"id": i.get("id"), "name": i.get("name"), "image_url": i.get("image_url")} for i in items],
+        }
 
     raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")

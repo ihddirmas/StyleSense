@@ -142,6 +142,7 @@ async def chat(req: StylistChatRequest, user = Depends(current_user)):
         pending_action=pending_action,
         product_preview=result.get("product_preview"),
         capsule_plan=result.get("capsule_plan"),
+        look_checks=result.get("look_checks") or [],
     )
 
 
