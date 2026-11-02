@@ -482,7 +482,8 @@ def _check_shape(items: list[dict], body_type: Optional[str], kibbe_ref: Optiona
 
 
 _REVEALING_HARD = ("deep v", "deep-v", "plunge", "plunging", "low-cut", "low cut", "backless", "sheer",
-                   "see-through", "bralette", "strapless", "cut-out", "cutout", "corset")
+                   "see-through", "bralette", "strapless", "cut-out", "cutout", "corset",
+                   "bikini", "swimsuit", "swimwear", "bandeau", "tube top")
 _REVEALING_SOFT = ("mini", "crop", "cropped", "bodycon", "slip dress", "micro")
 _CASUAL_SHOES = ("sneaker", "trainer", "flip flop", "flip-flop", "slide", "croc")
 # Names that tell us the neckline is covered, so a modest occasion can actually pass.
