@@ -72,6 +72,24 @@ export interface CapsulePlan {
   coverage_pct?: number;
 }
 
+export type LookCheckStatus = "pass" | "warn" | "fail" | "unknown";
+export type LookCheckVerdict = "wear" | "tweak" | "skip";
+
+export interface LookCheck {
+  verdict: LookCheckVerdict;
+  headline: string;
+  checks: Array<{
+    check: string;
+    label: string;
+    status: LookCheckStatus;
+    findings: Array<{ status: LookCheckStatus; reason: string; item_id?: string | null }>;
+  }>;
+  confidence: number;
+  unknowns: string[];
+  measured_skin: boolean;
+  items?: Array<{ id: string; name: string; image_url?: string | null }>;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -86,6 +104,7 @@ export interface ChatMessage {
   pendingAction?: PendingAction; // a tool call Aria proposed, awaiting confirm/cancel
   productPreview?: ProductPreview; // a link Aria looked up via lookup_product_from_url
   capsulePlan?: CapsulePlan;
+  lookChecks?: LookCheck[];   // every check_outfit Aria ran this turn, in call order
   feedbackRating?: "up" | "down";
 }
 
