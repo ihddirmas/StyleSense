@@ -32,7 +32,8 @@ import ThinkingIndicator from "@/components/stylist/ThinkingIndicator";
 import TrainTasteModal from "@/components/stylist/TrainTasteModal";
 import { CapsulePlanCard } from "@/components/stylist/CapsulePlanCard";
 import { LookCheckCard } from "@/components/stylist/LookCheckCard";
-import type { CapsulePlan, LookCheck } from "@/types";
+import { TodayFunnelCard } from "@/components/stylist/TodayFunnelCard";
+import type { CapsulePlan, LookCheck, TodayFunnel } from "@/types";
 
 const SUGGESTION_PROMPTS = [
   "What am I missing for a 5-day business trip?",
@@ -418,6 +419,7 @@ export default function StylistPage() {
         } | null;
         capsule_plan?: CapsulePlan | null;
         look_checks?: LookCheck[];
+        today_funnel?: TodayFunnel | null;
       }>("/api/stylist/chat", payload);
       const assistantMsg: ChatMessage = {
         role: "assistant",
@@ -444,6 +446,7 @@ export default function StylistPage() {
           : undefined,
         capsulePlan: res.capsule_plan ?? undefined,
         lookChecks: res.look_checks?.length ? res.look_checks : undefined,
+        todayFunnel: res.today_funnel ?? undefined,
       };
       const updatedMessages = [...next, assistantMsg];
       setMessages(updatedMessages);
@@ -826,6 +829,7 @@ const MessageBubble = memo(function MessageBubble({
           onSaveOutfit={m.manifestUrl ? () => onSaveOutfit(i) : undefined}
         />
         {m.capsulePlan && <CapsulePlanCard plan={m.capsulePlan} />}
+        {m.todayFunnel && <TodayFunnelCard funnel={m.todayFunnel} />}
         {m.lookChecks?.map((check, checkIndex) => (
           <LookCheckCard key={checkIndex} check={check} />
         ))}

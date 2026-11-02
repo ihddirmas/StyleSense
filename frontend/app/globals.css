@@ -580,6 +580,9 @@ button:focus:not(:focus-visible) { outline: none; }
   display: block;
   pointer-events: none;
 }
+.capitalize-first::first-letter {
+  text-transform: uppercase;
+}
 .wardrobe-cutout-img--away {
   opacity: 0.35;
   filter: grayscale(1);

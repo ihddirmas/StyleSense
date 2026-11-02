@@ -198,6 +198,7 @@ class StylistChatResponse(BaseModel):
     product_preview: Optional[ProductPreview] = None
     capsule_plan: Optional[dict] = None
     look_checks: List[dict] = []
+    today_funnel: Optional[dict] = None
 
 
 class StylistFeedbackRequest(BaseModel):

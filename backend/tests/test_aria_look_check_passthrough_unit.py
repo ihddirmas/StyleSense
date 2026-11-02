@@ -99,3 +99,13 @@ def test_prompt_marks_items_that_cannot_be_worn_today():
     assert "UNAVAILABLE TODAY" in rust and "laundry" in rust
     assert "UNAVAILABLE" not in cream
     assert "UNAVAILABLE" not in linen and "needs ironing" in linen
+
+
+def test_funnel_result_reaches_the_response(monkeypatch):
+    call = SimpleNamespace(
+        type="tool_use", id="t1", name="what_can_i_wear_today",
+        input={"occasion": "office_party", "temp_c": 9, "raining": True},
+    )
+    result = _advise_with(monkeypatch, [SimpleNamespace(stop_reason="tool_use", content=[call]), _text("Here you go.")])
+
+    assert result["today_funnel"]["context"]["occasion"] == "office_party"

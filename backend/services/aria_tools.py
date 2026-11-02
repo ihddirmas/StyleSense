@@ -170,10 +170,33 @@ ANTHROPIC_TOOLS = [
             "required": ["item_ids"],
         },
     },
+    {
+        "name": "what_can_i_wear_today",
+        "description": (
+            "Eliminate the user's whole closet down to the outfits that survive today: laundry and "
+            "stains, occasion and neckline, shoes vs the commute, weather, color vs their measured "
+            "skin and season, top+bottom harmony, and body shape. Returns how many combinations "
+            "each stage cut and why, plus up to 3 survivors. Free, read-only, runs immediately. "
+            "Call it for 'what should I wear', 'what can I wear to X', or any open outfit question, "
+            "instead of picking from the wardrobe yourself. Pass everything the user said. Give "
+            "`city` for live weather when they didn't state it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "occasion": {"type": "string", "enum": sorted(look_check_service.VALID_OCCASIONS)},
+                "temp_c": {"type": "number", "description": "Temperature in Celsius, only if the user stated it."},
+                "raining": {"type": "boolean", "description": "Only if the user stated it."},
+                "walk_minutes": {"type": "integer", "minimum": 0, "maximum": 180},
+                "transport": {"type": "string", "enum": sorted(look_check_service.VALID_TRANSPORT)},
+                "city": {"type": "string", "description": "City for live weather, e.g. 'Pune'."},
+            },
+        },
+    },
 ]
 
 CONFIRM_REQUIRED_TOOLS = {"add_wardrobe_items", "generate_tryon"}
-READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule", "check_outfit"}
+READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule", "check_outfit", "what_can_i_wear_today"}
 
 _DRESS_CODES = {"business", "smart casual", "casual", "formal", "beach", "evening"}
 
@@ -291,6 +314,26 @@ def _validate_check_outfit(raw_input: dict, wardrobe: list) -> Optional[dict]:
     }
 
 
+def _validate_what_to_wear(raw_input: dict) -> dict:
+    raw_input = raw_input or {}
+
+    def _num(key, lo, hi, cast):
+        try:
+            return max(lo, min(cast(raw_input[key]), hi))
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    raining, occasion, transport, city = (raw_input.get(k) for k in ("raining", "occasion", "transport", "city"))
+    return {
+        "occasion": occasion if occasion in look_check_service.VALID_OCCASIONS else None,
+        "temp_c": _num("temp_c", -40, 55, float),
+        "raining": raining if isinstance(raining, bool) else None,
+        "walk_minutes": _num("walk_minutes", 0, 180, int),
+        "transport": transport if transport in look_check_service.VALID_TRANSPORT else None,
+        "city": city.strip()[:80] if isinstance(city, str) and city.strip() else None,
+    }
+
+
 def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[dict]:
     """Re-validate Claude's tool_use input server-side before it's ever shown to the
     user (confirm-required tools) or executed (read-only tools). Returns a cleaned
@@ -307,6 +350,8 @@ def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[
         return _validate_plan_capsule(raw_input)
     if name == "check_outfit":
         return _validate_check_outfit(raw_input, wardrobe)
+    if name == "what_can_i_wear_today":
+        return _validate_what_to_wear(raw_input)
     return None
 
 
@@ -492,6 +537,42 @@ async def execute_readonly_tool(name: str, tool_input: dict, ctx: Optional[dict]
         return {
             **result,
             "items": [{"id": i.get("id"), "name": i.get("name"), "image_url": i.get("image_url")} for i in items],
+        }
+
+    if name == "what_can_i_wear_today":
+        from services import kibbe_service, today_service, weather_service
+
+        temp_c, raining = tool_input.get("temp_c"), tool_input.get("raining")
+        weather = None
+        if temp_c is None and raining is None and tool_input.get("city"):
+            weather = await weather_service.get_weather_for_city(tool_input["city"])
+        if weather:
+            temp_c, raining = weather["temp_c"], weather["raining"]
+
+        kibbe_type = (ctx.get("kibbe_analysis") or {}).get("kibbe_type")
+        result = today_service.eliminate(
+            ctx.get("wardrobe") or [],
+            color_profile=ctx.get("color_profile"),
+            kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
+            skin_analysis=ctx.get("skin_analysis"),
+            occasion=tool_input.get("occasion"),
+            temp_c=temp_c,
+            raining=raining,
+            walk_minutes=tool_input.get("walk_minutes"),
+            transport=tool_input.get("transport"),
+        )
+        has_weather = temp_c is not None or raining is not None
+        return {
+            **result,
+            "context": {
+                "occasion": tool_input.get("occasion"),
+                "temp_c": temp_c,
+                "raining": raining,
+                "walk_minutes": tool_input.get("walk_minutes"),
+                "transport": tool_input.get("transport"),
+                "weather_source": (weather or {}).get("source") or ("user" if has_weather else None),
+                "place": (weather or {}).get("place"),
+            },
         }
 
     raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")

@@ -17,7 +17,7 @@ const STATUS_STYLE: Record<LookCheckStatus, { Icon: LucideIcon; word: string; cl
   unknown: { Icon: HelpCircle, word: "Not enough data", className: "text-muted" },
 };
 
-function formatReason(reason: string): string {
+export function formatReason(reason: string): string {
   return reason
     .replace(/ -- /g, " — ")
     .replace(/\bdE (\d)/g, "ΔE $1")
