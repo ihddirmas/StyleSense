@@ -90,17 +90,14 @@ async def analyze_skin(user=Depends(current_user)):
     from services import color_service
 
     skin_hex = (result.get("colors") or {}).get("skin_color")
-    classification = color_service.classify_season_from_hex(skin_hex)
-    profile_update: dict = dict(classification) if classification else {}
+    profile = color_service.merge_measured_skin(row.get("color_profile") or {}, skin_hex)
 
     measured_shape = (face_shape_result or {}).get("face_shape")
     if measured_shape:
-        profile_update["face_shape"] = measured_shape.lower()
-        profile_update["face_shape_source"] = "youcam_measured"
+        profile = {**profile, "face_shape": measured_shape.lower(), "face_shape_source": "youcam_measured"}
 
-    if profile_update:
-        current_profile = row.get("color_profile") or {}
-        update_fields["color_profile"] = {**current_profile, **profile_update}
+    if profile:
+        update_fields["color_profile"] = profile
 
     supabase_service.upsert_user(user["id"], **update_fields)
 

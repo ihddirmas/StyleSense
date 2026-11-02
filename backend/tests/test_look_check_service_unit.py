@@ -81,18 +81,25 @@ def test_body_type_reason_uses_the_right_article():
     assert "an inverted triangle frame" in _check(r, "shape")["findings"][0]["reason"]
 
 
-def test_black_top_fails_for_autumn_because_it_reads_winter():
+def test_black_top_warns_for_autumn_because_it_reads_winter():
     r = check_outfit([{"id": "1", "name": "Black tee", "category": "tops", "color": "black"}],
                      color_profile=AUTUMN_INV_TRIANGLE)
     finding = _check(r, "color_on_you")["findings"][0]
-    assert finding["status"] == "fail"
+    assert finding["status"] == "warn"
     assert "winter" in finding["reason"]
+    assert "scarf" in finding["reason"]
 
 
 def test_off_palette_bottom_is_only_a_warning_away_from_the_face():
-    r = check_outfit([{"id": "1", "name": "Black jeans", "category": "bottoms", "color": "black"}],
+    r = check_outfit([{"id": "1", "name": "Icy blue trousers", "category": "bottoms", "color": "#BFE3F5"}],
                      color_profile=AUTUMN_INV_TRIANGLE)
     assert _check(r, "color_on_you")["status"] == "warn"
+
+
+def test_neutral_bottom_passes_even_when_off_palette():
+    r = check_outfit([{"id": "1", "name": "Black jeans", "category": "bottoms", "color": "black"}],
+                     color_profile=AUTUMN_INV_TRIANGLE)
+    assert _check(r, "color_on_you")["status"] == "pass"
 
 
 def test_top_close_to_measured_skin_warns_washout():
@@ -298,4 +305,54 @@ def test_execute_readonly_check_outfit_uses_context_profiles():
     ))
     assert result["verdict"] == "skip"
     assert _check(result, "occasion")["status"] == "fail"
-    assert _check(result, "color_on_you")["status"] == "fail"
+    assert _check(result, "color_on_you")["status"] == "warn"
+
+
+# -- verdicts stay usable and never overclaim --
+
+def test_color_alone_never_blocks_an_outfit():
+    r = check_outfit(
+        [{"id": "1", "name": "Black crew tee", "category": "tops", "color": "black"}],
+        color_profile=AUTUMN_INV_TRIANGLE,
+    )
+    assert r["verdict"] == "tweak"
+
+
+def test_denim_on_the_lower_body_is_a_neutral_in_every_season():
+    for season in ("spring", "summer", "autumn", "winter"):
+        r = check_outfit(
+            [{"id": "1", "name": "Blue jeans", "category": "bottoms", "color": "denim"}],
+            color_profile={"season": season},
+        )
+        assert _check(r, "color_on_you")["status"] == "pass", season
+
+
+def test_staple_outfit_can_earn_wear_when_it_fits_the_palette():
+    r = check_outfit(
+        [
+            {"id": "1", "name": "Olive crew tee", "category": "tops", "color": "olive"},
+            {"id": "2", "name": "Blue jeans", "category": "bottoms", "color": "denim"},
+        ],
+        color_profile=AUTUMN_INV_TRIANGLE, occasion="casual", temp_c=24, raining=False,
+        walk_minutes=2, transport="car",
+    )
+    assert r["verdict"] == "wear", r
+
+
+def test_top_with_unknown_neckline_is_unknown_at_a_modest_occasion_not_a_pass():
+    r = check_outfit([{"id": "1", "name": "Black top", "category": "tops", "color": "black"}], occasion="office_party")
+    occasion = _check(r, "occasion")
+    assert occasion["status"] == "unknown"
+    assert "neckline" in occasion["findings"][0]["reason"]
+
+
+def test_named_covered_neckline_passes_at_a_modest_occasion():
+    r = check_outfit([{"id": "1", "name": "Black turtleneck", "category": "tops", "color": "black"}], occasion="office_party")
+    assert _check(r, "occasion")["status"] == "pass"
+
+
+def test_top_with_no_cut_data_is_unknown_for_shape_and_lowers_confidence():
+    plain = check_outfit([{"id": "1", "name": "Plain tee", "category": "tops", "color": "olive"}],
+                         color_profile=AUTUMN_INV_TRIANGLE)
+    assert _check(plain, "shape")["status"] == "unknown"
+    assert "Body shape" in plain["unknowns"]
