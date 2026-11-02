@@ -10,7 +10,7 @@ import os
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from typing import Optional, Literal
-from services import supabase_service, wardrobe_vision_service, outfit_combo_service, kibbe_service
+from services import garment_color_service, supabase_service, wardrobe_vision_service, outfit_combo_service, kibbe_service
 from services.auth_service import current_user
 from services.image_service import validate_image_bytes, fetch_image_from_url
 from services.garment_cleaner import clean_garment_bytes, clean_with_runway, runway_isolate_item, make_cutout
@@ -470,6 +470,32 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
     for _ in req.items:
         supabase_service.record_usage_event(user["id"], "wardrobe_clean")
     return AddMultiResponse(created=created, failed=failed)
+
+
+@router.post("/measure-colors")
+async def measure_colors(user = Depends(current_user)):
+    """Measure the main color of this user's unmeasured items from their photos. Bounded
+    per call and free; the page calls it again until nothing is left. Covers every add
+    path and existing items from one place."""
+    items = supabase_service.get_wardrobe_items(user["id"], None, None)
+    pending = [it for it in items if garment_color_service.needs_measuring(it)]
+    storage_url = os.getenv("SUPABASE_URL")
+    fetchable = [it for it in pending if garment_color_service.is_fetchable(it.get("image_url"), storage_url)]
+
+    updated = []
+    async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
+        for item in fetchable[:garment_color_service.MAX_ITEMS_PER_CALL]:
+            try:
+                response = await client.get(item["image_url"])
+                response.raise_for_status()
+            except httpx.HTTPError as e:
+                logger.warning("Could not fetch item %s for color measuring: %s", item["id"], e)
+                continue
+            hex_color = await asyncio.to_thread(garment_color_service.dominant_hex, response.content)
+            if hex_color:
+                tags = garment_color_service.with_hex_tag(item.get("tags"), hex_color)
+                updated.append(supabase_service.set_wardrobe_item_tags(item["id"], tags))
+    return {"updated": updated, "remaining": max(0, len(fetchable) - garment_color_service.MAX_ITEMS_PER_CALL)}
 
 
 @router.patch("/{item_id}/status")

@@ -71,7 +71,7 @@ def _format_wardrobe(items: list) -> str:
     for c in cats:
         out.append(f"{c.upper()} ({len(groups[c])}):")
         for it in groups[c]:
-            tags = ", ".join(t for t in (it.get("tags") or []) if not str(t).lower().startswith("status:"))
+            tags = ", ".join(t for t in (it.get("tags") or []) if not str(t).lower().startswith(("status:", "hex:")))
             extra = f", tags: {tags}" if tags else ""
             brand = f", {it['brand']}" if it.get("brand") else ""
             note = status_note(it)

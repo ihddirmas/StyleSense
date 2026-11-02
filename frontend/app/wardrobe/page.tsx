@@ -7,7 +7,7 @@ import { Plus, Trash2, Sparkles, Shirt, Check, X, ArrowUpDown } from "lucide-rea
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAppStore } from "@/store/app";
 import { useAuth } from "@/components/AuthProvider";
-import { apiGet, apiDelete } from "@/lib/api";
+import { apiGet, apiDelete, apiPost } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
@@ -39,6 +39,7 @@ export default function WardrobePage() {
     try {
       const data = await apiGet<WardrobeItem[]>(`/api/wardrobe`);
       setItems(data);
+      measureColors();
     } catch (e) {
       toast.error(`Failed to load wardrobe: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
@@ -47,6 +48,17 @@ export default function WardrobePage() {
   }
 
   useEffect(() => { if (user) refresh(); }, [user]);
+
+  // Best-effort background work: until it succeeds, cards label colors as estimates.
+  async function measureColors() {
+    try {
+      const { updated } = await apiPost<{ updated: WardrobeItem[] }>(`/api/wardrobe/measure-colors`, {});
+      const byId = new Map(updated.map((item) => [item.id, item]));
+      setItems((prev) => prev.map((item) => byId.get(item.id) ?? item));
+    } catch (e) {
+      console.warn("Color measuring failed", e);
+    }
+  }
 
   async function performDelete(id: string) {
     try {

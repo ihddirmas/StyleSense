@@ -23,7 +23,7 @@ import re
 from functools import lru_cache
 from typing import Optional
 
-from services import suitability_service
+from services import garment_color_service, suitability_service
 
 
 def _swatches(season: Optional[str]) -> list[dict]:
@@ -201,6 +201,11 @@ def resolve_hex(color: Optional[str]) -> Optional[str]:
     return table[max(hits, key=len)] if hits else None
 
 
+def _garment_hex(item: dict) -> Optional[str]:
+    """The color measured from the photo when there is one, else from the color name."""
+    return garment_color_service.measured_hex(item) or resolve_hex(item.get("color"))
+
+
 def _nearest_swatch(lab: tuple, season: str) -> Optional[tuple[str, float]]:
     best = None
     for swatch in _swatches(season):
@@ -340,7 +345,7 @@ def _check_color_on_you(items: list[dict], color_profile: Optional[dict], skin_h
     for it in items:
         if (it.get("category") or "").lower() in ("shoes", "accessories"):
             continue
-        hex_color = resolve_hex(it.get("color"))
+        hex_color = _garment_hex(it)
         if not hex_color:
             if color_profile:
                 v = suitability_service.get_color_verdict(it.get("color"), color_profile)
@@ -395,7 +400,7 @@ def _check_color_together(items: list[dict]) -> dict:
     findings = []
     for top in tops:
         for bottom in bottoms:
-            th, bh = resolve_hex(top.get("color")), resolve_hex(bottom.get("color"))
+            th, bh = _garment_hex(top), _garment_hex(bottom)
             if not th or not bh:
                 continue
             tl, bl = hex_to_lab(th), hex_to_lab(bh)
@@ -504,11 +509,11 @@ def _check_occasion(items: list[dict], occasion: Optional[str]) -> dict:
         if occasion in _FORMAL_OCCASIONS and (hit := _has_any(text, _CASUAL_SHOES)):
             findings.append(_finding(WARN, f"{it.get('name')}: {hit} reads too casual for {label}.", it))
         if occasion == "wedding_guest" and (it.get("category") or "").lower() in ("dresses", "tops", "outerwear"):
-            hex_color = resolve_hex(it.get("color"))
+            hex_color = _garment_hex(it)
             if hex_color and hex_to_lab(hex_color)[0] > 92 and _chroma_hue(hex_to_lab(hex_color))[0] < 10:
                 findings.append(_finding(FAIL, f"{it.get('name')} is white/ivory -- leave that to the bride.", it))
         if occasion == "funeral" and (it.get("category") or "").lower() not in ("shoes", "accessories"):
-            hex_color = resolve_hex(it.get("color"))
+            hex_color = _garment_hex(it)
             if hex_color and _chroma_hue(hex_to_lab(hex_color))[0] > 45:
                 findings.append(_finding(WARN, f"{it.get('name')} ({it.get('color')}) is bright for a funeral.", it))
     if not findings and unclear_neckline:
@@ -555,10 +560,10 @@ def _check_footwear(items: list[dict], walk_minutes: Optional[int], transport: O
 # ───────────────────────────── entry point ───────────────────────────── #
 
 def _garment_colors_measured(items: list[dict]) -> bool:
-    """True only if every colored item stores a literal hex. A color name resolves
+    """True only if every clothing item has a measured hex. A color name resolves
     through a lookup table, so its distances are estimates and must be labeled so."""
-    colors = [(it.get("color") or "").strip() for it in items if (it.get("color") or "").strip()]
-    return bool(colors) and all(re.fullmatch(r"#?[0-9a-fA-F]{6}", c) for c in colors)
+    clothing = [it for it in items if (it.get("category") or "").lower() not in ("shoes", "accessories")]
+    return bool(clothing) and all(garment_color_service.measured_hex(it) for it in clothing)
 
 
 def check_outfit(
