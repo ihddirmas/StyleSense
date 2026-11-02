@@ -15,6 +15,7 @@ from models.schemas import (
     StylistChatResponse,
     StylistFeedbackRequest,
     StylistVerdictRequest,
+    LookCheckRequest,
     StylistWardrobeDetectRequest,
     StylistWardrobeDetectResponse,
     StylistWardrobeConfirmRequest,
@@ -23,7 +24,7 @@ from models.schemas import (
     ToolConfirmResponse,
     DetectedItem,
 )
-from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service, outfit_combo_service, capsule_service, suitability_service
+from services import supabase_service, anthropic_service, color_service, kibbe_service, wardrobe_vision_service, aria_tools, analytics_service, aria_memory_service, outfit_combo_service, capsule_service, suitability_service, look_check_service, weather_service
 from services.auth_service import current_user
 from services.rate_limit import check_rate_limit_async
 from services.wardrobe_add_service import confirm_and_add_items
@@ -382,6 +383,45 @@ async def item_verdicts(req: StylistVerdictRequest, user = Depends(current_user)
     wanted = set(req.item_ids)
     items = [it for it in supabase_service.get_wardrobe_items(user["id"]) if it.get("id") in wanted]
     return {"ready": True, **suitability_service.verdicts_for_items(items, color_profile, kibbe_ref)}
+
+
+@router.post("/look-check")
+async def look_check(req: LookCheckRequest, user = Depends(current_user)):
+    """
+    "Should I wear this today?" -- weather, clean/ready status, color vs the
+    measured skin tone + season palette (CIEDE2000), top/bottom harmony, body
+    type, occasion, and commute footwear (look_check_service). Deterministic
+    and free; the only network call is the optional Open-Meteo lookup.
+    """
+    row = supabase_service.get_user(user["id"]) or {}
+    kibbe_type = (row.get("kibbe_analysis") or {}).get("kibbe_type")
+    skin_analysis = row.get("skin_analysis_result") if row.get("skin_analysis_status") == "ready" else None
+
+    temp_c, raining, weather = req.temp_c, req.raining, None
+    if temp_c is None and req.lat is not None and req.lon is not None:
+        weather = await weather_service.get_current_weather(req.lat, req.lon)
+        if weather:
+            temp_c = weather["temp_c"]
+            raining = weather["raining"] if raining is None else raining
+
+    # Fetching through the user's own wardrobe enforces ownership of the ids.
+    wanted = set(req.item_ids)
+    items = [it for it in supabase_service.get_wardrobe_items(user["id"]) if it.get("id") in wanted]
+    if not items:
+        raise HTTPException(404, "None of those items are in your wardrobe.")
+
+    result = look_check_service.check_outfit(
+        items,
+        color_profile=row.get("color_profile"),
+        kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
+        skin_analysis=skin_analysis,
+        occasion=req.occasion,
+        temp_c=temp_c,
+        raining=raining,
+        walk_minutes=req.walk_minutes,
+        transport=req.transport,
+    )
+    return {**result, "weather": weather}
 
 
 @router.get("/color-profile")

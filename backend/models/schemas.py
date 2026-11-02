@@ -211,6 +211,23 @@ class StylistVerdictRequest(BaseModel):
     item_ids: List[str]
 
 
+class WardrobeStatusRequest(BaseModel):
+    # "available" clears any status; the rest are read by look_check_service.
+    status: Literal["available", "laundry", "needs_iron", "stain", "lent", "repair"]
+
+
+class LookCheckRequest(BaseModel):
+    item_ids: List[str] = Field(min_length=1, max_length=8)
+    occasion: Optional[str] = None
+    temp_c: Optional[float] = Field(default=None, ge=-40, le=55)
+    raining: Optional[bool] = None
+    walk_minutes: Optional[int] = Field(default=None, ge=0, le=180)
+    transport: Optional[str] = None
+    # When temp_c is omitted, current weather is looked up for these coords.
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lon: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
 class ToolConfirmRequest(BaseModel):
     tool_name: str
     tool_use_id: str
