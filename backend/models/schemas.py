@@ -199,6 +199,7 @@ class StylistChatResponse(BaseModel):
     capsule_plan: Optional[dict] = None
     look_checks: List[dict] = []
     today_funnel: Optional[dict] = None
+    purchase_verdict: Optional[dict] = None
 
 
 class StylistFeedbackRequest(BaseModel):

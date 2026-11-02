@@ -127,6 +127,17 @@ export interface TodayFunnel {
   };
 }
 
+export interface PurchaseVerdict {
+  verdict: "buy" | "think" | "skip" | "unknown";
+  reason: string;
+  product: { name: string; category: string; color?: string | null };
+  color: { status: LookCheckStatus; reasons: string[] };
+  outfits_with_closet: number;
+  pairs_with: Array<{ id: string; name: string; image_url?: string | null }>;
+  similar_owned: Array<{ id: string; name: string; image_url?: string | null }>;
+  measured_skin: boolean;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -143,6 +154,7 @@ export interface ChatMessage {
   capsulePlan?: CapsulePlan;
   lookChecks?: LookCheck[];   // every check_outfit Aria ran this turn, in call order
   todayFunnel?: TodayFunnel;  // closet elimination from what_can_i_wear_today
+  purchaseVerdict?: PurchaseVerdict; // buy-or-skip from should_i_buy
   feedbackRating?: "up" | "down";
 }
 

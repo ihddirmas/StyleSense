@@ -12,6 +12,8 @@ from services import look_check_service
 VALID_CATEGORIES = {"tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"}
 VALID_OCCASIONS = {"casual", "formal", "evening", "sport", "beach", "any"}
 
+PURCHASE_CATEGORIES = {"tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"}
+
 ANTHROPIC_TOOLS = [
     {
         "name": "add_wardrobe_items",
@@ -193,10 +195,30 @@ ANTHROPIC_TOOLS = [
             },
         },
     },
+    {
+        "name": "should_i_buy",
+        "description": (
+            "Buy-or-skip verdict for a product the user is considering: does the color suit their "
+            "measured skin and season, how many outfits does it make with what they own, and do "
+            "they already own something close. Free, read-only, runs immediately. Call it after "
+            "lookup_product_from_url, or when they describe something they might buy. Take the "
+            "color from the product name or what the user said; leave it out if unknown so the "
+            "verdict says so instead of guessing."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Product name."},
+                "category": {"type": "string", "enum": sorted(PURCHASE_CATEGORIES)},
+                "color": {"type": "string", "description": "Color name or hex, only if known."},
+            },
+            "required": ["name", "category"],
+        },
+    },
 ]
 
 CONFIRM_REQUIRED_TOOLS = {"add_wardrobe_items", "generate_tryon"}
-READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule", "check_outfit", "what_can_i_wear_today"}
+READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule", "check_outfit", "what_can_i_wear_today", "should_i_buy"}
 
 _DRESS_CODES = {"business", "smart casual", "casual", "formal", "beach", "evening"}
 
@@ -314,6 +336,18 @@ def _validate_check_outfit(raw_input: dict, wardrobe: list) -> Optional[dict]:
     }
 
 
+def _validate_should_i_buy(raw_input: dict) -> Optional[dict]:
+    raw_input = raw_input or {}
+    name, category, color = (raw_input.get(k) for k in ("name", "category", "color"))
+    if not isinstance(name, str) or not name.strip() or category not in PURCHASE_CATEGORIES:
+        return None
+    return {
+        "name": name.strip()[:120],
+        "category": category,
+        "color": color.strip()[:60] if isinstance(color, str) and color.strip() else None,
+    }
+
+
 def _validate_what_to_wear(raw_input: dict) -> dict:
     raw_input = raw_input or {}
 
@@ -352,6 +386,8 @@ def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[
         return _validate_check_outfit(raw_input, wardrobe)
     if name == "what_can_i_wear_today":
         return _validate_what_to_wear(raw_input)
+    if name == "should_i_buy":
+        return _validate_should_i_buy(raw_input)
     return None
 
 
@@ -580,5 +616,17 @@ async def execute_readonly_tool(name: str, tool_input: dict, ctx: Optional[dict]
                 "place": (weather or {}).get("place"),
             },
         }
+
+    if name == "should_i_buy":
+        from services import kibbe_service, purchase_service
+
+        kibbe_type = (ctx.get("kibbe_analysis") or {}).get("kibbe_type")
+        return purchase_service.evaluate(
+            tool_input,
+            ctx.get("wardrobe") or [],
+            color_profile=ctx.get("color_profile"),
+            kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
+            skin_analysis=ctx.get("skin_analysis"),
+        )
 
     raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")
