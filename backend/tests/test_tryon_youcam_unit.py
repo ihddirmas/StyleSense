@@ -103,6 +103,22 @@ def test_youcam_prefers_the_full_body_photo_over_a_face_selfie(fakes, monkeypatc
     assert fakes["calls"][0][0] == "https://x/body.jpg"
 
 
+def test_one_request_costs_at_most_three_calls_with_one_garment_per_slot(fakes):
+    extra_tops = [{**TOP, "id": f"t{i}", "name": f"Top {i}"} for i in range(4)]
+
+    result = _run([*extra_tops, BOTTOM, COAT])
+
+    assert len(fakes["calls"]) == 3
+    assert result["not_rendered"] == ["Top 1", "Top 2", "Top 3"]
+
+
+def test_dress_replaces_top_and_bottom(fakes):
+    result = _run([TOP, BOTTOM, DRESS])
+
+    assert [c[2] for c in fakes["calls"]] == ["full_body"]
+    assert result["not_rendered"] == ["Rust blouse", "Cream trousers"]
+
+
 def test_dress_renders_as_full_body(fakes):
     _run([DRESS])
 

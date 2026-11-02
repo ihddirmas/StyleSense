@@ -64,10 +64,6 @@ async def archive_tryon_image_to_b2(
 
 
 YOUCAM_MODEL = "youcam"
-# Innermost garment first, because each render becomes the next call's source photo.
-_YOUCAM_LAYER_ORDER = ("bottoms", "dresses", "tops", "outerwear")
-
-
 def youcam_garment_category(item_category: str) -> str:
     """StyleSense wardrobe category -> YouCam cloth-v3 garment_category."""
     return {
@@ -150,6 +146,16 @@ def extra_selfies(user_id: str, primary: str, model: str) -> list:
     return [s for s in (row.get("selfie_urls") or []) if s and s != primary][:2]
 
 
+def _youcam_layers(items: list) -> list:
+    """One garment per body slot, innermost first, so a request costs at most 3 paid
+    calls however many items it names. A dress replaces any top and bottom."""
+    first = {}
+    for item in items:
+        first.setdefault(item.get("category"), item)
+    slots = ("dresses", "outerwear") if "dresses" in first else ("bottoms", "tops", "outerwear")
+    return [first[slot] for slot in slots if slot in first]
+
+
 def youcam_source_photo(user_id: str, fallback_url: str) -> str:
     """cloth-v3 needs the body region it replaces and rejects head-and-shoulders
     selfies, so use the full-body photo whenever the user has one."""
@@ -160,10 +166,7 @@ async def _run_youcam_outfit(user_id: str, avatar_selfie_url: str, items: list) 
     """Layer an outfit on YouCam Apparel VTO, feeding each render into the next call."""
     from services import youcam_service
 
-    layers = sorted(
-        (it for it in items if it.get("category") in _YOUCAM_LAYER_ORDER),
-        key=lambda it: _YOUCAM_LAYER_ORDER.index(it.get("category")),
-    )
+    layers = _youcam_layers(items)
     if not layers:
         from fastapi import HTTPException
         raise HTTPException(400, "YouCam try-on needs a top, bottom, dress or outerwear piece.")
