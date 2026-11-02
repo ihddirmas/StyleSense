@@ -6,10 +6,11 @@ Garment cleaning:
 """
 import asyncio
 import logging
+import os
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from typing import Optional, Literal
-from services import supabase_service, wardrobe_vision_service, outfit_combo_service, kibbe_service
+from services import garment_color_service, supabase_service, wardrobe_vision_service, outfit_combo_service, kibbe_service
 from services.auth_service import current_user
 from services.image_service import validate_image_bytes, fetch_image_from_url
 from services.garment_cleaner import clean_garment_bytes, clean_with_runway, runway_isolate_item, make_cutout
@@ -33,15 +34,27 @@ router = APIRouter()
 CleanPref = Literal["auto", "runway", "rembg", "none"]
 
 
-def _generate_cutout(user_id: str, image_url: str, category: Optional[str] = None, image_bytes: Optional[bytes] = None) -> Optional[str]:
+def _generate_cutout(
+    user_id: str,
+    image_url: str,
+    category: Optional[str] = None,
+    image_bytes: Optional[bytes] = None,
+    *,
+    skip_occlusion_check: bool = False,
+) -> Optional[str]:
     """Best-effort transparent PNG cutout for the closet display. Returns a public URL
     or None (callers fall back to image_url). Pass image_bytes to skip the re-download.
-    category picks the segmentation model (clothing vs general object)."""
+    category picks the segmentation model (clothing vs general object).
+
+    Off unless WARDROBE_CUTOUTS_ENABLED is set: rembg runs inside the request and
+    can exhaust a small instance, such as Render's free plan."""
+    if not os.getenv("WARDROBE_CUTOUTS_ENABLED"):
+        return None
     try:
         data = image_bytes if image_bytes is not None else httpx.get(
             image_url, timeout=30, follow_redirects=True
         ).content
-        png = make_cutout(data, category=category)
+        png = make_cutout(data, category=category, skip_occlusion_check=skip_occlusion_check)
         if not png:
             return None
         return supabase_service.upload_to_storage("wardrobe", user_id, png, "cutout.png", "image/png")
@@ -134,6 +147,7 @@ async def upload_item(
     # are capped on Free tier; 'rembg' is local-only and free.
     final_url = original_url
     method_used = "skipped"
+    cleaned_bytes: Optional[bytes] = None
     if clean != "none":
         if clean in ("runway", "auto"):
             check_wardrobe_clean_cap(user["id"])
@@ -159,7 +173,15 @@ async def upload_item(
                 # Cleaning succeeded but storage upload failed - keep original
                 final_url = original_url
                 method_used = f"original (clean upload failed: {e})"
+                cleaned_bytes = None
 
+    cutout_url = _generate_cutout(
+        user["id"],
+        final_url,
+        category=category,
+        image_bytes=cleaned_bytes if method_used in ("runway", "rembg") else None,
+        skip_occlusion_check=method_used in ("runway", "rembg"),
+    )
     item = supabase_service.insert_wardrobe_item(
         user_id=user["id"],
         name=name,
@@ -168,7 +190,7 @@ async def upload_item(
         occasion=occasion,
         color=color,
         brand=brand,
-        cutout_url=None,  # cutouts disabled - the closet grid uses the clean image_url
+        cutout_url=cutout_url,
     )
     item["clean_method"] = method_used
     item["original_url"] = original_url if final_url != original_url else None
@@ -225,6 +247,12 @@ async def add_from_url(req: AddWardrobeFromUrl, user = Depends(current_user)):
             final_url = original_url
             method_used = f"original (clean failed: {e})"
 
+    cutout_url = _generate_cutout(
+        user["id"],
+        final_url,
+        category=req.category,
+        skip_occlusion_check=method_used in ("runway", "rembg") or clean_pref == "none",
+    )
     item = supabase_service.insert_wardrobe_item(
         user_id=user["id"],
         name=req.name,
@@ -235,7 +263,7 @@ async def add_from_url(req: AddWardrobeFromUrl, user = Depends(current_user)):
         brand=req.brand,
         source_url=req.source_url or req.image_url,
         tags=req.tags,
-        cutout_url=None,  # cutouts disabled - the grid uses the clean image_url
+        cutout_url=cutout_url,
     )
     item["clean_method"] = method_used
     item["original_url"] = original_url if final_url != original_url else None
@@ -275,6 +303,13 @@ async def extract_from_image(req: ExtractFromImage, user = Depends(current_user)
     except Exception as e:
         raise HTTPException(500, f"Could not save extracted image: {e}")
 
+    cutout_url = _generate_cutout(
+        user["id"],
+        permanent_url,
+        category=req.category,
+        image_bytes=r.content,
+        skip_occlusion_check=True,
+    )
     item = supabase_service.insert_wardrobe_item(
         user_id=user["id"],
         name=req.name,
@@ -283,7 +318,7 @@ async def extract_from_image(req: ExtractFromImage, user = Depends(current_user)
         occasion=req.occasion or "casual",
         source_url=req.image_url,
         tags=["extracted-from-friend"],
-        cutout_url=None,  # cutouts disabled - the grid uses the clean image_url
+        cutout_url=cutout_url,
     )
     item["clean_method"] = "runway-extract"
     return item
@@ -406,6 +441,13 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
             return None, AddMultiFailure(name=item.name, reason=f"Storage rehost failed: {e}")
 
         try:
+            cutout_url = _generate_cutout(
+                user["id"],
+                permanent_url,
+                category=item.category,
+                image_bytes=r.content,
+                skip_occlusion_check=True,
+            )
             row = supabase_service.insert_wardrobe_item(
                 user_id=user["id"],
                 name=item.name,
@@ -416,7 +458,7 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
                 brand=item.brand,
                 source_url=req.source_image_url,
                 tags=["multi-item-detected"],
-                cutout_url=None,  # cutouts disabled - the grid uses the clean image_url
+                cutout_url=cutout_url,
             )
             return row, None
         except Exception as e:
@@ -428,6 +470,51 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
     for _ in req.items:
         supabase_service.record_usage_event(user["id"], "wardrobe_clean")
     return AddMultiResponse(created=created, failed=failed)
+
+
+# Shared across requests: decoding is memory-heavy on a small instance.
+_COLOR_DECODE_SLOTS = asyncio.Semaphore(2)
+
+
+async def _download_capped(client: httpx.AsyncClient, url: str) -> Optional[bytes]:
+    """The response body, or None once it passes the size cap. Never buffers past it."""
+    chunks, size = [], 0
+    async with client.stream("GET", url) as response:
+        response.raise_for_status()
+        async for chunk in response.aiter_bytes():
+            size += len(chunk)
+            if size > garment_color_service.MAX_IMAGE_BYTES:
+                return None
+            chunks.append(chunk)
+    return b"".join(chunks)
+
+
+@router.post("/measure-colors")
+async def measure_colors(user = Depends(current_user)):
+    """Measure the main color of this user's unmeasured items from their photos. Bounded
+    per call and free; the page calls it again until nothing is left. Covers every add
+    path and existing items from one place."""
+    await check_rate_limit_async(user["id"], "wardrobe-measure", limit=6, window_seconds=60)
+    items = supabase_service.get_wardrobe_items(user["id"], None, None)
+    pending = [it for it in items if garment_color_service.needs_measuring(it)]
+    storage_url = os.getenv("SUPABASE_URL")
+    fetchable = [it for it in pending if garment_color_service.is_fetchable(it.get("image_url"), storage_url)]
+
+    updated = []
+    async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
+        for item in fetchable[:garment_color_service.MAX_ITEMS_PER_CALL]:
+            try:
+                image_bytes = await _download_capped(client, item["image_url"])
+            except httpx.HTTPError as e:
+                logger.warning("Could not fetch item %s for color measuring: %s", item["id"], e)
+                continue
+            hex_color = None
+            if image_bytes is not None:
+                async with _COLOR_DECODE_SLOTS:
+                    hex_color = await asyncio.to_thread(garment_color_service.dominant_hex, image_bytes)
+            tags = garment_color_service.with_hex_tag(item.get("tags"), hex_color or "none")
+            updated.append(supabase_service.set_wardrobe_item_tags(item["id"], tags))
+    return {"updated": updated, "remaining": max(0, len(fetchable) - garment_color_service.MAX_ITEMS_PER_CALL)}
 
 
 @router.patch("/{item_id}/status")

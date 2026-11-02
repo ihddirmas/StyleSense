@@ -48,6 +48,9 @@ class AriaState(TypedDict, total=False):
     pending_action: Optional[dict]    # tool call Aria proposed but hasn't executed
     product_preview: Optional[dict]   # result of an auto-executed lookup_product_from_url call
     capsule_plan: Optional[dict]      # result of plan_trip_capsule tool
+    look_checks: list                 # every check_outfit result this turn, in call order
+    today_funnel: Optional[dict]      # result of what_can_i_wear_today
+    purchase_verdict: Optional[dict]  # result of should_i_buy
 
 
 # Maps a detected occasion to a rich try-on background, used when the user clicks
@@ -139,6 +142,10 @@ their color season, undertone, and Kibbe type — for clothes they OWN or paste 
 # AGENT ACTIONS (tools)
 - **list_wardrobe_gaps** / **plan_trip_capsule** — free, run immediately for trips/capsules. Always call the tool; do not fake a packing list without it.
 - **lookup_product_from_url** — pasted store URL; call it in the same turn. If fetch fails, ask for a direct image link.
+- Items marked UNAVAILABLE TODAY (laundry, stain, lent out, repair) can't be worn: never recommend them, and say why if the user asks for one.
+- **what_can_i_wear_today** — free, runs immediately. Call it for any open question like "what should I wear" or "what can I wear to X"; never pick from the wardrobe yourself first. Pass everything they said; pass `city` for live weather if they named a place and gave no weather. The UI shows the whole funnel as a card, so reply in two sentences: the biggest thing that got cut and your top survivor tagged with [ITEM:<id>], then offer to try it on. If stages have no data, ask for the one that matters most. Never call it again in the same turn.
+- **should_i_buy** — free, runs immediately. After looking up a pasted product, or when they ask if they should buy something, call it. The UI shows the verdict as a card, so reply in one or two sentences with the deciding reason.
+- **check_outfit** — free, runs immediately. Call it whenever they ask if a specific outfit works, and before you recommend or approve one. The UI shows the full result as a card, so give the verdict and the single deciding reason in a sentence or two; never restate every check. If a check comes back unknown, ask for that context; never guess. To compare a swap, call it once per outfit.
 - **add_wardrobe_items** — photo shared THIS turn + user wants to save garment(s). Call the tool; the UI confirm card is the confirmation.
 - **generate_tryon** — when the user asks to try on, see it on them, or generate a look: tag items with [ITEM:<id>] AND call this tool in the same turn. Do not ask "just say the word" in prose — the confirm card is how they approve credit spend.
 
@@ -266,7 +273,7 @@ def _format_preferences(prefs: list, wardrobe: list) -> str:
 
 # Bounds the read-only tool loop below (lookup_product_from_url) so a confused
 # model can't loop indefinitely -- each round is one more Anthropic call.
-MAX_TOOL_ROUNDS = 3
+MAX_TOOL_ROUNDS = 4
 
 
 def _advise(state: AriaState) -> dict:
@@ -291,7 +298,10 @@ def _advise(state: AriaState) -> dict:
         # Stronger reasoning model for outfit decisions (falls back to Haiku if unavailable).
         kwargs = dict(
             max_tokens=600, temperature=0.7, system=system, messages=messages,
-            tools=aria_tools.ANTHROPIC_TOOLS, tool_choice={"type": "auto"},
+            tools=aria_tools.ANTHROPIC_TOOLS,
+            # The loop below answers one tool per round; a second parallel tool_use
+            # would go unanswered and the API would reject the next request.
+            tool_choice={"type": "auto", "disable_parallel_tool_use": True},
         )
         try:
             return anthropic_service.client.messages.create(model=ADVISE_MODEL, **kwargs)
@@ -301,6 +311,9 @@ def _advise(state: AriaState) -> dict:
 
     product_preview = None
     capsule_plan = None
+    look_checks: list[dict] = []
+    today_funnel = None
+    purchase_verdict = None
     tool_ctx = {
         "user_id": state["user_id"],
         "wardrobe": state.get("wardrobe", []),
@@ -324,6 +337,12 @@ def _advise(state: AriaState) -> dict:
             product_preview = tool_result
         if tool_use.name == "plan_trip_capsule" and tool_result.get("capsule_plan"):
             capsule_plan = tool_result["capsule_plan"]
+        if tool_use.name == "check_outfit":
+            look_checks = [*look_checks, tool_result]
+        if tool_use.name == "what_can_i_wear_today":
+            today_funnel = tool_result
+        if tool_use.name == "should_i_buy":
+            purchase_verdict = tool_result
         msgs = msgs + [
             {"role": "assistant", "content": resp.content},
             {"role": "user", "content": [
@@ -339,6 +358,9 @@ def _advise(state: AriaState) -> dict:
         "item_ids": anthropic_service.extract_item_ids(reply),
         "product_preview": product_preview,
         "capsule_plan": capsule_plan,
+        "look_checks": look_checks,
+        "today_funnel": today_funnel,
+        "purchase_verdict": purchase_verdict,
     }
 
     if resp.stop_reason == "tool_use":
@@ -407,4 +429,7 @@ def run_aria(
         "pending_action": out.get("pending_action"),
         "product_preview": out.get("product_preview"),
         "capsule_plan": out.get("capsule_plan"),
+        "look_checks": out.get("look_checks") or [],
+        "today_funnel": out.get("today_funnel"),
+        "purchase_verdict": out.get("purchase_verdict"),
     }

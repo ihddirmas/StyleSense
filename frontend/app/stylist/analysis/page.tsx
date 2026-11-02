@@ -215,12 +215,12 @@ export default function StyleAnalysisPage() {
                   <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
                     <Palette size={13} /> Color Season
                   </div>
-                  {report.color?.source === "youcam_measured" && (
+                  {(report.color?.source === "skin_hex_estimate" || report.color?.source === "youcam_measured") && (
                     <span
                       className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
                       style={{ background: "var(--gold-dim)", color: "var(--gold)" }}
                     >
-                      YouCam‑measured
+                      Estimated from skin tone
                     </span>
                   )}
                 </div>

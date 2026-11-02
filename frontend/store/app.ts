@@ -58,7 +58,7 @@ export const useAppStore = create<AppState>()(
       ariaName: null,
       cachedWardrobe: [],
       cachedRecent: [],
-      tryonModel: "gen4_image",
+      tryonModel: "youcam",
       videoModel: "veo3.1",
       hydrated: false,
       setTryonModel: (id) => set({ tryonModel: id }),
@@ -92,6 +92,9 @@ export const useAppStore = create<AppState>()(
     {
       name: "styleai-app-state",
       skipHydration: true,
+      // v1: move everyone with a saved Runway default onto YouCam Apparel VTO once.
+      version: 1,
+      migrate: (persisted) => ({ ...(persisted as AppState), tryonModel: "youcam" }),
       partialize: (s) => ({
         avatarSelfieUrl: s.avatarSelfieUrl,
         stylizedAvatarUrl: s.stylizedAvatarUrl,

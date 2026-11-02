@@ -31,7 +31,10 @@ import { PendingActionCard, type PendingActionResult } from "@/components/stylis
 import ThinkingIndicator from "@/components/stylist/ThinkingIndicator";
 import TrainTasteModal from "@/components/stylist/TrainTasteModal";
 import { CapsulePlanCard } from "@/components/stylist/CapsulePlanCard";
-import type { CapsulePlan } from "@/types";
+import { LookCheckCard } from "@/components/stylist/LookCheckCard";
+import { TodayFunnelCard } from "@/components/stylist/TodayFunnelCard";
+import { PurchaseVerdictCard } from "@/components/stylist/PurchaseVerdictCard";
+import type { CapsulePlan, LookCheck, PurchaseVerdict, TodayFunnel } from "@/types";
 
 const SUGGESTION_PROMPTS = [
   "What am I missing for a 5-day business trip?",
@@ -416,6 +419,9 @@ export default function StylistPage() {
           suggested_category?: string | null;
         } | null;
         capsule_plan?: CapsulePlan | null;
+        look_checks?: LookCheck[];
+        today_funnel?: TodayFunnel | null;
+        purchase_verdict?: PurchaseVerdict | null;
       }>("/api/stylist/chat", payload);
       const assistantMsg: ChatMessage = {
         role: "assistant",
@@ -441,6 +447,9 @@ export default function StylistPage() {
             }
           : undefined,
         capsulePlan: res.capsule_plan ?? undefined,
+        lookChecks: res.look_checks?.length ? res.look_checks : undefined,
+        todayFunnel: res.today_funnel ?? undefined,
+        purchaseVerdict: res.purchase_verdict ?? undefined,
       };
       const updatedMessages = [...next, assistantMsg];
       setMessages(updatedMessages);
@@ -823,6 +832,11 @@ const MessageBubble = memo(function MessageBubble({
           onSaveOutfit={m.manifestUrl ? () => onSaveOutfit(i) : undefined}
         />
         {m.capsulePlan && <CapsulePlanCard plan={m.capsulePlan} />}
+        {m.todayFunnel && <TodayFunnelCard funnel={m.todayFunnel} />}
+        {m.purchaseVerdict && <PurchaseVerdictCard verdict={m.purchaseVerdict} />}
+        {m.lookChecks?.map((check, checkIndex) => (
+          <LookCheckCard key={checkIndex} check={check} />
+        ))}
         {m.role === "assistant" && i > 0 && (
           <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
             <span className="text-2xs text-muted mr-1">Helpful?</span>

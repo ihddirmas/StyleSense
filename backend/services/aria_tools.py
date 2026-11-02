@@ -12,6 +12,8 @@ from services import look_check_service
 VALID_CATEGORIES = {"tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"}
 VALID_OCCASIONS = {"casual", "formal", "evening", "sport", "beach", "any"}
 
+PURCHASE_CATEGORIES = {"tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"}
+
 ANTHROPIC_TOOLS = [
     {
         "name": "add_wardrobe_items",
@@ -170,10 +172,53 @@ ANTHROPIC_TOOLS = [
             "required": ["item_ids"],
         },
     },
+    {
+        "name": "what_can_i_wear_today",
+        "description": (
+            "Eliminate the user's whole closet down to the outfits that survive today: laundry and "
+            "stains, occasion and neckline, shoes vs the commute, weather, color vs their measured "
+            "skin and season, top+bottom harmony, and body shape. Returns how many combinations "
+            "each stage cut and why, plus up to 3 survivors. Free, read-only, runs immediately. "
+            "Call it for 'what should I wear', 'what can I wear to X', or any open outfit question, "
+            "instead of picking from the wardrobe yourself. Pass everything the user said. Give "
+            "`city` for live weather when they didn't state it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "occasion": {"type": "string", "enum": sorted(look_check_service.VALID_OCCASIONS)},
+                "temp_c": {"type": "number", "description": "Temperature in Celsius, only if the user stated it."},
+                "raining": {"type": "boolean", "description": "Only if the user stated it."},
+                "walk_minutes": {"type": "integer", "minimum": 0, "maximum": 180},
+                "transport": {"type": "string", "enum": sorted(look_check_service.VALID_TRANSPORT)},
+                "city": {"type": "string", "description": "City for live weather, e.g. 'Pune'."},
+            },
+        },
+    },
+    {
+        "name": "should_i_buy",
+        "description": (
+            "Buy-or-skip verdict for a product the user is considering: does the color suit their "
+            "measured skin and season, how many outfits does it make with what they own, and do "
+            "they already own something close. Free, read-only, runs immediately. Call it after "
+            "lookup_product_from_url, or when they describe something they might buy. Take the "
+            "color from the product name or what the user said; leave it out if unknown so the "
+            "verdict says so instead of guessing."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Product name."},
+                "category": {"type": "string", "enum": sorted(PURCHASE_CATEGORIES)},
+                "color": {"type": "string", "description": "Color name or hex, only if known."},
+            },
+            "required": ["name", "category"],
+        },
+    },
 ]
 
 CONFIRM_REQUIRED_TOOLS = {"add_wardrobe_items", "generate_tryon"}
-READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule", "check_outfit"}
+READONLY_TOOLS = {"lookup_product_from_url", "list_wardrobe_gaps", "plan_trip_capsule", "check_outfit", "what_can_i_wear_today", "should_i_buy"}
 
 _DRESS_CODES = {"business", "smart casual", "casual", "formal", "beach", "evening"}
 
@@ -291,6 +336,38 @@ def _validate_check_outfit(raw_input: dict, wardrobe: list) -> Optional[dict]:
     }
 
 
+def _validate_should_i_buy(raw_input: dict) -> Optional[dict]:
+    raw_input = raw_input or {}
+    name, category, color = (raw_input.get(k) for k in ("name", "category", "color"))
+    if not isinstance(name, str) or not name.strip() or category not in PURCHASE_CATEGORIES:
+        return None
+    return {
+        "name": name.strip()[:120],
+        "category": category,
+        "color": color.strip()[:60] if isinstance(color, str) and color.strip() else None,
+    }
+
+
+def _validate_what_to_wear(raw_input: dict) -> dict:
+    raw_input = raw_input or {}
+
+    def _num(key, lo, hi, cast):
+        try:
+            return max(lo, min(cast(raw_input[key]), hi))
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    raining, occasion, transport, city = (raw_input.get(k) for k in ("raining", "occasion", "transport", "city"))
+    return {
+        "occasion": occasion if occasion in look_check_service.VALID_OCCASIONS else None,
+        "temp_c": _num("temp_c", -40, 55, float),
+        "raining": raining if isinstance(raining, bool) else None,
+        "walk_minutes": _num("walk_minutes", 0, 180, int),
+        "transport": transport if transport in look_check_service.VALID_TRANSPORT else None,
+        "city": city.strip()[:80] if isinstance(city, str) and city.strip() else None,
+    }
+
+
 def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[dict]:
     """Re-validate Claude's tool_use input server-side before it's ever shown to the
     user (confirm-required tools) or executed (read-only tools). Returns a cleaned
@@ -307,6 +384,10 @@ def validate_tool_input(name: str, raw_input: dict, wardrobe: list) -> Optional[
         return _validate_plan_capsule(raw_input)
     if name == "check_outfit":
         return _validate_check_outfit(raw_input, wardrobe)
+    if name == "what_can_i_wear_today":
+        return _validate_what_to_wear(raw_input)
+    if name == "should_i_buy":
+        return _validate_should_i_buy(raw_input)
     return None
 
 
@@ -398,6 +479,12 @@ async def _execute_add_wardrobe_items(tool_input: dict, user_id: str) -> dict:
     }
 
 
+def _tryon_summary(result: dict) -> str:
+    provider = "YouCam Apparel VTO" if result.get("model_used") == "youcam" else result.get("model_used")
+    missing = ", ".join(n for n in (result.get("not_rendered") or []) if n)
+    return f"Here's your try-on, rendered by {provider}." + (f" Not shown in the render: {missing}." if missing else "")
+
+
 async def _execute_generate_tryon(tool_input: dict, user_id: str) -> dict:
     from fastapi import HTTPException
     from services import tryon_service
@@ -415,7 +502,7 @@ async def _execute_generate_tryon(tool_input: dict, user_id: str) -> dict:
         raise
 
     return {
-        "summary": "Here's your try-on!",
+        "summary": _tryon_summary(result),
         "created": [],
         "failed": [],
         "result_image_url": result["result_image_url"],
@@ -482,12 +569,64 @@ async def execute_readonly_tool(name: str, tool_input: dict, ctx: Optional[dict]
         wanted = set(tool_input["item_ids"])
         items = [w for w in (ctx.get("wardrobe") or []) if w.get("id") in wanted]
         kibbe_type = (ctx.get("kibbe_analysis") or {}).get("kibbe_type")
-        return look_check_service.check_outfit(
+        result = look_check_service.check_outfit(
             items,
             color_profile=ctx.get("color_profile"),
             kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
             skin_analysis=ctx.get("skin_analysis"),
             **{k: v for k, v in tool_input.items() if k != "item_ids"},
+        )
+        return {
+            **result,
+            "items": [{"id": i.get("id"), "name": i.get("name"), "image_url": i.get("image_url")} for i in items],
+        }
+
+    if name == "what_can_i_wear_today":
+        from services import kibbe_service, today_service, weather_service
+
+        temp_c, raining = tool_input.get("temp_c"), tool_input.get("raining")
+        weather = None
+        if temp_c is None and raining is None and tool_input.get("city"):
+            weather = await weather_service.get_weather_for_city(tool_input["city"])
+        if weather:
+            temp_c, raining = weather["temp_c"], weather["raining"]
+
+        kibbe_type = (ctx.get("kibbe_analysis") or {}).get("kibbe_type")
+        result = today_service.eliminate(
+            ctx.get("wardrobe") or [],
+            color_profile=ctx.get("color_profile"),
+            kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
+            skin_analysis=ctx.get("skin_analysis"),
+            occasion=tool_input.get("occasion"),
+            temp_c=temp_c,
+            raining=raining,
+            walk_minutes=tool_input.get("walk_minutes"),
+            transport=tool_input.get("transport"),
+        )
+        has_weather = temp_c is not None or raining is not None
+        return {
+            **result,
+            "context": {
+                "occasion": tool_input.get("occasion"),
+                "temp_c": temp_c,
+                "raining": raining,
+                "walk_minutes": tool_input.get("walk_minutes"),
+                "transport": tool_input.get("transport"),
+                "weather_source": (weather or {}).get("source") or ("user" if has_weather else None),
+                "place": (weather or {}).get("place"),
+            },
+        }
+
+    if name == "should_i_buy":
+        from services import kibbe_service, purchase_service
+
+        kibbe_type = (ctx.get("kibbe_analysis") or {}).get("kibbe_type")
+        return purchase_service.evaluate(
+            tool_input,
+            ctx.get("wardrobe") or [],
+            color_profile=ctx.get("color_profile"),
+            kibbe_ref=kibbe_service.get_type_reference(kibbe_type) or None,
+            skin_analysis=ctx.get("skin_analysis"),
         )
 
     raise ValueError(f"Unknown or not-yet-supported read-only tool: {name}")

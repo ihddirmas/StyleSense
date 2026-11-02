@@ -5,11 +5,27 @@ and Aria's `add_wardrobe_items` tool -- both need the exact same Runway-isolate 
 rehost -> DB-insert pipeline, so it lives here once instead of being duplicated.
 """
 import asyncio
+import logging
 import httpx
 
 from models.schemas import DetectedItem, AddMultiFailure
 from services import supabase_service
-from services.garment_cleaner import runway_isolate_item
+from services.garment_cleaner import runway_isolate_item, make_cutout
+
+logger = logging.getLogger(__name__)
+
+
+def _best_effort_cutout(user_id: str, image_url: str, category: str | None, image_bytes: bytes) -> str | None:
+    try:
+        png = make_cutout(image_bytes, category=category, skip_occlusion_check=True)
+        if not png:
+            return None
+        return supabase_service.upload_to_storage(
+            "wardrobe", user_id, png, "cutout.png", "image/png"
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"chat cutout generation failed: {e}")
+        return None
 
 
 async def _process_one(user_id: str, source_image_url: str, item: DetectedItem):
@@ -45,6 +61,7 @@ async def _process_one(user_id: str, source_image_url: str, item: DetectedItem):
         return None, AddMultiFailure(name=item.name, reason=f"Storage rehost failed: {e}")
 
     try:
+        cutout_url = _best_effort_cutout(user_id, permanent_url, item.category, r.content)
         row = supabase_service.insert_wardrobe_item(
             user_id=user_id,
             name=item.name,
@@ -55,7 +72,7 @@ async def _process_one(user_id: str, source_image_url: str, item: DetectedItem):
             brand=item.brand,
             source_url=source_image_url,
             tags=["chat-added"],
-            cutout_url=None,
+            cutout_url=cutout_url,
         )
         return row, None
     except Exception as e:
