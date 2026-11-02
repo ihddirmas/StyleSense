@@ -27,18 +27,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _youcam_category(item_category: str) -> str:
-    """Map StyleSense's wardrobe categories to YouCam's garment_category values.
-    VERIFY exact allowed values against the account playground — dresses/outerwear/
-    shoes/accessories are best-effort guesses pending confirmation."""
-    return {
-        "tops": "upper_body",
-        "outerwear": "upper_body",
-        "bottoms": "lower_body",
-        "dresses": "full_body",
-    }.get(item_category, "upper_body")
-
-
 @router.post("/generate")
 async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
     if not req.avatar_selfie_url:
@@ -57,9 +45,9 @@ async def generate_tryon(req: TryOnRequest, user = Depends(current_user)):
         try:
             result = await _run_blocking(
                 youcam_service.youcam_apparel_tryon,
-                user_image_url=req.avatar_selfie_url,
+                user_image_url=await _run_blocking(tryon_service.youcam_source_photo, user["id"], req.avatar_selfie_url),
                 garment_image_url=req.item_image_url,
-                garment_category=_youcam_category(req.item_category),
+                garment_category=tryon_service.youcam_garment_category(req.item_category),
             )
         except Exception as e:
             raise HTTPException(502, f"YouCam try-on failed: {e}")

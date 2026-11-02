@@ -44,6 +44,8 @@ export interface TryOnTask extends BaseTask {
   nobgUrl?: string;
   b2ImageUrl?: string;
   imageManifestHash?: string;
+  modelUsed?: string;
+  notRendered?: string[];
   b2VideoUrl?: string;
   videoManifestHash?: string;
   // Derived
@@ -137,7 +139,7 @@ export const useTasks = create<State>((set, get) => ({
     };
     set((s) => ({ tasks: [...s.tasks.filter((t) => t.kind !== "tryon" || t.status !== "running"), task] }));
 
-    const model = input.model ?? (input.quality === "pro" ? "gen4_image" : "gen4_image_turbo");
+    const model = input.model ?? "youcam";
     const setting = input.setting?.trim() || undefined;
     const promise = input.items.length === 1
       ? apiPost<{
@@ -146,6 +148,8 @@ export const useTasks = create<State>((set, get) => ({
           result_nobg_url?: string;
           b2_image_url?: string;
           image_manifest_hash?: string;
+          model_used?: string;
+          not_rendered?: string[];
         }>("/api/tryon/generate", {
           wardrobe_item_id: input.items[0].id,
           item_image_url: input.items[0].image_url,
@@ -162,6 +166,8 @@ export const useTasks = create<State>((set, get) => ({
           result_nobg_url?: string;
           b2_image_url?: string;
           image_manifest_hash?: string;
+          model_used?: string;
+          not_rendered?: string[];
         }>("/api/tryon/generate-multi", {
           avatar_selfie_url: input.avatarSelfieUrl,
           items: input.items.map((i) => ({ image_url: i.image_url, name: i.name, category: i.category })),
@@ -182,6 +188,8 @@ export const useTasks = create<State>((set, get) => ({
           nobgUrl: res.result_nobg_url ?? undefined,
           b2ImageUrl: res.b2_image_url,
           imageManifestHash: res.image_manifest_hash,
+          modelUsed: res.model_used,
+          notRendered: res.not_rendered,
         });
         if (res.image_manifest_hash) {
           toast.success("Try-on ready — archived to B2 (Genblaze manifest)");

@@ -63,6 +63,21 @@ async def archive_tryon_image_to_b2(
         return {}
 
 
+YOUCAM_MODEL = "youcam"
+# Innermost garment first, because each render becomes the next call's source photo.
+_YOUCAM_LAYER_ORDER = ("bottoms", "dresses", "tops", "outerwear")
+
+
+def youcam_garment_category(item_category: str) -> str:
+    """StyleSense wardrobe category -> YouCam cloth-v3 garment_category."""
+    return {
+        "tops": "upper_body",
+        "outerwear": "upper_body",
+        "bottoms": "lower_body",
+        "dresses": "full_body",
+    }.get(item_category, "upper_body")
+
+
 async def run_blocking(fn, *args, **kwargs):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(_executor, lambda: fn(*args, **kwargs))
@@ -135,19 +150,75 @@ def extra_selfies(user_id: str, primary: str, model: str) -> list:
     return [s for s in (row.get("selfie_urls") or []) if s and s != primary][:2]
 
 
+def youcam_source_photo(user_id: str, fallback_url: str) -> str:
+    """cloth-v3 needs the body region it replaces and rejects head-and-shoulders
+    selfies, so use the full-body photo whenever the user has one."""
+    return (supabase_service.get_user(user_id) or {}).get("full_body_url") or fallback_url
+
+
+async def _run_youcam_outfit(user_id: str, avatar_selfie_url: str, items: list) -> dict:
+    """Layer an outfit on YouCam Apparel VTO, feeding each render into the next call."""
+    from services import youcam_service
+
+    layers = sorted(
+        (it for it in items if it.get("category") in _YOUCAM_LAYER_ORDER),
+        key=lambda it: _YOUCAM_LAYER_ORDER.index(it.get("category")),
+    )
+    if not layers:
+        from fastapi import HTTPException
+        raise HTTPException(400, "YouCam try-on needs a top, bottom, dress or outerwear piece.")
+
+    current_url = await run_blocking(youcam_source_photo, user_id, avatar_selfie_url)
+    task_id = None
+    for item in layers:
+        result = await run_blocking(
+            youcam_service.youcam_apparel_tryon,
+            user_image_url=current_url,
+            garment_image_url=item["image_url"],
+            garment_category=youcam_garment_category(item["category"]),
+        )
+        current_url, task_id = result["image_url"], result.get("task_id")
+
+    image_url = await rehost(user_id, current_url)
+    saved = supabase_service.save_tryon_result(
+        user_id=user_id,
+        item_id=None,
+        result_url=image_url,
+        model_used=YOUCAM_MODEL,
+        prompt_used=None,
+        runway_task_id=task_id,
+    )
+    analytics_service.capture(user_id, "tryon_generated", {
+        "model_used": YOUCAM_MODEL, "endpoint": "generate-multi", "item_count": len(layers),
+    })
+    prov = await archive_tryon_image_to_b2(
+        user_id, saved["id"], image_url,
+        model_used=YOUCAM_MODEL,
+        item_ids=[i.get("id") for i in layers if i.get("id")],
+    )
+    return {
+        "result_image_url": image_url,
+        "result_id": saved["id"],
+        "model_used": YOUCAM_MODEL,
+        "not_rendered": [i.get("name") for i in items if i not in layers],
+        **archive_fields(prov),
+    }
+
+
 async def run_multi_tryon(
     user_id: str,
     avatar_selfie_url: str,
     items: list,
-    model: str = "gen4_image",
+    model: str = YOUCAM_MODEL,
     setting: Optional[str] = None,
     enhance_prompt: bool = True,
     reference_selfie_urls: Optional[list] = None,
 ) -> dict:
-    """Generate a composited multi-item try-on. Returns {result_image_url, result_id, model_used}.
+    """Generate a multi-item try-on. Returns {result_image_url, result_id, model_used}.
 
-    Raises HTTPException(400/402) for invalid input or a hit usage cap, RuntimeError
-    if the Runway generation itself fails.
+    YouCam layers garments one by one; other models composite them. Raises
+    HTTPException(400/402) for invalid input or a hit usage cap, RuntimeError if the
+    generation itself fails. A failed provider never falls back to another one.
     """
     if not avatar_selfie_url:
         from fastapi import HTTPException
@@ -161,6 +232,9 @@ async def run_multi_tryon(
 
     check_cooldown(user_id, "generate-multi", 5)
     usage_limits.check_tryon_cap(user_id)
+
+    if model == YOUCAM_MODEL:
+        return await _run_youcam_outfit(user_id, avatar_selfie_url, items)
 
     if enhance_prompt and setting:
         setting = await run_blocking(prompt_graph.build_prompt, setting, "manifest")

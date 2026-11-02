@@ -22,7 +22,7 @@ class TryOnRequest(BaseModel):
     avatar_selfie_url: str
     item_name: str
     item_category: str = "tops"
-    model: str = "gen4_image"  # Default to full quality for best results
+    model: str = "youcam"  # YouCam Apparel VTO; a Runway/Gemini id opts out
     setting: Optional[str] = None  # Optional cinematic setting override
     enhance_prompt: bool = True  # Run the prompt-builder graph on `setting`
     reference_selfie_urls: Optional[List[str]] = None  # extra selfie refs (Gemini identity)
@@ -34,7 +34,7 @@ class MultiItemTryOnRequest(BaseModel):
         ...,
         description="List of {image_url, name, category} dicts. No hard limit (uses composite collage)."
     )
-    model: str = "gen4_image"
+    model: str = "youcam"
     setting: Optional[str] = None
     enhance_prompt: bool = True  # Run the prompt-builder graph on `setting`
     reference_selfie_urls: Optional[List[str]] = None  # extra selfie refs (Gemini identity)

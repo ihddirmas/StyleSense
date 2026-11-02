@@ -650,6 +650,13 @@ const [showQuickAdd, setShowQuickAdd] = useState(false);
               </div>
           )}
 
+          {resultUrl && !generating && activeTryOn?.modelUsed === "youcam" && (
+            <p className="text-2xs text-muted mt-2 mb-0">
+              Rendered by YouCam Apparel VTO
+              {activeTryOn.notRendered?.length ? ` · Not shown in the render: ${activeTryOn.notRendered.join(", ")}` : ""}
+            </p>
+          )}
+
           {/* Aria's verdict on the generated look — the stylist reads every result */}
           {resultUrl && resultId && !generating && (
             <TryOnVerdict itemIds={activeTryOn?.itemIds ?? []} resultId={resultId} />

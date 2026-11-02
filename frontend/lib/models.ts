@@ -11,21 +11,18 @@ export interface ModelOption {
   tier: ModelTier;
 }
 
-// Try-on / image generation models. gen4_image is the default.
+// Try-on / image generation models. YouCam Apparel VTO is the default.
 // Limited to models supported by the installed runwayml SDK (4.4.0). Newer
 // models (gemini_image3_pro, gpt_image_2, seedance2) need an SDK upgrade.
 // Labels below are user-facing outcome descriptions, deliberately hiding the
 // underlying vendor/model name (e.g. "gen4_image", "Gemini 2.5 Flash") — a
 // non-technical user shouldn't have to know which AI vendor renders their
-// try-on, only what tradeoff they're picking.
+// try-on, only what tradeoff they're picking. YouCam is the exception: it's named
+// because the app's try-on provenance is part of what it shows the user.
 export const TRYON_MODELS: ModelOption[] = [
-  // Runway/Gemini give the more reliable photoreal outfit render; that's
-  // the default and lead option. YouCam's cloth-v3 (hackathon Apparel VTO
-  // engine, verified end-to-end 2026-08-09, see docs/hackathons/YOUCAM_2026.md)
-  // stays available as the garment-specialized alternative, not the default.
+  { id: "youcam", label: "YouCam Apparel VTO", blurb: "Purpose-built garment try-on; layers your whole outfit", tier: "premium" },
   { id: "gen4_image", label: "Best Face Match", blurb: "Looks most like you", tier: "premium" },
   { id: "gemini_2.5_flash", label: "Fast Full-Body", blurb: "Fast, reliable full-body", tier: "fast" },
-  { id: "youcam", label: "Best for Garments", blurb: "Purpose-built garment try-on", tier: "premium" },
   { id: "gen4_image_turbo", label: "Quick Draft", blurb: "Fast & cheap draft", tier: "fast" },
 ];
 
@@ -36,5 +33,5 @@ export const VIDEO_MODELS: ModelOption[] = [
   { id: "gen4_turbo", label: "Native Motion", blurb: "Runway native motion", tier: "standard" },
 ];
 
-export const DEFAULT_TRYON_MODEL = "gen4_image";
+export const DEFAULT_TRYON_MODEL = "youcam";
 export const DEFAULT_VIDEO_MODEL = "veo3.1";

@@ -443,6 +443,12 @@ async def _execute_add_wardrobe_items(tool_input: dict, user_id: str) -> dict:
     }
 
 
+def _tryon_summary(result: dict) -> str:
+    provider = "YouCam Apparel VTO" if result.get("model_used") == "youcam" else result.get("model_used")
+    missing = ", ".join(n for n in (result.get("not_rendered") or []) if n)
+    return f"Here's your try-on, rendered by {provider}." + (f" Not shown in the render: {missing}." if missing else "")
+
+
 async def _execute_generate_tryon(tool_input: dict, user_id: str) -> dict:
     from fastapi import HTTPException
     from services import tryon_service
@@ -460,7 +466,7 @@ async def _execute_generate_tryon(tool_input: dict, user_id: str) -> dict:
         raise
 
     return {
-        "summary": "Here's your try-on!",
+        "summary": _tryon_summary(result),
         "created": [],
         "failed": [],
         "result_image_url": result["result_image_url"],
