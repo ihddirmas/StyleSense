@@ -294,6 +294,15 @@ def item_status(item: dict) -> Optional[str]:
     return status if status in _STATUS_RULES else None
 
 
+def status_note(item: dict) -> Optional[str]:
+    """Short prompt note for an item's availability, or None if it's ready."""
+    status = item_status(item)
+    if not status:
+        return None
+    level, phrase = _STATUS_RULES[status]
+    return f"UNAVAILABLE TODAY: {phrase}" if level == FAIL else phrase
+
+
 def is_wearable(item: dict) -> bool:
     """False when the item can't be worn today (laundry, stain, lent, repair).
     Needs-ironing still counts as wearable -- it's a warning, not a blocker."""
@@ -314,6 +323,11 @@ def _check_availability(items: list[dict]) -> dict:
 
 
 _NEAR_FACE = {"tops", "dresses", "outerwear"}
+
+
+def _is_fashion_neutral(item: dict) -> bool:
+    color = (item.get("color") or "").strip().lower()
+    return color in _FASHION_NEUTRALS or bool(_has_any(_text(item), ("jeans", "denim")))
 
 
 def _check_color_on_you(items: list[dict], color_profile: Optional[dict], skin_hex: Optional[str]) -> tuple[dict, bool]:
@@ -340,17 +354,22 @@ def _check_color_on_you(items: list[dict], color_profile: Optional[dict], skin_h
             own = _nearest_swatch(lab, season)
             clashes = [(s, m) for s in _CLASH_SEASONS.get(season, ()) if (m := _nearest_swatch(lab, s))]
             clash = min(clashes, key=lambda c: c[1][1]) if clashes else None
-            if own and own[1] < 1:
+            near_face = (it.get("category") or "").lower() in _NEAR_FACE
+            if not near_face and _is_fashion_neutral(it):
+                findings.append(_finding(PASS, f"{name} is a classic neutral, away from your face.", it))
+            elif own and own[1] < 1:
                 findings.append(_finding(PASS, f"{name} matches {own[0]} in your {season} palette.", it))
             elif own and own[1] <= 12:
                 findings.append(_finding(PASS, f"{name} sits in your {season} palette (dE {own[1]:.1f} from {own[0]}).", it))
             elif own and clash and clash[1][1] <= 12 and clash[1][1] + 4 < own[1]:
                 other, (swatch, d) = clash
-                near_face = (it.get("category") or "").lower() in _NEAR_FACE
+                # Color alone never blocks an outfit: it's a preference with a fix,
+                # unlike a stain or a commute the shoes can't survive.
+                fix = f" -- near the face that's where it shows; a scarf or necklace in {own[0]} tones would help."
                 findings.append(_finding(
-                    FAIL if near_face else WARN,
+                    WARN,
                     f"{name} reads {other} (dE {d:.1f} from {swatch}) vs dE {own[1]:.1f} to your nearest "
-                    f"{season} swatch {own[0]}" + (" -- worn near the face, that's where it shows." if near_face else "."),
+                    f"{season} swatch {own[0]}" + (fix if near_face else "."),
                     it,
                 ))
             elif own:
@@ -450,15 +469,21 @@ def _check_shape(items: list[dict], body_type: Optional[str], kibbe_ref: Optiona
             v = suitability_service.get_silhouette_verdict(it, kibbe_ref)
             if v["verdict"] != "neutral":
                 findings.append(_finding(PASS if v["verdict"] == "flatters" else WARN, v["reason"], it))
-    if not findings and (rules or kibbe_ref):
-        findings.append(_finding(PASS, "Nothing here fights your body type."))
-    return _rollup("shape", findings, "No body-type analysis yet -- add a full-body photo.")
+    if rules or kibbe_ref:
+        no_data = "These items don't say their cut or fit -- tell me and I'll check them against your shape."
+    else:
+        no_data = "No body-type analysis yet -- add a full-body photo."
+    return _rollup("shape", findings, no_data)
 
 
 _REVEALING_HARD = ("deep v", "deep-v", "plunge", "plunging", "low-cut", "low cut", "backless", "sheer",
                    "see-through", "bralette", "strapless", "cut-out", "cutout", "corset")
 _REVEALING_SOFT = ("mini", "crop", "cropped", "bodycon", "slip dress", "micro")
 _CASUAL_SHOES = ("sneaker", "trainer", "flip flop", "flip-flop", "slide", "croc")
+# Names that tell us the neckline is covered, so a modest occasion can actually pass.
+_COVERED_NECKLINES = ("turtleneck", "mock neck", "high neck", "crew", "tee", "t-shirt", "polo", "collar", "shirt",
+                      "blouse", "sweater", "jumper", "cardigan", "hoodie", "sweatshirt", "boat neck", "round neck",
+                      "square neck", "v-neck", "v neck", "blazer", "jacket", "coat", "kurta")
 
 
 def _check_occasion(items: list[dict], occasion: Optional[str]) -> dict:
@@ -466,6 +491,7 @@ def _check_occasion(items: list[dict], occasion: Optional[str]) -> dict:
         return _rollup("occasion", [], "Where are you going? Tell me the occasion.")
     label = occasion.replace("_", " ")
     findings = []
+    unclear_neckline = []
     for it in items:
         text = _text(it)
         if occasion in _MODEST_OCCASIONS:
@@ -473,6 +499,8 @@ def _check_occasion(items: list[dict], occasion: Optional[str]) -> dict:
                 findings.append(_finding(FAIL, f"{it.get('name')}: {hit} is too revealing for {label}.", it))
             elif hit := _has_any(text, _REVEALING_SOFT):
                 findings.append(_finding(WARN, f"{it.get('name')}: {hit} is borderline for {label}.", it))
+            elif (it.get("category") or "").lower() in ("tops", "dresses") and not _has_any(text, _COVERED_NECKLINES):
+                unclear_neckline.append(it.get("name"))
         if occasion in _FORMAL_OCCASIONS and (hit := _has_any(text, _CASUAL_SHOES)):
             findings.append(_finding(WARN, f"{it.get('name')}: {hit} reads too casual for {label}.", it))
         if occasion == "wedding_guest" and (it.get("category") or "").lower() in ("dresses", "tops", "outerwear"):
@@ -483,6 +511,9 @@ def _check_occasion(items: list[dict], occasion: Optional[str]) -> dict:
             hex_color = resolve_hex(it.get("color"))
             if hex_color and _chroma_hue(hex_to_lab(hex_color))[0] > 45:
                 findings.append(_finding(WARN, f"{it.get('name')} ({it.get('color')}) is bright for a funeral.", it))
+    if not findings and unclear_neckline:
+        names = " and ".join(unclear_neckline)
+        return _rollup("occasion", [], f"I can't tell the neckline of {names} from its name -- how low does it go?")
     if not findings:
         findings.append(_finding(PASS, f"Appropriate for {label}."))
     return _rollup("occasion", findings, "")

@@ -329,6 +329,25 @@ def classify_season_from_hex(skin_hex: Optional[str]) -> Optional[dict]:
     }
 
 
+def merge_measured_skin(current: dict, skin_hex: Optional[str]) -> dict:
+    """
+    Fold a measured skin hex into a stored color_profile without overclaiming.
+
+    A season can't be measured from one skin swatch, and classify_season_from_hex
+    leans warm on nearly every skin tone, so it must never replace an existing
+    season. It only fills the gap when there is none, labeled as an estimate. The
+    measured hex itself drives contrast checks via skin_analysis_result.
+    """
+    if current.get("season") and current.get("season") != "unknown":
+        if current.get("source") == "youcam_measured":
+            return {**current, "source": "skin_hex_estimate"}
+        return current
+    classification = classify_season_from_hex(skin_hex)
+    if not classification:
+        return current
+    return {**current, **classification, "source": "skin_hex_estimate"}
+
+
 def best_body_source(user_row: dict) -> Optional[str]:
     """Best photo for BODY/proportions (avatar, optional try-on ref): the full-body photo,
     else the face selfie. None if neither exists."""
