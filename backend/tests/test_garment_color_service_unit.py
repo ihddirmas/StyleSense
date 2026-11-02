@@ -74,6 +74,28 @@ def test_busy_print_with_no_main_color_stays_unmeasured():
     assert gc.dominant_hex(_png(image)) is None
 
 
+def test_image_over_the_pixel_cap_is_refused_before_decoding():
+    assert gc.dominant_hex(_png(Image.new("RGB", (6000, 6000), RUST))) is None
+
+
+def test_formats_outside_the_allowlist_are_refused():
+    buf = io.BytesIO()
+    Image.new("RGB", (200, 200), RUST).save(buf, "GIF")
+
+    assert gc.dominant_hex(buf.getvalue()) is None
+
+
+def test_oversized_file_is_refused():
+    assert gc.dominant_hex(b"x" * (gc.MAX_IMAGE_BYTES + 1)) is None
+
+
+def test_unmeasurable_marker_stops_retries_but_is_not_a_color():
+    item = {"tags": [gc.UNMEASURABLE_TAG], "color": "rust"}
+
+    assert not gc.needs_measuring(item)
+    assert gc.measured_hex(item) is None
+
+
 def test_unreadable_image_returns_none():
     assert gc.dominant_hex(b"not an image") is None
 

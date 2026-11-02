@@ -472,11 +472,29 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
     return AddMultiResponse(created=created, failed=failed)
 
 
+# Shared across requests: decoding is memory-heavy on a small instance.
+_COLOR_DECODE_SLOTS = asyncio.Semaphore(2)
+
+
+async def _download_capped(client: httpx.AsyncClient, url: str) -> Optional[bytes]:
+    """The response body, or None once it passes the size cap. Never buffers past it."""
+    chunks, size = [], 0
+    async with client.stream("GET", url) as response:
+        response.raise_for_status()
+        async for chunk in response.aiter_bytes():
+            size += len(chunk)
+            if size > garment_color_service.MAX_IMAGE_BYTES:
+                return None
+            chunks.append(chunk)
+    return b"".join(chunks)
+
+
 @router.post("/measure-colors")
 async def measure_colors(user = Depends(current_user)):
     """Measure the main color of this user's unmeasured items from their photos. Bounded
     per call and free; the page calls it again until nothing is left. Covers every add
     path and existing items from one place."""
+    await check_rate_limit_async(user["id"], "wardrobe-measure", limit=6, window_seconds=60)
     items = supabase_service.get_wardrobe_items(user["id"], None, None)
     pending = [it for it in items if garment_color_service.needs_measuring(it)]
     storage_url = os.getenv("SUPABASE_URL")
@@ -486,15 +504,16 @@ async def measure_colors(user = Depends(current_user)):
     async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
         for item in fetchable[:garment_color_service.MAX_ITEMS_PER_CALL]:
             try:
-                response = await client.get(item["image_url"])
-                response.raise_for_status()
+                image_bytes = await _download_capped(client, item["image_url"])
             except httpx.HTTPError as e:
                 logger.warning("Could not fetch item %s for color measuring: %s", item["id"], e)
                 continue
-            hex_color = await asyncio.to_thread(garment_color_service.dominant_hex, response.content)
-            if hex_color:
-                tags = garment_color_service.with_hex_tag(item.get("tags"), hex_color)
-                updated.append(supabase_service.set_wardrobe_item_tags(item["id"], tags))
+            hex_color = None
+            if image_bytes is not None:
+                async with _COLOR_DECODE_SLOTS:
+                    hex_color = await asyncio.to_thread(garment_color_service.dominant_hex, image_bytes)
+            tags = garment_color_service.with_hex_tag(item.get("tags"), hex_color or "none")
+            updated.append(supabase_service.set_wardrobe_item_tags(item["id"], tags))
     return {"updated": updated, "remaining": max(0, len(fetchable) - garment_color_service.MAX_ITEMS_PER_CALL)}
 
 

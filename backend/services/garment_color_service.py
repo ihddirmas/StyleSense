@@ -18,7 +18,14 @@ from PIL import Image, UnidentifiedImageError
 logger = logging.getLogger(__name__)
 
 HEX_TAG_PREFIX = "hex:"
+# Marks an item already tried with no clear main color, so it isn't decoded again.
+UNMEASURABLE_TAG = "hex:none"
 MAX_ITEMS_PER_CALL = 20
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+_ALLOWED_FORMATS = ("JPEG", "PNG", "WEBP")
+# Checked from the header, before any pixels are decoded.
+_MAX_PIXELS = 25_000_000
 
 _THUMBNAIL_SIZE = 96
 _BUCKET_SIZE = 48  # wide enough that folds and shading stay in one region
@@ -52,12 +59,20 @@ def _without_background(image: Image.Image) -> list[tuple[int, int, int]]:
 
 def dominant_hex(image_bytes: bytes) -> Optional[str]:
     """Main color of a garment photo as #RRGGBB, or None if it has no clear main color."""
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        return None
     try:
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
-    except (UnidentifiedImageError, OSError, ValueError) as e:
+        source = Image.open(io.BytesIO(image_bytes), formats=_ALLOWED_FORMATS)
+        width, height = source.size
+        if width * height > _MAX_PIXELS:
+            logger.warning(f"Garment image too large to decode: {width}x{height}")
+            return None
+        source.draft("RGB", (_THUMBNAIL_SIZE, _THUMBNAIL_SIZE))
+        source.thumbnail((_THUMBNAIL_SIZE, _THUMBNAIL_SIZE))
+        image = source.convert("RGBA")
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError, SyntaxError) as e:
         logger.warning(f"Could not read garment image: {e}")
         return None
-    image.thumbnail((_THUMBNAIL_SIZE, _THUMBNAIL_SIZE))
 
     has_transparency = image.getextrema()[3][0] < _OPAQUE
     pixels = _opaque_pixels(image) if has_transparency else _without_background(image)
