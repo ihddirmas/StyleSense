@@ -31,6 +31,9 @@ const config: Config = {
         rose: "var(--rose)",
         green: "var(--green)",
         red: "var(--red)",
+        "status-pass": "var(--status-pass)",
+        "status-warn": "var(--status-warn)",
+        "status-fail": "var(--status-fail)",
       },
       fontFamily: {
         sans: ["Public Sans", "sans-serif"],
