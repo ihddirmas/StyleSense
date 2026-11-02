@@ -62,7 +62,23 @@ def test_in_palette_color_passes_with_numbers():
                      color_profile=AUTUMN_INV_TRIANGLE)
     check = _check(r, "color_on_you")
     assert check["status"] == "pass"
-    assert "dE 0.0" in check["findings"][0]["reason"]
+    assert "matches rust" in check["findings"][0]["reason"].lower()
+    assert "dE 0.0" not in check["findings"][0]["reason"]
+
+
+def test_color_names_are_labeled_as_estimates_and_literal_hexes_as_measured():
+    named = check_outfit([{"id": "1", "name": "Rust knit", "category": "tops", "color": "rust"}])
+    measured = check_outfit([{"id": "1", "name": "Rust knit", "category": "tops", "color": "#A0522D"}])
+
+    assert named["garment_colors_measured"] is False
+    assert measured["garment_colors_measured"] is True
+
+
+def test_body_type_reason_uses_the_right_article():
+    r = check_outfit([{"id": "1", "name": "Wide-leg trousers", "category": "bottoms", "color": "cream"}],
+                     color_profile=AUTUMN_INV_TRIANGLE)
+
+    assert "an inverted triangle frame" in _check(r, "shape")["findings"][0]["reason"]
 
 
 def test_black_top_fails_for_autumn_because_it_reads_winter():

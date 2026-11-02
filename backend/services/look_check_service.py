@@ -340,7 +340,9 @@ def _check_color_on_you(items: list[dict], color_profile: Optional[dict], skin_h
             own = _nearest_swatch(lab, season)
             clashes = [(s, m) for s in _CLASH_SEASONS.get(season, ()) if (m := _nearest_swatch(lab, s))]
             clash = min(clashes, key=lambda c: c[1][1]) if clashes else None
-            if own and own[1] <= 12:
+            if own and own[1] < 1:
+                findings.append(_finding(PASS, f"{name} matches {own[0]} in your {season} palette.", it))
+            elif own and own[1] <= 12:
                 findings.append(_finding(PASS, f"{name} sits in your {season} palette (dE {own[1]:.1f} from {own[0]}).", it))
             elif own and clash and clash[1][1] <= 12 and clash[1][1] + 4 < own[1]:
                 other, (swatch, d) = clash
@@ -439,10 +441,11 @@ def _check_shape(items: list[dict], body_type: Optional[str], kibbe_ref: Optiona
         text = _text(it)
         if rules:
             label = body_type.replace("_", " ")
+            frame = f"{'an' if label[0] in 'aeiou' else 'a'} {label} frame"
             if hit := _has_any(text, rules["avoid"]):
-                findings.append(_finding(WARN, f"{it.get('name')}: {hit} works against a {label} frame -- aim to {rules['why']}.", it))
+                findings.append(_finding(WARN, f"{it.get('name')}: {hit} works against {frame} -- aim to {rules['why']}.", it))
             elif hit := _has_any(text, rules["favor"]):
-                findings.append(_finding(PASS, f"{it.get('name')}: {hit} helps a {label} frame {rules['why']}.", it))
+                findings.append(_finding(PASS, f"{it.get('name')}: {hit} helps {frame} {rules['why']}.", it))
         if kibbe_ref:
             v = suitability_service.get_silhouette_verdict(it, kibbe_ref)
             if v["verdict"] != "neutral":
@@ -520,6 +523,13 @@ def _check_footwear(items: list[dict], walk_minutes: Optional[int], transport: O
 
 # ───────────────────────────── entry point ───────────────────────────── #
 
+def _garment_colors_measured(items: list[dict]) -> bool:
+    """True only if every colored item stores a literal hex. A color name resolves
+    through a lookup table, so its distances are estimates and must be labeled so."""
+    colors = [(it.get("color") or "").strip() for it in items if (it.get("color") or "").strip()]
+    return bool(colors) and all(re.fullmatch(r"#?[0-9a-fA-F]{6}", c) for c in colors)
+
+
 def check_outfit(
     items: list[dict],
     *,
@@ -580,4 +590,5 @@ def check_outfit(
         "confidence": round((len(checks) - len(unknowns)) / len(checks), 2),
         "unknowns": unknowns,
         "measured_skin": measured,
+        "garment_colors_measured": _garment_colors_measured(items),
     }

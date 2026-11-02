@@ -87,6 +87,7 @@ export interface LookCheck {
   confidence: number;
   unknowns: string[];
   measured_skin: boolean;
+  garment_colors_measured?: boolean;
   items?: Array<{ id: string; name: string; image_url?: string | null }>;
 }
 

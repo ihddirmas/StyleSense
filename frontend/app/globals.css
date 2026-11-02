@@ -47,6 +47,11 @@
   --green:  #6b8e5f;
   --red:    #e85c5c;
 
+  /* Verdict states: dark enough for 4.5:1 text contrast on --surface2 */
+  --status-pass: #27593A;
+  --status-warn: #7A4E0C;
+  --status-fail: #9A2B24;
+
   /* Radii */
   --radius-sm:  6px;
   --radius:     10px;

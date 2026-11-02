@@ -5,17 +5,24 @@ import type { LucideIcon } from "lucide-react";
 import type { LookCheck, LookCheckStatus, LookCheckVerdict } from "@/types";
 
 const VERDICT_COPY: Record<LookCheckVerdict, { title: string; className: string }> = {
-  wear: { title: "Wear it", className: "text-green" },
-  tweak: { title: "Worth a tweak", className: "text-gold-dim" },
-  skip: { title: "Skip it", className: "text-red" },
+  wear: { title: "Wear it", className: "text-status-pass" },
+  tweak: { title: "Worth a tweak", className: "text-status-warn" },
+  skip: { title: "Skip it", className: "text-status-fail" },
 };
 
 const STATUS_STYLE: Record<LookCheckStatus, { Icon: LucideIcon; word: string; className: string }> = {
-  pass: { Icon: Check, word: "Pass", className: "text-green" },
-  warn: { Icon: AlertTriangle, word: "Warning", className: "text-gold-dim" },
-  fail: { Icon: X, word: "Fail", className: "text-red" },
+  pass: { Icon: Check, word: "Pass", className: "text-status-pass" },
+  warn: { Icon: AlertTriangle, word: "Warning", className: "text-status-warn" },
+  fail: { Icon: X, word: "Fail", className: "text-status-fail" },
   unknown: { Icon: HelpCircle, word: "Not enough data", className: "text-muted" },
 };
+
+function formatReason(reason: string): string {
+  return reason
+    .replace(/ -- /g, " — ")
+    .replace(/\bdE (\d)/g, "ΔE $1")
+    .replace(/(\d)C\b/g, "$1°C");
+}
 
 export function LookCheckCard({ check }: { check: LookCheck }) {
   const verdict = VERDICT_COPY[check.verdict];
@@ -43,7 +50,7 @@ export function LookCheckCard({ check }: { check: LookCheck }) {
                 <p className="font-medium text-foreground m-0 text-xs">{row.label}</p>
                 {shown.map((finding) => (
                   <p key={finding.reason} className="text-xs text-muted m-0 mt-0.5 leading-relaxed">
-                    {finding.reason}
+                    {formatReason(finding.reason)}
                   </p>
                 ))}
                 {shown.length === 0 && <p className="text-xs text-muted m-0 mt-0.5">{word}</p>}
@@ -56,6 +63,7 @@ export function LookCheckCard({ check }: { check: LookCheck }) {
       <p className="text-2xs text-muted m-0 mt-1 pt-2 border-t border-border/60">
         {measuredCount} of {check.checks.length} checks had data
         {check.measured_skin ? " · Skin tone measured by YouCam Skin AI" : " · No measured skin tone yet"}
+        {check.garment_colors_measured ? " · Garment colors measured" : " · Garment colors estimated from their names"}
       </p>
     </section>
   );
