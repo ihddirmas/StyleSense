@@ -16,6 +16,7 @@ from services.garment_cleaner import clean_garment_bytes, clean_with_runway, run
 from services.rate_limit import check_rate_limit_async
 from services.usage_limits import check_wardrobe_clean_cap, MAX_ITEMS_PER_ADD_MULTI
 from models.schemas import (
+    WardrobeStatusRequest,
     AddWardrobeFromUrl,
     ExtractFromImage,
     DetectedItem,
@@ -427,6 +428,21 @@ async def add_multi(req: AddMultiRequest, user = Depends(current_user)):
     for _ in req.items:
         supabase_service.record_usage_event(user["id"], "wardrobe_clean")
     return AddMultiResponse(created=created, failed=failed)
+
+
+@router.patch("/{item_id}/status")
+async def set_item_status(item_id: str, req: WardrobeStatusRequest, user = Depends(current_user)):
+    """Mark an item in the laundry / needs ironing / etc. Stored as a single
+    `status:<x>` tag so the look-check can skip what isn't wearable today."""
+    item = supabase_service.get_wardrobe_item(item_id)
+    if not item:
+        raise HTTPException(404, "Not found")
+    if item["user_id"] != user["id"]:
+        raise HTTPException(403, "Not your item")
+    tags = [t for t in (item.get("tags") or []) if not str(t).lower().startswith("status:")]
+    if req.status != "available":
+        tags.append(f"status:{req.status}")
+    return supabase_service.set_wardrobe_item_tags(item_id, tags)
 
 
 @router.delete("/{item_id}")

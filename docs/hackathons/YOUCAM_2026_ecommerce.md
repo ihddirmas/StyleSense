@@ -96,3 +96,41 @@ One-line for judges: *One selfie. YouCam measures your skin. Aria grades every l
 - Settings / stylist analysis UI already surfaces YouCam-measured fields
 - Aria tools + wardrobe/scrape pipeline for the agentic shopping loop
 - Prior plan details in `YOUCAM_2026.md`
+
+---
+
+## Look Check — "how I actually decide what to wear" (shipped)
+
+The founder's own decision order (inverted triangle, autumn, oval face), encoded
+as a deterministic gate in `backend/services/look_check_service.py`. It's exposed as
+`POST /api/stylist/look-check` and as Aria's read-only `check_outfit` tool. Each check
+returns pass / warn / fail / **unknown** (never a guess), plus an overall confidence.
+
+| # | Question | Check | Data it uses |
+|---|----------|-------|--------------|
+| 1 | What's the weather? | `weather` | `temp_c`/`raining`, or Open-Meteo from `lat`/`lon` |
+| 2 | Is it clean / ironed / not lent out? | `availability` | `status:<x>` tag via `PATCH /api/wardrobe/{id}/status` |
+| 3 | Does this color flatter *me*? | `color_on_you` | CIEDE2000 vs season swatches; ΔE + L* vs **YouCam-measured** skin hex |
+| 4 | Do top + bottom work together? | `color_together` | neutral anchor / analogous / complementary / triadic vs. near-miss and clashing hues |
+| 5 | Does it suit my shape? | `shape` | body-type balancing rules + Kibbe line |
+| 6 | Right for the occasion? | `occasion` | neckline/hem rules (no deep V at an office party), white at a wedding |
+| 7 | Can I walk my commute in these shoes? | `footwear` | `walk_minutes` + `transport` + rain |
+
+Laundry/stain/lent items are also dropped from outfit-combo suggestions.
+
+**Demo beat:** "Black deep-V top + olive wide-leg + stilettos, office party, 9C rain,
+25 min transit" → **skip**, with ΔE 3.0 to winter's true black, a deep-V occasion
+fail, and a stiletto commute fail. Swap to rust V-neck + cream trousers + loafers → **wear**.
+
+### Next (not built yet)
+
+- **Studio/Wardrobe UI**: a Look Check card under the try-on, and a laundry toggle on wardrobe cards.
+- **Garment hex at ingest**: have `wardrobe_vision_service` return `color_hex` so ΔE runs on the real
+  garment color, not on the name lookup table.
+- **Daily outfit log**: a `worn_on` record per day, logged via Aria ("wore this today"); feeds rotation
+  and "not worn in 30 days" nudges.
+- **Part B (face)**: YouCam face shape is already measured. Add jewellery, makeup-shade and haircut
+  suggestions keyed off `face_shape` + skin hex.
+- **Google Photos auto-cutter**: this needs the Photos Picker API, because the Library API lost
+  full-library read scopes in 2025. The user still picks the photos, so this is a smaller win than
+  "no selection needed". It ranks below the items above for the Nov 2 demo.

@@ -158,6 +158,14 @@ def get_wardrobe_item(item_id: str) -> Optional[dict]:
     return db.query("SELECT * FROM wardrobe_items WHERE id = :id", {"id": item_id}, fetch="one")
 
 
+def set_wardrobe_item_tags(item_id: str, tags: list) -> Optional[dict]:
+    return db.query(
+        "UPDATE wardrobe_items SET tags = (:tags)::text[] WHERE id = :id RETURNING *",
+        {"id": item_id, "tags": tags},
+        fetch="one",
+    )
+
+
 def delete_wardrobe_item(item_id: str) -> None:
     db.query("DELETE FROM wardrobe_items WHERE id = :id", {"id": item_id}, fetch="none")
 
