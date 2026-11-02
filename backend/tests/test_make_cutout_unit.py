@@ -47,3 +47,18 @@ class MakeCutoutSkipTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GenerateCutoutSwitchTests(unittest.TestCase):
+    def test_cutouts_are_off_unless_explicitly_enabled(self):
+        import os
+        os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
+        os.environ.setdefault("DATABASE_URL", "postgresql://user:pass@localhost:5432/unused")
+        os.environ.setdefault("SUPABASE_URL", "https://unused.supabase.co")
+        os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "unused")
+        from routers import wardrobe
+
+        with patch.dict(os.environ, {"WARDROBE_CUTOUTS_ENABLED": ""}), patch.object(wardrobe, "make_cutout") as make:
+            self.assertIsNone(wardrobe._generate_cutout("u1", "https://x/a.jpg", image_bytes=b"img"))
+            make.assert_not_called()
+

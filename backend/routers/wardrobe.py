@@ -6,6 +6,7 @@ Garment cleaning:
 """
 import asyncio
 import logging
+import os
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from typing import Optional, Literal
@@ -43,7 +44,12 @@ def _generate_cutout(
 ) -> Optional[str]:
     """Best-effort transparent PNG cutout for the closet display. Returns a public URL
     or None (callers fall back to image_url). Pass image_bytes to skip the re-download.
-    category picks the segmentation model (clothing vs general object)."""
+    category picks the segmentation model (clothing vs general object).
+
+    Off unless WARDROBE_CUTOUTS_ENABLED is set: rembg runs inside the request and
+    can exhaust a small instance, such as Render's free plan."""
+    if not os.getenv("WARDROBE_CUTOUTS_ENABLED"):
+        return None
     try:
         data = image_bytes if image_bytes is not None else httpx.get(
             image_url, timeout=30, follow_redirects=True
