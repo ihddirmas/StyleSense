@@ -580,6 +580,30 @@ button:focus:not(:focus-visible) { outline: none; }
   display: block;
   pointer-events: none;
 }
+.wardrobe-cutout-img--away {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.item-status-select {
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 4px;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.item-status-select:hover,
+.item-status-select:focus-visible {
+  border-color: var(--border-hover);
+}
+.item-status-select--flagged {
+  color: var(--status-warn);
+  font-weight: 600;
+}
 .wardrobe-create-fab {
   position: fixed;
   right: max(1.25rem, env(safe-area-inset-right));

@@ -12,6 +12,8 @@ import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 import { AddItemModal } from "@/components/wardrobe/AddItemModal";
 import { OutfitSuggestions } from "@/components/wardrobe/OutfitSuggestions";
+import { ItemStatusSelect } from "@/components/wardrobe/ItemStatusSelect";
+import { isUnavailable } from "@/lib/itemStatus";
 import type { WardrobeItem } from "@/types";
 import posthog from "posthog-js";
 
@@ -197,49 +199,56 @@ export default function WardrobePage() {
                 const selected = selectedItemIds.includes(item.id);
                 const src = item.cutout_url || item.image_url;
                 return (
-                  <motion.button
+                  <motion.div
                     key={item.id}
-                    type="button"
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ delay: Math.min(i, 12) * 0.02 }}
-                    className="wardrobe-cutout-tile group relative"
-                    style={{
-                      outline: selected ? "2px solid var(--ink)" : undefined,
-                      outlineOffset: 1,
-                    }}
-                    onClick={() => toggleSelected(item.id)}
-                    aria-pressed={selected}
-                    aria-label={`${selected ? "Deselect" : "Select"} ${item.name}`}
+                    className="group relative flex flex-col gap-1 min-w-0"
                   >
-                    <span
-                      className="absolute top-2 left-2 z-10 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{
-                        background: selected ? "var(--ink)" : "rgba(255,255,255,0.85)",
-                        border: `1.5px solid ${selected ? "var(--ink)" : "var(--border)"}`,
-                        color: selected ? "var(--parchment)" : "transparent",
-                      }}
-                    >
-                      {selected && <Check size={11} strokeWidth={3} />}
-                    </span>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt={item.name}
-                      className="wardrobe-cutout-img"
-                    />
                     <button
                       type="button"
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition w-7 h-7 flex items-center justify-center rounded-full"
+                      className="wardrobe-cutout-tile relative w-full"
+                      style={{
+                        outline: selected ? "2px solid var(--ink)" : undefined,
+                        outlineOffset: 1,
+                      }}
+                      onClick={() => toggleSelected(item.id)}
+                      aria-pressed={selected}
+                      aria-label={`${selected ? "Deselect" : "Select"} ${item.name}`}
+                    >
+                      <span
+                        className="absolute top-2 left-2 z-10 w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{
+                          background: selected ? "var(--ink)" : "rgba(255,255,255,0.85)",
+                          border: `1.5px solid ${selected ? "var(--ink)" : "var(--border)"}`,
+                          color: selected ? "var(--parchment)" : "transparent",
+                        }}
+                      >
+                        {selected && <Check size={11} strokeWidth={3} />}
+                      </span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={item.name}
+                        className={`wardrobe-cutout-img ${isUnavailable(item) ? "wardrobe-cutout-img--away" : ""}`}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition w-7 h-7 flex items-center justify-center rounded-full"
                       style={{ background: "rgba(255,255,255,0.9)", border: "1px solid var(--border)", color: "var(--text-dim)", cursor: "pointer" }}
-                      onClick={(e) => { e.stopPropagation(); setPendingDelete(item); }}
-                      aria-label="Delete"
+                      onClick={() => setPendingDelete(item)}
+                      aria-label={`Delete ${item.name}`}
                     >
                       <Trash2 size={12} />
                     </button>
-                    <span className="sr-only">{item.name}</span>
-                  </motion.button>
+                    <ItemStatusSelect
+                      item={item}
+                      onChange={(next) => setItems((prev) => prev.map((p) => (p.id === next.id ? next : p)))}
+                    />
+                  </motion.div>
                 );
               })}
             </AnimatePresence>

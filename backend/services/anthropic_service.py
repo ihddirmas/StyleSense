@@ -61,6 +61,7 @@ def _format_wardrobe(items: list) -> str:
     if not items:
         return "(empty - user has no wardrobe items yet)"
     from collections import defaultdict
+    from services.look_check_service import status_note
     groups: dict = defaultdict(list)
     for it in items:
         groups[(it.get("category") or "other").lower()].append(it)
@@ -70,12 +71,14 @@ def _format_wardrobe(items: list) -> str:
     for c in cats:
         out.append(f"{c.upper()} ({len(groups[c])}):")
         for it in groups[c]:
-            tags = ", ".join(it.get("tags") or [])
+            tags = ", ".join(t for t in (it.get("tags") or []) if not str(t).lower().startswith("status:"))
             extra = f", tags: {tags}" if tags else ""
             brand = f", {it['brand']}" if it.get("brand") else ""
+            note = status_note(it)
+            availability = f", {note}" if note else ""
             out.append(
                 f"  - {it['name']} (color: {it.get('color') or '?'}, occasion: "
-                f"{it.get('occasion') or 'any'}{brand}{extra})  ID:{it['id']}"
+                f"{it.get('occasion') or 'any'}{brand}{extra}{availability})  ID:{it['id']}"
             )
     return "\n".join(out)
 

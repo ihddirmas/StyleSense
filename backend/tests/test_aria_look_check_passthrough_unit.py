@@ -84,3 +84,18 @@ def test_replies_without_check_outfit_have_no_look_checks(monkeypatch):
     result = _advise_with(monkeypatch, [_text("Hello.")])
 
     assert result["look_checks"] == []
+
+
+# -- Aria only sees laundry etc. as unavailable -------------------------------
+
+def test_prompt_marks_items_that_cannot_be_worn_today():
+    wardrobe = anthropic_service._format_wardrobe([
+        {"id": "a", "name": "Rust top", "category": "tops", "tags": ["status:laundry"]},
+        {"id": "b", "name": "Cream top", "category": "tops", "tags": []},
+        {"id": "c", "name": "Linen shirt", "category": "tops", "tags": ["status:needs_iron"]},
+    ])
+
+    rust, cream, linen = [next(l for l in wardrobe.splitlines() if n in l) for n in ("Rust top", "Cream top", "Linen shirt")]
+    assert "UNAVAILABLE TODAY" in rust and "laundry" in rust
+    assert "UNAVAILABLE" not in cream
+    assert "UNAVAILABLE" not in linen and "needs ironing" in linen
