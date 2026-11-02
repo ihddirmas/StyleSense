@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from services.color_service import classify_season_from_hex
+from services.color_service import classify_season_from_hex, merge_measured_skin
 
 
 def test_warm_light_hex_classifies_as_spring():
@@ -71,3 +71,25 @@ def test_hex_without_hash_prefix_still_parses():
     result = classify_season_from_hex("E8C39E")
     assert result is not None
     assert result["undertone"] in ("warm", "cool", "neutral")
+
+
+def test_measured_skin_never_overwrites_an_existing_season():
+    current = {"season": "autumn", "undertone": "warm", "flattering_colors": ["rust"], "avoid_colors": ["icy blue"]}
+    assert merge_measured_skin(current, "#F5D5C8") == current
+
+
+def test_measured_skin_gives_a_labeled_estimate_only_when_no_season_exists():
+    merged = merge_measured_skin({"body_type": "pear"}, "#C68E6A")
+    assert merged["body_type"] == "pear"
+    assert merged["season"]
+    assert merged["source"] == "skin_hex_estimate"
+
+
+def test_legacy_measured_label_on_a_season_is_corrected():
+    merged = merge_measured_skin({"season": "autumn", "source": "youcam_measured"}, "#C68E6A")
+    assert merged["season"] == "autumn"
+    assert merged["source"] == "skin_hex_estimate"
+
+
+def test_unusable_skin_hex_leaves_the_profile_alone():
+    assert merge_measured_skin({"season": "winter"}, None) == {"season": "winter"}
